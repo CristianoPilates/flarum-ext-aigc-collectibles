@@ -1,0 +1,258 @@
+donk-aigc-collectibles:
+  admin:
+    settings:
+      title: AIGC Collectibles Settings
+
+      # AIGC API settings
+      aigc_heading: AIGC Image Generation
+      aigc_api_endpoint_label: AIGC API Endpoint
+      aigc_api_endpoint_help: The base URL for the image generation API (e.g. OpenAI DALL-E or Stable Diffusion compatible endpoint).
+      aigc_api_key_label: AIGC API Key
+      aigc_api_key_help: Secret key used to authenticate with the AIGC image generation service.
+      aigc_model_label: AIGC Model
+      aigc_model_help: The model identifier to use for image generation (e.g. dall-e-3, stable-diffusion-xl).
+      aigc_default_prompt_label: Default Prompt Template
+      aigc_default_prompt_help: "Base prompt template for collectible generation. Use {rarity} as a placeholder for the rarity tier."
+
+      # IPFS settings
+      ipfs_heading: IPFS Storage
+      ipfs_api_endpoint_label: IPFS API Endpoint
+      ipfs_api_endpoint_help: The HTTP API endpoint for your IPFS node or Pinata API (e.g. https://api.pinata.cloud).
+      ipfs_api_key_label: IPFS API Key
+      ipfs_api_key_help: API key or bearer token for authenticating with your IPFS pinning service.
+      ipfs_gateway_url_label: IPFS Gateway URL
+      ipfs_gateway_url_help: "The public gateway URL for serving IPFS content (e.g. https://gateway.pinata.cloud/ipfs/). Must end with /."
+
+      # Blockchain settings
+      blockchain_heading: Blockchain & NFT
+      blockchain_enabled_label: Enable NFT Minting
+      blockchain_rpc_url_label: Blockchain RPC URL
+      blockchain_rpc_url_help: JSON-RPC endpoint for the EVM chain (e.g. http://127.0.0.1:8545 for local Hardhat/Ganache).
+      blockchain_contract_address_label: NFT Contract Address
+      blockchain_contract_address_help: Deployed ERC-721 CollectibleNFT contract address.
+      blockchain_private_key_label: Minting Wallet Private Key
+      blockchain_private_key_help: Private key of the wallet authorized to mint NFTs. Keep this secret.
+      blockchain_chain_id_label: Chain ID
+      blockchain_chain_id_help: The chain ID of the target EVM network (e.g. 31337 for Hardhat local).
+
+      # Check-in settings
+      checkin_heading: Daily Check-in
+      checkin_reward_amount_label: Check-in Reward Amount
+      checkin_reward_amount_help: Number of blind boxes awarded per daily check-in.
+
+      # Rarity settings
+      rarity_heading: Rarity Weights
+      rarity_help: "Relative weights for each rarity tier. These do not need to sum to 100 -- they are normalized automatically."
+      rarity_common_weight_label: Common Weight
+      rarity_rare_weight_label: Rare Weight
+      rarity_epic_weight_label: Epic Weight
+      rarity_legendary_weight_label: Legendary Weight
+
+      # Feature toggles
+      features_heading: Feature Toggles
+      trading_enabled_label: Enable P2P Trading
+      web3_enabled_label: Enable Web3 Wallet Binding
+      aigc_enabled_label: Enable AIGC Generation
+
+      # Submit
+      submit_button: Save Settings
+
+      # Section headings used by admin settings page
+      section_aigc: AIGC Image Generation
+      section_ipfs: IPFS Storage
+      section_blockchain: Blockchain & NFT
+      section_rarity: Rarity Weights
+
+      # Keys used by admin.ts registerSetting
+      checkin_reward_label: Check-in Reward Amount
+      checkin_reward_help: Number of blind boxes awarded per daily check-in.
+      aigc_enabled_help: Enable or disable the AIGC image generation feature.
+      aigc_endpoint_label: AIGC API Endpoint
+      aigc_model_label: AIGC Model
+      aigc_prompt_template_label: Default Prompt Template
+      aigc_prompt_template_help: "Base prompt template for collectible generation. Use {rarity} as a placeholder."
+      ipfs_endpoint_label: IPFS API Endpoint
+      ipfs_api_key_label: IPFS API Key
+      ipfs_gateway_label: IPFS Gateway URL
+      blockchain_enabled_help: Enable or disable NFT minting on the blockchain.
+      blockchain_private_key_help: Private key of the wallet authorized to mint NFTs. Keep this secret.
+      rarity_common_label: Common Weight
+      rarity_rare_label: Rare Weight
+      rarity_epic_label: Epic Weight
+      rarity_legendary_label: Legendary Weight
+      rarity_weights_help: "Relative weights for each rarity tier. They are normalized automatically."
+      ws_url_label: WebSocket URL
+      ws_url_help: WebSocket server URL for real-time notifications (optional).
+
+  forum:
+    checkin:
+      button: Check In
+      button_checked: Checked In Today
+      check_in: Check In
+      checked_in: Checked In
+      success_message: "Check-in successful! You earned {reward} blind box(es)."
+      already_checked: You have already checked in today.
+      streak_label: "Check-in streak: {count} day(s)"
+
+    blind_box:
+      balance_label: "Blind Boxes: {count}"
+      balance_title: Your blind box balance
+      balance: blind boxes available
+      open_button: Open Blind Box
+      open_title: Open Blind Box
+      open: Open Blind Box
+      open_another: Open Another
+      close: Close
+      try_again: Try Again
+      generating: "Generating your collectible..."
+      generation_failed: Failed to generate collectible. Please try again.
+      generation_timeout: Generation timed out. Please try again later.
+      insufficient: You don't have enough blind boxes.
+      reveal_title: You Got a New Collectible!
+      cost_label: "Cost: 1 Blind Box"
+      confirm_open: Are you sure you want to open a blind box?
+
+    collectible:
+      gallery_title: My Collectibles
+      gallery_title_user: "{username}'s Collectibles"
+      detail_title: Collectible Details
+      rarity_common: Common
+      rarity_rare: Rare
+      rarity_epic: Epic
+      rarity_legendary: Legendary
+      status_generating: Generating...
+      status_completed: Completed
+      status_failed: Generation Failed
+      status_burned: Burned
+      showcase_button: Set as Showcase
+      showcase_set: This collectible is now displayed on your posts.
+      showcase_remove: Remove from Showcase
+      showcase_removed: Collectible removed from showcase.
+      owner: "Owner: {username}"
+      original_creator: "Created by: {username}"
+      times_traded: "Times traded: {count}"
+      created_at: "Created: {date}"
+      no_collectibles: No collectibles yet. Open a blind box to get started!
+      no_collectibles_user: This user has no collectibles yet.
+      mint_nft_button: Mint as NFT
+      mint_nft_confirm: Mint this collectible as an on-chain NFT?
+      minting: Minting NFT...
+      minted: Minted on-chain
+      token_id_label: "Token ID: #{id}"
+      ipfs_label: View on IPFS
+      image_unavailable: Image no longer available on IPFS.
+      view_history: View Ownership History
+      history_title: Ownership History
+      history_generated: Generated by {username}
+      history_traded: "Traded: {from} -> {to} for {boxes} blind box(es)"
+      history_minted: Minted as NFT by {username}
+      history_burned: Burned by {username}
+
+    trade:
+      panel_title: Trades
+      title: Trades
+      create_button: Offer Trade
+      create_title: Make a Trade Offer
+      offer_label: Blind Boxes to Offer
+      offer_amount: Blind Boxes to Offer
+      offer_placeholder: Enter the number of blind boxes
+      note_label: Note (optional)
+      note_placeholder: Add a message to the collectible owner...
+      submit: Send Offer
+      cancel: Cancel Offer
+      cancel_action: Cancel
+      accept: Accept Trade
+      reject: Reject Trade
+      confirm_accept: "Accept this trade? You will give up your collectible in exchange for {boxes} blind box(es)."
+      confirm_reject: Are you sure you want to reject this trade offer?
+      confirm_cancel: Are you sure you want to cancel this trade offer?
+      status_pending: Pending
+      status_accepted: Accepted
+      status_rejected: Rejected
+      status_cancelled: Cancelled
+      incoming: Incoming Offers
+      outgoing: My Offers
+      history: Trade History
+      empty: No trades to display.
+      no_incoming: No incoming trade offers.
+      no_outgoing: You haven't made any trade offers.
+      success_created: Trade offer sent!
+      success_accepted: Trade completed! The collectible is now yours.
+      success_rejected: Trade offer rejected.
+      success_cancelled: Trade offer cancelled.
+      error_insufficient: "The buyer no longer has enough blind boxes to complete this trade."
+      error_self_trade: You cannot trade with yourself.
+      error_not_owner: This collectible no longer belongs to the expected owner.
+      no_trades: No trade history yet.
+      offered_boxes: "{count} blind box(es) offered"
+      available: available
+      from_user: "From: {username}"
+      to_user: "To: {username}"
+      owned_by: "Owned by {user}"
+      unknown_user: Unknown User
+      offers_you: offers you
+      you_offered: you offered
+      offer_sent: Trade offer sent!
+      notification_received: You received a new trade offer!
+      notification_accepted: Your trade offer was accepted!
+      notification_rejected: Your trade offer was rejected.
+
+    wallet:
+      title: Web3 Wallet
+      connect_button: Connect Wallet
+      connect: Connect Wallet
+      disconnect_button: Disconnect Wallet
+      unbind: Disconnect Wallet
+      connected_label: Wallet Connected
+      install_metamask: Please install MetaMask to use this feature.
+      connection_denied: Wallet connection was denied.
+      signing_message: Please sign the message in MetaMask to verify ownership.
+      signing_cancelled: Signing was cancelled.
+      verify_success: Wallet successfully linked to your account!
+      verify_failed: Signature verification failed. Please try again.
+      address_label: "Wallet: {address}"
+      already_bound: This wallet address is already linked to another account.
+      confirm_disconnect: Are you sure you want to disconnect your wallet?
+      disconnect_success: Wallet disconnected.
+      step_connecting: Connecting to MetaMask...
+      step_signing: Please sign the message in MetaMask...
+      step_verifying: Verifying signature...
+      bind_failed: Failed to bind wallet. Please try again.
+      unbind_failed: Failed to unbind wallet. Please try again.
+
+    post_badge:
+      showcase_alt: "{username}'s showcase collectible"
+      showcase_tooltip: "{name} ({rarity})"
+
+    nav:
+      collectibles: Collectibles
+      trades: Trades
+
+    user:
+      collectibles_link: Collectibles
+
+    gallery:
+      title: Collectibles
+      filter_all: All
+      filter_common: Common
+      filter_rare: Rare
+      filter_epic: Epic
+      filter_legendary: Legendary
+      empty: No collectibles to display.
+      load_more: Load More
+
+    notification:
+      trade_received_title: New Trade Offer
+      trade_received_body: "{username} offered {boxes} blind box(es) for your {collectible}."
+      trade_accepted_title: Trade Accepted
+      trade_accepted_body: "{username} accepted your trade offer for {collectible}."
+      trade_rejected_title: Trade Rejected
+      trade_rejected_body: "{username} rejected your trade offer for {collectible}."
+      trade_cancelled_title: Trade Cancelled
+      trade_cancelled_body: "{username} cancelled their trade offer for {collectible}."
+      collectible_ready_title: Collectible Ready
+      collectible_ready_body: Your new collectible has been generated!
+      collectible_failed_title: Generation Failed
+      collectible_failed_body: "Failed to generate your collectible. Your blind box has been refunded."
+      nft_minted_title: NFT Minted
+      nft_minted_body: "Your collectible has been minted as NFT #{tokenId}."

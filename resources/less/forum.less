@@ -1,0 +1,741 @@
+// ============================================
+// AIGC Collectibles — Forum Styles
+// ============================================
+
+// Rarity color variables
+@rarity-common: #9CA3AF;
+@rarity-rare: #3B82F6;
+@rarity-epic: #8B5CF6;
+@rarity-legendary: #F59E0B;
+
+@rarity-common-bg: #F3F4F6;
+@rarity-rare-bg: #EFF6FF;
+@rarity-epic-bg: #F5F3FF;
+@rarity-legendary-bg: #FFFBEB;
+
+@rarity-common-border: #D1D5DB;
+@rarity-rare-border: #93C5FD;
+@rarity-epic-border: #C4B5FD;
+@rarity-legendary-border: #FCD34D;
+
+// ============================================
+// Rarity Badge
+// ============================================
+
+.CollectibleRarity {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &--common {
+    background: @rarity-common-bg;
+    color: @rarity-common;
+    border: 1px solid @rarity-common-border;
+  }
+
+  &--rare {
+    background: @rarity-rare-bg;
+    color: @rarity-rare;
+    border: 1px solid @rarity-rare-border;
+  }
+
+  &--epic {
+    background: @rarity-epic-bg;
+    color: @rarity-epic;
+    border: 1px solid @rarity-epic-border;
+  }
+
+  &--legendary {
+    background: @rarity-legendary-bg;
+    color: @rarity-legendary;
+    border: 1px solid @rarity-legendary-border;
+  }
+}
+
+// ============================================
+// Check-in Button
+// ============================================
+
+.CheckinButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &-button--done {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  &-balance {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+
+    i {
+      color: @rarity-legendary;
+    }
+  }
+}
+
+// ============================================
+// Blind Box Opener (Modal)
+// ============================================
+
+.BlindBoxOpener {
+  &-body {
+    text-align: center;
+    padding: 30px 20px;
+  }
+
+  &-balance {
+    margin-bottom: 24px;
+
+    i {
+      font-size: 32px;
+      color: @rarity-legendary;
+      display: block;
+      margin-bottom: 8px;
+    }
+  }
+
+  &-balanceCount {
+    font-size: 36px;
+    font-weight: 700;
+    display: block;
+  }
+
+  &-balanceLabel {
+    font-size: 14px;
+    color: #6B7280;
+  }
+
+  &-openButton {
+    font-size: 16px;
+    padding: 12px 32px;
+  }
+
+  // Generating state
+  &-generating {
+    &Animation {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    &Icon {
+      font-size: 48px;
+      margin: 20px 0;
+
+      i {
+        animation: sparkle 1.5s ease-in-out infinite;
+      }
+    }
+
+    &Text {
+      font-size: 16px;
+      color: #6B7280;
+    }
+
+    &--legendary &Icon i {
+      color: @rarity-legendary;
+    }
+
+    &--epic &Icon i {
+      color: @rarity-epic;
+    }
+
+    &--rare &Icon i {
+      color: @rarity-rare;
+    }
+  }
+
+  // Reveal state
+  &-reveal {
+    &Card {
+      margin: 0 auto 20px;
+      max-width: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+      animation: revealCard 0.6s ease-out;
+    }
+
+    &Image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    &Placeholder {
+      width: 100%;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F3F4F6;
+
+      i {
+        font-size: 48px;
+        color: #D1D5DB;
+      }
+    }
+
+    &Name {
+      margin: 12px 0 8px;
+      font-size: 20px;
+    }
+
+    &Actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    &--legendary &Card {
+      box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4);
+    }
+
+    &--epic &Card {
+      box-shadow: 0 4px 24px rgba(139, 92, 246, 0.3);
+    }
+
+    &--rare &Card {
+      box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  // Error state
+  &-error {
+    &Icon {
+      font-size: 48px;
+      color: #EF4444;
+      margin-bottom: 16px;
+    }
+  }
+}
+
+@keyframes sparkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+    opacity: 0.7;
+  }
+}
+
+@keyframes revealCard {
+  0% {
+    transform: scale(0.5) rotateY(180deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) rotateY(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+// ============================================
+// Collectible Card
+// ============================================
+
+.CollectibleCard {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #E5E7EB;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &--clickable {
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &--common {
+    border-color: @rarity-common-border;
+  }
+  &--rare {
+    border-color: @rarity-rare-border;
+  }
+  &--epic {
+    border-color: @rarity-epic-border;
+  }
+  &--legendary {
+    border-color: @rarity-legendary-border;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+  }
+
+  &--generating {
+    opacity: 0.7;
+  }
+
+  &-image {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #F9FAFB;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .CollectibleCard-img--loaded {
+      opacity: 1;
+    }
+  }
+
+  &-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #D1D5DB;
+
+    i {
+      font-size: 32px;
+    }
+
+    small {
+      margin-top: 4px;
+      font-size: 10px;
+      color: #9CA3AF;
+    }
+
+    &--generating {
+      i {
+        font-size: 24px;
+        color: @rarity-common;
+      }
+    }
+  }
+
+  &-info {
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &-owner {
+    font-size: 11px;
+    color: #6B7280;
+  }
+
+  &-nft {
+    font-size: 10px;
+    color: #8B5CF6;
+    font-weight: 600;
+  }
+
+  &--compact {
+    .CollectibleCard-image {
+      aspect-ratio: auto;
+      height: 80px;
+    }
+
+    .CollectibleCard-info {
+      padding: 4px 6px;
+    }
+
+    .CollectibleCard-name {
+      font-size: 11px;
+    }
+  }
+}
+
+// ============================================
+// Collectible Gallery
+// ============================================
+
+.CollectibleGallery {
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &-title {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  &-filters {
+    display: flex;
+    gap: 4px;
+
+    .active {
+      font-weight: 700;
+      text-decoration: underline;
+    }
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  &-loading,
+  &-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9CA3AF;
+  }
+
+  &-loadMore {
+    text-align: center;
+    margin-top: 20px;
+  }
+}
+
+// ============================================
+// Trade Panel
+// ============================================
+
+.TradePanel {
+  &-title {
+    font-size: 18px;
+    margin: 0 0 12px;
+  }
+
+  &-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #E5E7EB;
+    padding-bottom: 8px;
+
+    .active {
+      font-weight: 700;
+      border-bottom: 2px solid currentColor;
+    }
+  }
+
+  &-empty {
+    text-align: center;
+    color: #9CA3AF;
+    padding: 20px;
+  }
+
+  &-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+
+    &--accepted {
+      border-color: #86EFAC;
+      background: #F0FDF4;
+    }
+
+    &--rejected {
+      border-color: #FCA5A5;
+      background: #FEF2F2;
+    }
+
+    &--cancelled {
+      opacity: 0.6;
+    }
+
+    &Info {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    &User {
+      font-weight: 600;
+    }
+
+    &Boxes {
+      i {
+        color: @rarity-legendary;
+      }
+      font-weight: 600;
+    }
+
+    &Actions {
+      display: flex;
+      gap: 4px;
+    }
+  }
+
+  &-statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--pending {
+      background: #FEF3C7;
+      color: #D97706;
+    }
+    &--accepted {
+      background: #D1FAE5;
+      color: #059669;
+    }
+    &--rejected {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+    &--cancelled {
+      background: #F3F4F6;
+      color: #6B7280;
+    }
+  }
+}
+
+// ============================================
+// Trade Request Modal
+// ============================================
+
+.TradeRequestModal {
+  &-body {
+    padding: 20px;
+  }
+
+  &-target {
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #F9FAFB;
+    border-radius: 8px;
+  }
+
+  &-targetInfo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &-owner {
+    font-size: 12px;
+    color: #6B7280;
+  }
+
+  &-inputGroup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    input {
+      width: 100px;
+    }
+  }
+
+  &-balance {
+    font-size: 13px;
+    color: #6B7280;
+
+    i {
+      color: @rarity-legendary;
+    }
+  }
+
+  &-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+}
+
+// ============================================
+// Wallet Connector
+// ============================================
+
+.WalletConnector {
+  &-title {
+    font-size: 16px;
+    margin: 0 0 12px;
+
+    i {
+      color: #6B7280;
+    }
+  }
+
+  &-bound {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &-address {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #F3F4F6;
+    border-radius: 8px;
+    font-size: 13px;
+
+    code {
+      font-family: monospace;
+      font-weight: 600;
+    }
+  }
+
+  &-noMetaMask {
+    p {
+      color: #6B7280;
+      font-size: 13px;
+    }
+  }
+
+  &-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #6B7280;
+  }
+
+  &-error {
+    padding: 8px 12px;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #DC2626;
+  }
+}
+
+// ============================================
+// Post Collectible Badge
+// ============================================
+
+.PostCollectibleBadge {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-left: 6px;
+  border: 2px solid @rarity-common-border;
+
+  &--rare {
+    border-color: @rarity-rare-border;
+  }
+  &--epic {
+    border-color: @rarity-epic-border;
+  }
+  &--legendary {
+    border-color: @rarity-legendary-border;
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+  }
+
+  &-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 12px;
+    color: @rarity-common;
+  }
+}
+
+// ============================================
+// Blind Box trigger in header
+// ============================================
+
+.BlindBoxOpener-trigger {
+  position: relative;
+
+  i {
+    font-size: 16px;
+  }
+}
+
+// ============================================
+// Responsive
+// ============================================
+
+@media (max-width: 768px) {
+  .CollectibleGallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+
+  .CollectibleGallery-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .TradePanel-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .TradePanel-itemActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .WalletConnector-bound {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
