@@ -1,30 +1,61 @@
 {
-    "name": "donk/flarum-ext-aigc-collectibles",
-    "description": "AIGC blind box digital collectible generation and circulation system for Flarum.",
-    "type": "flarum-extension",
-    "license": "MIT",
-    "require": {
-        "flarum/core": "^1.8",
-        "guzzlehttp/guzzle": "^7.0",
-        "simplito/elliptic-php": "^1.0",
-        "kornrunner/keccak": "^1.1"
+  "name": "donk/flarum-ext-aigc-collectibles",
+  "description": "AIGC blind box digital collectible generation and circulation system for Flarum.",
+  "type": "flarum-extension",
+  "license": "MIT",
+  "require": {
+    "flarum/core": "^2.0",
+    "guzzlehttp/guzzle": "^7.0",
+    "simplito/elliptic-php": "^1.0",
+    "kornrunner/keccak": "^1.1"
+  },
+  "require-dev": {
+    "flarum/testing": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Donk\\AigcCollectibles\\": "src/"
+    }
+  },
+  "extra": {
+    "flarum-extension": {
+      "title": "AIGC Collectibles",
+      "category": "feature",
+      "icon": {
+        "name": "fas fa-gem",
+        "backgroundColor": "#7C3AED",
+        "color": "#fff"
+      }
     },
-    "autoload": {
-        "psr-4": {
-            "Donk\\AigcCollectibles\\": "src/"
-        }
-    },
-    "extra": {
-        "flarum-extension": {
-            "title": "AIGC Collectibles",
-            "category": "feature",
-            "icon": {
-                "name": "fas fa-gem",
-                "backgroundColor": "#7C3AED",
-                "color": "#fff"
-            }
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "flarum-cli": {
+      "modules": {
+        "backendTesting": true
+      }
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "autoload-dev": {
+    "psr-4": {
+      "Donk\\AigcCollectibles\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": [
+      "@test:unit",
+      "@test:integration"
+    ],
+    "test:unit": "phpunit -c tests/phpunit.unit.xml",
+    "test:integration": "phpunit -c tests/phpunit.integration.xml",
+    "test:setup": "@php tests/integration/setup.php"
+  },
+  "scripts-descriptions": {
+    "test": "Runs all tests.",
+    "test:unit": "Runs all unit tests.",
+    "test:integration": "Runs all integration tests.",
+    "test:setup": "Sets up a database for use with integration tests. Execute this only once."
+  },
+  "require-dev": {
+    "flarum/testing": "^2.0"
+  }
 }
