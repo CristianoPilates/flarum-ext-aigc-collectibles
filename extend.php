@@ -2,8 +2,11 @@
 
 namespace Donk\AigcCollectibles;
 
+use Donk\AigcCollectibles\Model\Collectible;
+use Donk\AigcCollectibles\Service\CheckinService;
+use Flarum\Api\Resource\UserResource;
+use Flarum\Api\Schema;
 use Flarum\Extend;
-use Flarum\Api\Serializer\UserSerializer;
 use Flarum\User\User;
 
 return [
@@ -16,21 +19,58 @@ return [
 
     new Extend\Locales(__DIR__ . '/resources/locale'),
 
-    (new Extend\Routes('api'))
-        ->post('/checkin', 'donk-aigc-collectibles.checkin', Api\Controller\CheckinController::class)
-        ->get('/collectibles', 'donk-aigc-collectibles.collectibles.index', Api\Controller\ListCollectiblesController::class)
-        ->get('/collectibles/{id}', 'donk-aigc-collectibles.collectibles.show', Api\Controller\ShowCollectibleController::class)
-        ->post('/collectibles/generate', 'donk-aigc-collectibles.collectibles.generate', Api\Controller\GenerateCollectibleController::class)
-        ->patch('/collectibles/{id}', 'donk-aigc-collectibles.collectibles.update', Api\Controller\UpdateCollectibleController::class)
-        ->post('/trades', 'donk-aigc-collectibles.trades.create', Api\Controller\CreateTradeController::class)
-        ->get('/trades', 'donk-aigc-collectibles.trades.index', Api\Controller\ListTradesController::class)
-        ->post('/trades/{id}/accept', 'donk-aigc-collectibles.trades.accept', Api\Controller\AcceptTradeController::class)
-        ->post('/trades/{id}/reject', 'donk-aigc-collectibles.trades.reject', Api\Controller\RejectTradeController::class)
-        ->delete('/trades/{id}', 'donk-aigc-collectibles.trades.cancel', Api\Controller\CancelTradeController::class)
-        ->post('/web3/nonce', 'donk-aigc-collectibles.web3.nonce', Api\Controller\Web3NonceController::class)
-        ->post('/web3/accounts', 'donk-aigc-collectibles.web3.verify', Api\Controller\Web3VerifyController::class)
-        ->get('/web3/accounts', 'donk-aigc-collectibles.web3.index', Api\Controller\ListWeb3AccountsController::class)
-        ->delete('/web3/accounts/{id}', 'donk-aigc-collectibles.web3.delete', Api\Controller\DeleteWeb3AccountController::class),
+    // API Resources (replaces Routes + ApiSerializer)
+    new Extend\ApiResource(Api\Resource\CollectibleResource::class),
+    new Extend\ApiResource(Api\Resource\TradeResource::class),
+    new Extend\ApiResource(Api\Resource\CheckinRecordResource::class),
+    new Extend\ApiResource(Api\Resource\Web3AccountResource::class),
+    new Extend\ApiResource(Api\Resource\CollectibleEventResource::class),
+
+    // Extend UserResource with collectible-related fields
+    (new Extend\ApiResource(UserResource::class))
+        ->fields(fn () => [
+            Schema\Integer::make('blindBoxCount')
+                ->property('blind_box_count'),
+            Schema\DateTime::make('lastCheckinAt')
+                ->property('last_checkin_at')
+                ->nullable(),
+            Schema\Integer::make('showcaseCollectibleId')
+                ->property('showcase_collectible_id')
+                ->nullable(),
+            Schema\Boolean::make('canCheckin')
+                ->visible(fn (User $user, $context) => $context->getActor()->id === $user->id)
+                ->get(function (User $user) {
+                    $checkinService = resolve(CheckinService::class);
+                    return !$checkinService->hasCheckedInToday($user);
+                }),
+            Schema\Boolean::make('hasCheckedInToday')
+                ->visible(fn (User $user, $context) => $context->getActor()->id === $user->id)
+                ->get(function (User $user) {
+                    $checkinService = resolve(CheckinService::class);
+                    return $checkinService->hasCheckedInToday($user);
+                }),
+            Schema\Str::make('showcaseCollectibleName')
+                ->get(function (User $user) {
+                    if (!$user->showcase_collectible_id) return null;
+                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
+                    return ($collectible && $collectible->status === 'completed') ? $collectible->name : null;
+                })
+                ->nullable(),
+            Schema\Str::make('showcaseCollectibleRarity')
+                ->get(function (User $user) {
+                    if (!$user->showcase_collectible_id) return null;
+                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
+                    return ($collectible && $collectible->status === 'completed') ? $collectible->rarity : null;
+                })
+                ->nullable(),
+            Schema\Str::make('showcaseCollectibleCid')
+                ->get(function (User $user) {
+                    if (!$user->showcase_collectible_id) return null;
+                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
+                    return ($collectible && $collectible->status === 'completed') ? $collectible->ipfs_cid : null;
+                })
+                ->nullable(),
+        ]),
 
     (new Extend\Model(User::class))
         ->hasMany('collectibles', Model\Collectible::class, 'user_id')
@@ -42,9 +82,6 @@ return [
         ->hasOne('showcaseCollectible', Model\Collectible::class, 'id', 'showcase_collectible_id')
         ->default('blind_box_count', 0)
         ->cast('blind_box_count', 'integer'),
-
-    (new Extend\ApiSerializer(UserSerializer::class))
-        ->attributes(Api\AddUserAttributes::class),
 
     (new Extend\ServiceProvider())
         ->register(Provider\CollectibleServiceProvider::class),

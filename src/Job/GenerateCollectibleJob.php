@@ -43,7 +43,7 @@ class GenerateCollectibleJob implements ShouldQueue
             return;
         }
 
-        $user = User::find($collectible->user_id);
+        $user = User::query()->find($collectible->user_id);
 
         if (!$user) {
             $this->markFailed($collectible, $db);

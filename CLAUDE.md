@@ -8,8 +8,8 @@
 - **Namespace**: `Donk\AigcCollectibles`
 - **Frontend entry**: `js/src/forum.ts`, `js/src/admin.ts`
 - **Backend entry**: `extend.php`
-- **Flarum version**: 1.8+
-- **PHP**: ^8.1
+- **Flarum version**: 2.0+
+- **PHP**: ^8.2
 - **License**: MIT
 
 ## Core Concepts
@@ -27,9 +27,9 @@
 
 | Layer         | Technology                                                            |
 | ------------- | --------------------------------------------------------------------- |
-| Forum Engine  | Flarum 1.8+ (PHP, Laravel components)                                 |
+| Forum Engine  | Flarum 2.0+ (PHP, Laravel 12 components)                              |
 | Backend ORM   | Eloquent (Active Record pattern via `Flarum\Database\AbstractModel`)  |
-| API Protocol  | JSON:API (via Flarum Serializers + Controllers)                       |
+| API Protocol  | JSON:API (via Flarum Resources + Endpoints, based on tobyz/json-api-server) |
 | Frontend      | Mithril.js (Flarum's built-in frontend framework)                     |
 | Database      | MySQL                                                                 |
 | AIGC          | External API (DALL-E / Stable Diffusion / compatible service)         |
@@ -84,7 +84,7 @@ package "Flarum Application Server (PHP)" as server {
     component [Flarum Core Engine] as flarum_core #BBDEFB
     component [IoC Container (Laravel)] as ioc #BBDEFB
     component [Extender Registry\n(extend.php)] as extender_reg #BBDEFB
-    component [JSON:API Layer\n(Serializers, Controllers)] as api_layer #BBDEFB
+    component [JSON:API Layer\n(Resources, Endpoints)] as api_layer #BBDEFB
     component [Event Dispatcher] as event_disp #BBDEFB
     component [Queue Worker\n(Laravel Queue)] as queue_worker #BBDEFB
 
@@ -333,18 +333,12 @@ package "Backend (PHP)" as backend #E8F5E9 {
     }
 
     package "Api" as api #C8E6C9 {
-        package "Controller" {
-            class "CheckinController"
-            class "BlindBoxController"
-            class "CollectibleController"
-            class "TradeController"
-            class "Web3AccountController"
-        }
-        package "Serializer" {
-            class "CollectibleSerializer" { type: "collectibles" }
-            class "TradeSerializer" { type: "trades" }
-            class "CheckinRecordSerializer" { type: "checkin-records" }
-            class "Web3AccountSerializer" { type: "web3-accounts" }
+        package "Resource" {
+            class "CollectibleResource" { type: "collectibles" }
+            class "TradeResource" { type: "trades" }
+            class "CheckinRecordResource" { type: "checkin-records" }
+            class "Web3AccountResource" { type: "web3-accounts" }
+            class "CollectibleEventResource" { type: "collectible-events" }
         }
     }
 
@@ -981,11 +975,23 @@ users ||--o{ events : "event source"
 **Extender System**: All backend registration goes through `extend.php`. Key extenders:
 
 - `Extend\Frontend('forum')` — register JS/CSS assets
-- `Extend\Routes('api')` — register API routes
+- `Extend\ApiResource(CollectibleResource::class)` — register a new Resource (auto-registers routes)
+- `Extend\ApiResource(UserResource::class)->fields(...)` — add fields to an existing Resource
 - `Extend\Model(User::class)` — add casts, defaults, relationships to existing models
-- `Extend\ApiSerializer(UserSerializer::class)` — expose new fields to JSON:API
+- `Extend\Routes('api')` — register custom non-Resource routes (rarely needed)
 - `Extend\ServiceProvider` — register services into IoC container
 - `Extend\Event` — subscribe to domain events
+
+**Resource Layer** (Flarum 2.x JSON:API):
+
+- Each API entity is a Resource class extending `Flarum\Api\Resource\AbstractDatabaseResource`
+- A single Resource replaces the old Controller + Serializer pair
+- Resources define: `type()`, `model()`, `endpoints()`, `fields()`, `sorts()`, `scope()`
+- Endpoints: `Endpoint\Index`, `Endpoint\Show`, `Endpoint\Create`, `Endpoint\Update`, `Endpoint\Delete`, `Endpoint\Endpoint` (custom)
+- Fields: `Schema\Str`, `Schema\Integer`, `Schema\Boolean`, `Schema\DateTime`, `Schema\Arr`
+- Relationships: `Schema\Relationship\ToOne`, `Schema\Relationship\ToMany`
+- Routes are auto-registered based on `type()` — e.g. type `'collectibles'` → `/api/collectibles`
+- Lifecycle hooks: `creating()`, `updating()`, `deleting()`, `saving()`, `saved()`, etc.
 
 **Model Layer** (Eloquent Active Record):
 
@@ -995,9 +1001,9 @@ users ||--o{ events : "event source"
 - Use `Migration::createTable()` helper (returns `['up' => fn, 'down' => fn]` array)
 - Migration naming: `YYYY_MM_DD_HHMMSS_snake_case_description.php`
 
-**CQRS Command Pattern**: Controllers dispatch Command objects, Handler classes process them. This decouples HTTP handling from business logic.
+**CQRS Command Pattern**: Resource endpoint actions dispatch Command objects, Handler classes process them. This decouples API handling from business logic.
 
-**JSON:API Protocol**: All API responses follow strict JSON:API spec. Serializers transform models into API-consumable format. Frontend uses `app.store` to cache and access model instances.
+**JSON:API Protocol**: All API responses follow strict JSON:API spec via `tobyz/json-api-server`. Resources define field schemas that automatically serialize models. Frontend uses `app.store` to cache and access model instances.
 
 ### Frontend Architecture Patterns
 
@@ -1086,17 +1092,12 @@ donk/flarum-ext-aigc-collectibles/
 │   │   ├── TradePolicy.php
 │   │   └── CheckinPolicy.php
 │   ├── Api/
-│   │   ├── Controller/
-│   │   │   ├── CheckinController.php
-│   │   │   ├── BlindBoxController.php
-│   │   │   ├── CollectibleController.php
-│   │   │   ├── TradeController.php
-│   │   │   └── Web3AccountController.php
-│   │   └── Serializer/
-│   │       ├── CollectibleSerializer.php
-│   │       ├── TradeSerializer.php
-│   │       ├── CheckinRecordSerializer.php
-│   │       └── Web3AccountSerializer.php
+│   │   └── Resource/
+│   │       ├── CollectibleResource.php
+│   │       ├── TradeResource.php
+│   │       ├── CheckinRecordResource.php
+│   │       ├── Web3AccountResource.php
+│   │       └── CollectibleEventResource.php
 │   ├── Command/
 │   │   ├── Checkin.php
 │   │   ├── CheckinHandler.php
