@@ -6,3 +6,4 @@ chain
 tests/.phpunit.cache
 js/node_modules
 js/dist
+js/assets

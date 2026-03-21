@@ -1,5 +1,7 @@
+import Extend from 'flarum/common/extenders';
 import app from 'flarum/forum/app';
-import { extend } from 'flarum/common/extend';
+import { extend as flarumExtend } from 'flarum/common/extend';
+import User from 'flarum/common/models/User';
 import HeaderSecondary from 'flarum/forum/components/HeaderSecondary';
 import UserPage from 'flarum/forum/components/UserPage';
 import PostUser from 'flarum/forum/components/PostUser';
@@ -12,21 +14,33 @@ import CheckinRecord from './forum/models/CheckinRecord';
 import CheckinButton from './forum/components/CheckinButton';
 import PostCollectibleBadge from './forum/components/PostCollectibleBadge';
 import BlindBoxOpener from './forum/components/BlindBoxOpener';
-import CollectibleGallery from './forum/components/CollectibleGallery';
-import TradePanel from './forum/components/TradePanel';
-import WalletConnector from './forum/components/WalletConnector';
 import UserCollectiblesPage from './forum/components/UserCollectiblesPage';
 
-import { connect as wsConnect, subscribe, unsubscribe } from './forum/utils/notifications';
+import { connect as wsConnect, subscribe } from './forum/utils/notifications';
+
+export const extend = [
+  new Extend.Store()
+    .add('collectibles', Collectible)
+    .add('trades', Trade)
+    .add('checkin-records', CheckinRecord),
+
+  new Extend.Routes()
+    .add('user.collectibles', '/u/:username/collectibles', UserCollectiblesPage),
+
+  new Extend.Model(User)
+    .attribute<number>('blindBoxCount')
+    .attribute<string>('lastCheckinAt')
+    .attribute<number>('showcaseCollectibleId')
+    .attribute<string>('showcaseCollectibleName')
+    .attribute<string>('showcaseCollectibleCid')
+    .attribute<string>('showcaseCollectibleRarity')
+    .attribute<string>('web3Address')
+    .attribute<string>('web3AccountId'),
+];
 
 app.initializers.add('donk-aigc-collectibles', () => {
-  // Register models with the store
-  app.store.models.collectibles = Collectible;
-  app.store.models.trades = Trade;
-  app.store.models['checkin-records'] = CheckinRecord;
-
   // Add check-in button to header
-  extend(HeaderSecondary.prototype, 'items', function (items: any) {
+  flarumExtend(HeaderSecondary.prototype, 'items', function (items: any) {
     if (app.session.user) {
       items.add(
         'donk-aigc-collectibles-checkin',
@@ -50,7 +64,7 @@ app.initializers.add('donk-aigc-collectibles', () => {
   });
 
   // Add collectible badge next to post author
-  extend(PostUser.prototype, 'view', function (vnode: any) {
+  flarumExtend(PostUser.prototype, 'view', function (vnode: any) {
     if (!vnode || !this.attrs.post) return;
 
     const user = this.attrs.post.user();
@@ -59,7 +73,6 @@ app.initializers.add('donk-aigc-collectibles', () => {
     const showcaseId = user.attribute('showcaseCollectibleId');
     if (!showcaseId) return;
 
-    // Ensure vnode.children is an array we can append to
     if (!vnode.children) {
       vnode.children = [];
     }
@@ -70,7 +83,7 @@ app.initializers.add('donk-aigc-collectibles', () => {
   });
 
   // Add collectibles tab to user profile
-  extend(UserPage.prototype, 'navItems', function (items: any) {
+  flarumExtend(UserPage.prototype, 'navItems', function (items: any) {
     const user = this.user;
     if (!user) return;
 
@@ -83,32 +96,25 @@ app.initializers.add('donk-aigc-collectibles', () => {
     );
   });
 
-  // Register user profile route for collectibles
-  app.routes['user.collectibles'] = {
-    path: '/u/:username/collectibles',
-    component: UserCollectiblesPage,
-  };
-
   // Connect WebSocket for real-time notifications
   if (app.session.user) {
     wsConnect();
 
-    // Listen for trade notifications
-    subscribe('trade.created', (data: any) => {
+    subscribe('trade.created', () => {
       app.alerts.show(
         { type: 'info' },
         app.translator.trans('donk-aigc-collectibles.forum.trade.notification_received')
       );
     });
 
-    subscribe('trade.accepted', (data: any) => {
+    subscribe('trade.accepted', () => {
       app.alerts.show(
         { type: 'success' },
         app.translator.trans('donk-aigc-collectibles.forum.trade.notification_accepted')
       );
     });
 
-    subscribe('trade.rejected', (data: any) => {
+    subscribe('trade.rejected', () => {
       app.alerts.show(
         { type: 'info' },
         app.translator.trans('donk-aigc-collectibles.forum.trade.notification_rejected')

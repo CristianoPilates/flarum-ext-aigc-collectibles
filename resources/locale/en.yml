@@ -57,30 +57,7 @@ donk-aigc-collectibles:
       # Submit
       submit_button: Save Settings
 
-      # Section headings used by admin settings page
-      section_aigc: AIGC Image Generation
-      section_ipfs: IPFS Storage
-      section_blockchain: Blockchain & NFT
-      section_rarity: Rarity Weights
-
-      # Keys used by admin.ts registerSetting
-      checkin_reward_label: Check-in Reward Amount
-      checkin_reward_help: Number of blind boxes awarded per daily check-in.
-      aigc_enabled_help: Enable or disable the AIGC image generation feature.
-      aigc_endpoint_label: AIGC API Endpoint
-      aigc_model_label: AIGC Model
-      aigc_prompt_template_label: Default Prompt Template
-      aigc_prompt_template_help: "Base prompt template for collectible generation. Use {rarity} as a placeholder."
-      ipfs_endpoint_label: IPFS API Endpoint
-      ipfs_api_key_label: IPFS API Key
-      ipfs_gateway_label: IPFS Gateway URL
-      blockchain_enabled_help: Enable or disable NFT minting on the blockchain.
-      blockchain_private_key_help: Private key of the wallet authorized to mint NFTs. Keep this secret.
-      rarity_common_label: Common Weight
-      rarity_rare_label: Rare Weight
-      rarity_epic_label: Epic Weight
-      rarity_legendary_label: Legendary Weight
-      rarity_weights_help: "Relative weights for each rarity tier. They are normalized automatically."
+      # WebSocket settings
       ws_url_label: WebSocket URL
       ws_url_help: WebSocket server URL for real-time notifications (optional).
 

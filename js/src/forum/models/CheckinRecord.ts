@@ -1,8 +1,15 @@
 import Model from 'flarum/common/Model';
+import User from 'flarum/common/models/User';
 
 export default class CheckinRecord extends Model {
-  rewardAmount = Model.attribute<number>('rewardAmount');
-  checkedInAt = Model.attribute('checkedInAt', Model.transformDate);
+  rewardAmount() {
+    return Model.attribute<number>('rewardAmount').call(this);
+  }
+  checkedInAt() {
+    return Model.attribute('checkedInAt', Model.transformDate).call(this);
+  }
 
-  user = Model.hasOne<any>('user');
+  user() {
+    return Model.hasOne<User>('user').call(this);
+  }
 }

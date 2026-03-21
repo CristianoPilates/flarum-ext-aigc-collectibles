@@ -45,6 +45,7 @@ export default class BlindBoxOpener extends Modal {
 
   onremove(vnode: any) {
     super.onremove(vnode);
+    this.stopPolling();
     if (this.wsHandler) {
       unsubscribe('collectible.ready', this.wsHandler);
     }

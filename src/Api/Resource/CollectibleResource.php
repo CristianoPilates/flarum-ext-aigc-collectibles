@@ -121,7 +121,7 @@ class CollectibleResource extends AbstractDatabaseResource
         ];
     }
 
-    public function updating(object $model, Context $context): ?object
+    public function updating(object $model, \Tobyz\JsonApiServer\Context $context): ?object
     {
         $data = $context->body();
         $isShowcase = $data['data']['attributes']['isShowcase'] ?? null;

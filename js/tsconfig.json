@@ -1,5 +1,5 @@
 {
-  "extends": "@flarum/tsconfig",
+  "extends": "flarum-tsconfig",
   "compilerOptions": {
     "declarationDir": "./dist-typings",
     "baseUrl": ".",
