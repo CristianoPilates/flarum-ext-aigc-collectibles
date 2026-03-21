@@ -4,7 +4,7 @@ namespace Donk\AigcCollectibles\Api\Resource;
 
 use Donk\AigcCollectibles\Command\BindWallet;
 use Donk\AigcCollectibles\Model\Web3Account;
-use Donk\AigcCollectibles\Service\BlockchainService;
+use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
@@ -21,7 +21,7 @@ class Web3AccountResource extends AbstractDatabaseResource
 {
     public function __construct(
         protected Dispatcher $bus,
-        protected BlockchainService $blockchainService,
+        protected BlockchainServiceInterface $blockchainService,
     ) {
     }
 
@@ -54,7 +54,7 @@ class Web3AccountResource extends AbstractDatabaseResource
                 ->authenticated()
                 ->action(function (Context $context) {
                     $data = $context->body();
-                    $data['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $data['domain'] = $context->request->getUri()->getHost() ?: 'localhost';
 
                     return $this->bus->dispatch(
                         new BindWallet($context->getActor(), $data)
@@ -89,7 +89,7 @@ class Web3AccountResource extends AbstractDatabaseResource
                 ->authenticated()
                 ->action(function (Context $context) {
                     $nonce = $this->blockchainService->generateNonce();
-                    $domain = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $domain = $context->request->getUri()->getHost() ?: 'localhost';
                     $message = $this->blockchainService->buildSignMessage($nonce, $domain);
 
                     return [

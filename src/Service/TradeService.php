@@ -8,6 +8,8 @@ use Donk\AigcCollectibles\Event\TradeCreated;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\CollectibleEvent;
 use Donk\AigcCollectibles\Model\Trade;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\TradeServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -20,10 +22,10 @@ use Illuminate\Database\ConnectionInterface;
  * for a seller's specific collectible. The seller can accept, reject,
  * or the buyer can cancel while the trade is still pending.
  */
-class TradeService
+class TradeService implements TradeServiceInterface
 {
     public function __construct(
-        protected BlindBoxService $blindBoxService,
+        protected BlindBoxServiceInterface $blindBoxService,
         protected ConnectionInterface $db,
         protected Dispatcher $events
     ) {}

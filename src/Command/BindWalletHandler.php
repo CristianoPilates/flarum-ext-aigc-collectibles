@@ -4,7 +4,7 @@ namespace Donk\AigcCollectibles\Command;
 
 use Donk\AigcCollectibles\Event\WalletBound;
 use Donk\AigcCollectibles\Model\Web3Account;
-use Donk\AigcCollectibles\Service\BlockchainService;
+use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
 use Donk\AigcCollectibles\Validator\Web3LoginValidator;
 use Flarum\Foundation\ValidationException;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -12,12 +12,12 @@ use Illuminate\Support\Arr;
 
 class BindWalletHandler
 {
-    protected BlockchainService $blockchainService;
+    protected BlockchainServiceInterface $blockchainService;
     protected Web3LoginValidator $validator;
     protected Dispatcher $events;
 
     public function __construct(
-        BlockchainService $blockchainService,
+        BlockchainServiceInterface $blockchainService,
         Web3LoginValidator $validator,
         Dispatcher $events
     ) {
@@ -63,7 +63,7 @@ class BindWalletHandler
             ]);
         }
 
-        $message = $this->blockchainService->buildSignMessage($nonce, $data['HTTP_HOST'] ?? $_SERVER['HTTP_HOST'] ?? 'localhost');
+        $message = $this->blockchainService->buildSignMessage($nonce, $data['domain'] ?? 'localhost');
 
         if (!$this->blockchainService->verifySignature($message, $signature, $address)) {
             throw new ValidationException([

@@ -2,12 +2,13 @@
 
 namespace Donk\AigcCollectibles\Service;
 
+use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use RuntimeException;
 
-class IPFSService
+class IPFSService implements IPFSServiceInterface
 {
     protected Client $client;
 

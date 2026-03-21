@@ -2,10 +2,7 @@
 
 namespace Donk\AigcCollectibles;
 
-use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Service\CheckinService;
 use Flarum\Api\Resource\UserResource;
-use Flarum\Api\Schema;
 use Flarum\Extend;
 use Flarum\User\User;
 
@@ -28,49 +25,7 @@ return [
 
     // Extend UserResource with collectible-related fields
     (new Extend\ApiResource(UserResource::class))
-        ->fields(fn () => [
-            Schema\Integer::make('blindBoxCount')
-                ->property('blind_box_count'),
-            Schema\DateTime::make('lastCheckinAt')
-                ->property('last_checkin_at')
-                ->nullable(),
-            Schema\Integer::make('showcaseCollectibleId')
-                ->property('showcase_collectible_id')
-                ->nullable(),
-            Schema\Boolean::make('canCheckin')
-                ->visible(fn (User $user, $context) => $context->getActor()->id === $user->id)
-                ->get(function (User $user) {
-                    $checkinService = resolve(CheckinService::class);
-                    return !$checkinService->hasCheckedInToday($user);
-                }),
-            Schema\Boolean::make('hasCheckedInToday')
-                ->visible(fn (User $user, $context) => $context->getActor()->id === $user->id)
-                ->get(function (User $user) {
-                    $checkinService = resolve(CheckinService::class);
-                    return $checkinService->hasCheckedInToday($user);
-                }),
-            Schema\Str::make('showcaseCollectibleName')
-                ->get(function (User $user) {
-                    if (!$user->showcase_collectible_id) return null;
-                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
-                    return ($collectible && $collectible->status === 'completed') ? $collectible->name : null;
-                })
-                ->nullable(),
-            Schema\Str::make('showcaseCollectibleRarity')
-                ->get(function (User $user) {
-                    if (!$user->showcase_collectible_id) return null;
-                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
-                    return ($collectible && $collectible->status === 'completed') ? $collectible->rarity : null;
-                })
-                ->nullable(),
-            Schema\Str::make('showcaseCollectibleCid')
-                ->get(function (User $user) {
-                    if (!$user->showcase_collectible_id) return null;
-                    $collectible = Collectible::query()->find($user->showcase_collectible_id);
-                    return ($collectible && $collectible->status === 'completed') ? $collectible->ipfs_cid : null;
-                })
-                ->nullable(),
-        ]),
+        ->fields(Api\UserResourceFields::class),
 
     (new Extend\Model(User::class))
         ->hasMany('collectibles', Model\Collectible::class, 'user_id')

@@ -4,14 +4,14 @@ namespace Donk\AigcCollectibles\Command;
 
 use Donk\AigcCollectibles\Model\Trade;
 use Donk\AigcCollectibles\Repository\TradeRepository;
-use Donk\AigcCollectibles\Service\TradeService;
+use Donk\AigcCollectibles\Service\Contracts\TradeServiceInterface;
 
 class CancelTradeHandler
 {
-    protected TradeService $tradeService;
+    protected TradeServiceInterface $tradeService;
     protected TradeRepository $tradeRepository;
 
-    public function __construct(TradeService $tradeService, TradeRepository $tradeRepository)
+    public function __construct(TradeServiceInterface $tradeService, TradeRepository $tradeRepository)
     {
         $this->tradeService = $tradeService;
         $this->tradeRepository = $tradeRepository;

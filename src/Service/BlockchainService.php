@@ -2,18 +2,24 @@
 
 namespace Donk\AigcCollectibles\Service;
 
+use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
 use Elliptic\EC;
 use Flarum\Settings\SettingsRepositoryInterface;
+use GuzzleHttp\Client;
 use kornrunner\Keccak;
 use RuntimeException;
 
-class BlockchainService
+class BlockchainService implements BlockchainServiceInterface
 {
     protected SettingsRepositoryInterface $settings;
+    protected Client $client;
 
-    public function __construct(SettingsRepositoryInterface $settings)
-    {
+    public function __construct(
+        SettingsRepositoryInterface $settings,
+        ?Client $client = null
+    ) {
         $this->settings = $settings;
+        $this->client = $client ?? new Client(['timeout' => 30]);
     }
 
     public function verifySignature(string $message, string $signature, string $expectedAddress): bool
@@ -152,9 +158,7 @@ class BlockchainService
 
     protected function rpcCall(string $rpcUrl, string $method, array $params)
     {
-        $client = new \GuzzleHttp\Client(['timeout' => 30]);
-
-        $response = $client->post($rpcUrl, [
+        $response = $this->client->post($rpcUrl, [
             'json' => [
                 'jsonrpc' => '2.0',
                 'method' => $method,

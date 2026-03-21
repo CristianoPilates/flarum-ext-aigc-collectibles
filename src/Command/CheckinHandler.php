@@ -3,13 +3,13 @@
 namespace Donk\AigcCollectibles\Command;
 
 use Donk\AigcCollectibles\Model\CheckinRecord;
-use Donk\AigcCollectibles\Service\CheckinService;
+use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 
 class CheckinHandler
 {
-    protected CheckinService $checkinService;
+    protected CheckinServiceInterface $checkinService;
 
-    public function __construct(CheckinService $checkinService)
+    public function __construct(CheckinServiceInterface $checkinService)
     {
         $this->checkinService = $checkinService;
     }

@@ -3,16 +3,16 @@
 namespace Donk\AigcCollectibles\Command;
 
 use Donk\AigcCollectibles\Model\Trade;
-use Donk\AigcCollectibles\Service\TradeService;
+use Donk\AigcCollectibles\Service\Contracts\TradeServiceInterface;
 use Donk\AigcCollectibles\Validator\TradeValidator;
 use Illuminate\Support\Arr;
 
 class CreateTradeHandler
 {
-    protected TradeService $tradeService;
+    protected TradeServiceInterface $tradeService;
     protected TradeValidator $validator;
 
-    public function __construct(TradeService $tradeService, TradeValidator $validator)
+    public function __construct(TradeServiceInterface $tradeService, TradeValidator $validator)
     {
         $this->tradeService = $tradeService;
         $this->validator = $validator;

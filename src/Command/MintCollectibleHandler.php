@@ -7,8 +7,8 @@ use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\CollectibleEvent;
 use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
-use Donk\AigcCollectibles\Service\BlockchainService;
-use Donk\AigcCollectibles\Service\IPFSService;
+use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Illuminate\Contracts\Events\Dispatcher;
 use RuntimeException;
@@ -16,14 +16,14 @@ use RuntimeException;
 class MintCollectibleHandler
 {
     protected CollectibleRepository $collectibleRepository;
-    protected BlockchainService $blockchainService;
-    protected IPFSService $ipfsService;
+    protected BlockchainServiceInterface $blockchainService;
+    protected IPFSServiceInterface $ipfsService;
     protected Dispatcher $events;
 
     public function __construct(
         CollectibleRepository $collectibleRepository,
-        BlockchainService $blockchainService,
-        IPFSService $ipfsService,
+        BlockchainServiceInterface $blockchainService,
+        IPFSServiceInterface $ipfsService,
         Dispatcher $events
     ) {
         $this->collectibleRepository = $collectibleRepository;

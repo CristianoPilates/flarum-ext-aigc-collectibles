@@ -5,17 +5,19 @@ namespace Donk\AigcCollectibles\Service;
 use Carbon\Carbon;
 use Donk\AigcCollectibles\Event\CheckedIn;
 use Donk\AigcCollectibles\Model\CheckinRecord;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 
-class CheckinService
+class CheckinService implements CheckinServiceInterface
 {
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected BlindBoxService $blindBoxService,
+        protected BlindBoxServiceInterface $blindBoxService,
         protected ConnectionInterface $db,
         protected Dispatcher $events
     ) {}

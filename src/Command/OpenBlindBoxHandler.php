@@ -6,7 +6,7 @@ use Donk\AigcCollectibles\Event\BlindBoxOpened;
 use Donk\AigcCollectibles\Job\GenerateCollectibleJob;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\CollectibleEvent;
-use Donk\AigcCollectibles\Service\BlindBoxService;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\Queue;
@@ -14,14 +14,14 @@ use Illuminate\Database\ConnectionInterface;
 
 class OpenBlindBoxHandler
 {
-    protected BlindBoxService $blindBoxService;
+    protected BlindBoxServiceInterface $blindBoxService;
     protected SettingsRepositoryInterface $settings;
     protected ConnectionInterface $db;
     protected Queue $queue;
     protected Dispatcher $events;
 
     public function __construct(
-        BlindBoxService $blindBoxService,
+        BlindBoxServiceInterface $blindBoxService,
         SettingsRepositoryInterface $settings,
         ConnectionInterface $db,
         Queue $queue,

@@ -5,12 +5,13 @@ namespace Donk\AigcCollectibles\Job;
 use Donk\AigcCollectibles\Event\CollectibleGenerated;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\Web3Account;
-use Donk\AigcCollectibles\Service\AIGCService;
-use Donk\AigcCollectibles\Service\BlockchainService;
-use Donk\AigcCollectibles\Service\IPFSService;
+use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Queue\InteractsWithQueue;
@@ -31,11 +32,12 @@ class GenerateCollectibleJob implements ShouldQueue
     }
 
     public function handle(
-        AIGCService $aigcService,
-        IPFSService $ipfsService,
-        BlockchainService $blockchainService,
+        AIGCServiceInterface $aigcService,
+        IPFSServiceInterface $ipfsService,
+        BlockchainServiceInterface $blockchainService,
         SettingsRepositoryInterface $settings,
-        ConnectionInterface $db
+        ConnectionInterface $db,
+        Dispatcher $events
     ): void {
         $collectible = Collectible::query()->find($this->collectibleId);
 
@@ -92,8 +94,7 @@ class GenerateCollectibleJob implements ShouldQueue
             $collectible->status = 'completed';
             $collectible->save();
 
-            resolve(\Illuminate\Contracts\Events\Dispatcher::class)
-                ->dispatch(new CollectibleGenerated($user, $collectible));
+            $events->dispatch(new CollectibleGenerated($user, $collectible));
 
         } catch (\Throwable $e) {
             if ($this->attempts() >= $this->tries) {

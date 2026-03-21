@@ -2,11 +2,12 @@
 
 namespace Donk\AigcCollectibles\Service;
 
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Flarum\User\User;
 use Illuminate\Database\ConnectionInterface;
 
-class BlindBoxService
+class BlindBoxService implements BlindBoxServiceInterface
 {
     public function __construct(protected ConnectionInterface $db) {}
 

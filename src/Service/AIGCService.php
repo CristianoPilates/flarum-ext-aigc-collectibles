@@ -2,6 +2,7 @@
 
 namespace Donk\AigcCollectibles\Service;
 
+use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -13,7 +14,7 @@ use RuntimeException;
  * This service enhances the input prompt based on rarity, sends an image generation
  * request, and returns the decoded binary image content.
  */
-class AIGCService
+class AIGCService implements AIGCServiceInterface
 {
     protected Client $client;
 
