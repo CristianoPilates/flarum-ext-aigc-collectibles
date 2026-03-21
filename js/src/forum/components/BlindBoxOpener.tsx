@@ -54,7 +54,7 @@ export default class BlindBoxOpener extends Modal {
   private wsHandler: ((data: any) => void) | null = null;
 
   content() {
-    const user = app.session.user;
+    const user = app.session?.user;
     if (!user) return null;
 
     const blindBoxCount = user.attribute<number>('blindBoxCount') || 0;
@@ -188,7 +188,7 @@ export default class BlindBoxOpener extends Modal {
         }
 
         // Update user's blind box count
-        const user = app.session.user;
+        const user = app.session?.user;
         if (user && response?.data?.attributes) {
           const currentCount = user.attribute<number>('blindBoxCount') || 0;
           user.pushAttributes({ blindBoxCount: Math.max(0, currentCount - 1) });

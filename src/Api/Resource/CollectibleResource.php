@@ -51,7 +51,7 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->defaultInclude(['user', 'originalUser']),
 
             Endpoint\Endpoint::make('generate')
-                ->route('POST', '/')
+                ->route('POST', '/generate')
                 ->authenticated()
                 ->action(function (Context $context) {
                     return $this->bus->dispatch(

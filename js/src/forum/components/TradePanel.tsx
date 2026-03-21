@@ -29,7 +29,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
   }
 
   view() {
-    const currentUser = app.session.user;
+    const currentUser = app.session?.user;
     if (!currentUser) return null;
 
     const isOwnProfile = this.attrs.user && this.attrs.user.id() === currentUser.id();
@@ -81,7 +81,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
   }
 
   viewTradeItem(trade: any) {
-    const currentUser = app.session.user;
+    const currentUser = app.session?.user;
     if (!currentUser) return null;
 
     const status = trade.status();
@@ -156,7 +156,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
   }
 
   filteredTrades(): any[] {
-    const currentUser = app.session.user;
+    const currentUser = app.session?.user;
     if (!currentUser) return [];
 
     return this.trades.filter((trade: any) => {

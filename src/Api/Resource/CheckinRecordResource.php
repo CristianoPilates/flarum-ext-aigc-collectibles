@@ -34,7 +34,7 @@ class CheckinRecordResource extends AbstractDatabaseResource
     {
         return [
             Endpoint\Endpoint::make('checkin')
-                ->route('POST', '/')
+                ->route('POST', '/checkin')
                 ->authenticated()
                 ->action(function (Context $context) {
                     return $this->bus->dispatch(

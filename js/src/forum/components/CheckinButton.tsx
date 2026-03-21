@@ -14,7 +14,7 @@ export default class CheckinButton extends Component {
   }
 
   view() {
-    const user = app.session.user;
+    const user = app.session?.user;
     if (!user) return null;
 
     const blindBoxCount = user.attribute<number>('blindBoxCount') || 0;
@@ -43,7 +43,7 @@ export default class CheckinButton extends Component {
   hasCheckedInToday(): boolean {
     if (this.justCheckedIn) return true;
 
-    const user = app.session.user;
+    const user = app.session?.user;
     if (!user) return false;
 
     const lastCheckin = user.attribute<string>('lastCheckinAt');
@@ -67,14 +67,14 @@ export default class CheckinButton extends Component {
     app
       .request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/checkin',
+        url: app.forum.attribute('apiUrl') + '/checkin-records/checkin',
       })
       .then((response: any) => {
         this.loading = false;
         this.justCheckedIn = true;
 
         // Update user attributes in store
-        const user = app.session.user;
+        const user = app.session?.user;
         if (user && response?.data?.attributes) {
           user.pushAttributes({
             blindBoxCount: response.data.attributes.blindBoxCount,

@@ -18,7 +18,7 @@ export default class UserCollectiblesPage extends UserPage {
       return <LoadingIndicator />;
     }
 
-    const isOwnProfile = app.session.user && app.session.user.id() === user.id();
+    const isOwnProfile = app.session?.user && app.session?.user.id() === user.id();
 
     return (
       <div className="UserCollectiblesPage">

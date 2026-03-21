@@ -31,7 +31,7 @@ export default class TradeRequestModal extends Modal {
     if (!collectible) return null;
 
     const owner = collectible.user();
-    const user = app.session.user;
+    const user = app.session?.user;
     const blindBoxCount = user ? user.attribute<number>('blindBoxCount') || 0 : 0;
 
     return (

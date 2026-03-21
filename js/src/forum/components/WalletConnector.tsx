@@ -20,7 +20,7 @@ export default class WalletConnector extends Component {
   }
 
   view() {
-    const user = app.session.user;
+    const user = app.session?.user;
     if (!user) return null;
 
     const isOwnProfile = this.attrs.user && this.attrs.user.id() === user.id();
@@ -45,7 +45,7 @@ export default class WalletConnector extends Component {
   }
 
   viewBound() {
-    const isOwn = this.attrs.user && app.session.user && this.attrs.user.id() === app.session.user.id();
+    const isOwn = this.attrs.user && app.session?.user && this.attrs.user.id() === app.session?.user.id();
 
     return (
       <div className="WalletConnector-bound">
@@ -133,7 +133,7 @@ export default class WalletConnector extends Component {
 
       const nonceResponse: any = await app.request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/web3/nonce',
+        url: app.forum.attribute('apiUrl') + '/web3-accounts/nonce',
         body: {
           data: {
             type: 'web3-nonce',
@@ -154,7 +154,7 @@ export default class WalletConnector extends Component {
 
       const verifyResponse: any = await app.request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/web3/accounts',
+        url: app.forum.attribute('apiUrl') + '/web3-accounts',
         body: {
           data: {
             type: 'web3-accounts',
@@ -173,7 +173,7 @@ export default class WalletConnector extends Component {
       this.loading = false;
 
       // Update user attributes
-      const user = app.session.user;
+      const user = app.session?.user;
       if (user) {
         user.pushAttributes({ web3Address: address });
       }
@@ -203,14 +203,14 @@ export default class WalletConnector extends Component {
     app
       .request({
         method: 'DELETE',
-        url: app.forum.attribute('apiUrl') + '/web3/accounts/' + this.walletId,
+        url: app.forum.attribute('apiUrl') + '/web3-accounts/' + this.walletId,
       })
       .then(() => {
         this.walletAddress = null;
         this.walletId = null;
         this.loading = false;
 
-        const user = app.session.user;
+        const user = app.session?.user;
         if (user) {
           user.pushAttributes({ web3Address: null, web3AccountId: null });
         }
