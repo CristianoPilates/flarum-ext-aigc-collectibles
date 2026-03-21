@@ -31,29 +31,29 @@
     };
   };
 
-  # services.mysql = {
-  #   enable = true;
-  #   package = pkgs.mysql84;
-  #   settings.mysqld = {
-  #     default-storage-engine = "InnoDB";
-  #     bind-address = "127.0.0.1";
-  #     port = 3306;
-  #   };
-  #   initialDatabases = [
-  #     { name = "flarum"; }
-  #     { name = "flarum_test"; }
-  #   ];
-  #   ensureUsers = [
-  #     {
-  #       name = "flarum";
-  #       password = "flarum";
-  #       ensurePermissions = {
-  #         "flarum.*" = "ALL PRIVILEGES";
-  #         "flarum_test.*" = "ALL PRIVILEGES";
-  #       };
-  #     }
-  #   ];
-  # };
+  services.mysql = {
+    enable = true;
+    package = pkgs.mysql84;
+    settings.mysqld = {
+      default-storage-engine = "InnoDB";
+      bind-address = "127.0.0.1";
+      port = 3306;
+    };
+    initialDatabases = [
+      { name = "flarum"; }
+      { name = "flarum_test"; }
+    ];
+    ensureUsers = [
+      {
+        name = "flarum";
+        password = "flarum";
+        ensurePermissions = {
+          "flarum.*" = "ALL PRIVILEGES";
+          "flarum_test.*" = "ALL PRIVILEGES";
+        };
+      }
+    ];
+  };
 
   enterShell = ''
     export IPFS_PATH="$DEVENV_STATE/ipfs"
@@ -89,4 +89,8 @@
 
   # one-shot: 幂等确保合约已部署
   processes.contract-ensure.exec = "bash scripts/ensure-contract.sh";
+
+  processes.forum.exec = ''
+    php -S 127.0.0.1:8080 -t /home/donk/development/flarum-site/public/
+  '';
 }
