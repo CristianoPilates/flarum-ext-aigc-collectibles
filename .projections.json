@@ -1,0 +1,118 @@
+{
+  "extend.php": {
+    "type": "source",
+    "alternate": "tests/integration/ExtendTest.php"
+  },
+  "tests/integration/ExtendTest.php": {
+    "type": "test",
+    "alternate": "extend.php"
+  },
+
+  "src/Access/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Access/{}Test.php"
+  },
+  "tests/unit/Access/*Test.php": {
+    "type": "test",
+    "alternate": "src/Access/{}.php"
+  },
+
+  "src/Api/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Api/{}Test.php"
+  },
+  "tests/unit/Api/*Test.php": {
+    "type": "test",
+    "alternate": "src/Api/{}.php"
+  },
+
+  "src/Api/Controller/*.php": {
+    "type": "source",
+    "alternate": "tests/integration/Api/Controller/{}Test.php"
+  },
+  "tests/integration/Api/Controller/*Test.php": {
+    "type": "test",
+    "alternate": "src/Api/Controller/{}.php"
+  },
+
+  "src/Api/Serializer/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Api/Serializer/{}Test.php"
+  },
+  "tests/unit/Api/Serializer/*Test.php": {
+    "type": "test",
+    "alternate": "src/Api/Serializer/{}.php"
+  },
+
+  "src/Command/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Command/{}Test.php"
+  },
+  "tests/unit/Command/*Test.php": {
+    "type": "test",
+    "alternate": "src/Command/{}.php"
+  },
+
+  "src/Event/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Event/{}Test.php"
+  },
+  "tests/unit/Event/*Test.php": {
+    "type": "test",
+    "alternate": "src/Event/{}.php"
+  },
+
+  "src/Job/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Job/{}Test.php"
+  },
+  "tests/unit/Job/*Test.php": {
+    "type": "test",
+    "alternate": "src/Job/{}.php"
+  },
+
+  "src/Model/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Model/{}Test.php"
+  },
+  "tests/unit/Model/*Test.php": {
+    "type": "test",
+    "alternate": "src/Model/{}.php"
+  },
+
+  "src/Provider/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Provider/{}Test.php"
+  },
+  "tests/unit/Provider/*Test.php": {
+    "type": "test",
+    "alternate": "src/Provider/{}.php"
+  },
+
+  "src/Repository/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Repository/{}Test.php"
+  },
+  "tests/unit/Repository/*Test.php": {
+    "type": "test",
+    "alternate": "src/Repository/{}.php"
+  },
+
+  "src/Service/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Service/{}Test.php"
+  },
+  "tests/unit/Service/*Test.php": {
+    "type": "test",
+    "alternate": "src/Service/{}.php"
+  },
+
+  "src/Validator/*.php": {
+    "type": "source",
+    "alternate": "tests/unit/Validator/{}Test.php"
+  },
+  "tests/unit/Validator/*Test.php": {
+    "type": "test",
+    "alternate": "src/Validator/{}.php"
+  }
+}

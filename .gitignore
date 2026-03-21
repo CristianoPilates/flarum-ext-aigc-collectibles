@@ -1,3 +1,6 @@
 vendor
 .devenv
 CLAUDE.md
+.env
+chain
+tests/.phpunit.cache

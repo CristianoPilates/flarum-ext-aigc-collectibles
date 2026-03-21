@@ -37,27 +37,106 @@ class Collectible extends AbstractModel
 
     public $timestamps = true;
 
+    /* 去数据库里读取这些字段时, Laravel 会先根据cast自动做数据类型转换, 再返回 */
     protected $casts = [
         'generation_params' => 'array',
         'times_traded' => 'integer',
         'token_id' => 'integer',
     ];
 
+    public int $id;
+
+    public int $user_id;
+
+    public int $original_user_id;
+
+    public string $name;
+
+    /**
+     * @var string|null
+     */
+    public $ipfs_cid;
+
+    /**
+     * @var string|null
+     */
+    public $metadata_cid;
+
+    /**
+     * @var string|null
+     */
+    public $aigc_prompt;
+
+    public string $rarity;
+
+    public string $status;
+
+    /**
+     * @var int|null
+     */
+    public $token_id;
+
+    /**
+     * @var array|null
+     */
+    public $generation_params;
+
+    public int $times_traded;
+
+    /**
+     * @var Carbon\Carbon
+     */
+    public Carbon $created_at;
+
+    /**
+     * @var Carbon\Carbon
+     */
+    public Carbon $updated_at;
+
+    /**
+     * @var Flarum\User\User
+     */
+    public User $user;
+
+    /**
+     * @var Flarum\User\User
+     */
+    public User $originalUser;
+
+    /**
+     * @var Donk\AigcCollectibles\Model\CollectibleEvent[]
+     */
+    public array $events;
+
+    /**
+     * @var Donk\AigcCollectibles\Model\Trade[]
+     */
+    public array $trades;
+
+    /*
+ * @return BelongsTo<User,Collectible> 多对一, 多个藏品可以BelongsTo 一个用户. $user = $collectible->user; // 拿到所属用户 */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * @return BelongsTo<User,Collectible>
+     */
     public function originalUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'original_user_id');
     }
 
+    /*
+ * @return HasMany<CollectibleEvent,Collectible> 藏品有多种"生命周期日志" */
     public function events(): HasMany
     {
         return $this->hasMany(CollectibleEvent::class, 'collectible_id');
     }
 
+    /*
+ * @return HasMany<Trade,Collectible> 一个 Collectible可以有很多条 Trade */
     public function trades(): HasMany
     {
         return $this->hasMany(Trade::class, 'collectible_id');
@@ -65,7 +144,7 @@ class Collectible extends AbstractModel
 
     public static function createForUser(User $user, string $rarity, string $name): self
     {
-        $collectible = new static();
+        $collectible = new static;
         $collectible->user_id = $user->id;
         $collectible->original_user_id = $user->id;
         $collectible->name = $name;

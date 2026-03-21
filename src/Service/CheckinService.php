@@ -13,23 +13,25 @@ use Illuminate\Database\ConnectionInterface;
 
 class CheckinService
 {
-    protected SettingsRepositoryInterface $settings;
-    protected BlindBoxService $blindBoxService;
-    protected ConnectionInterface $db;
-    protected Dispatcher $events;
-
     public function __construct(
-        SettingsRepositoryInterface $settings,
-        BlindBoxService $blindBoxService,
-        ConnectionInterface $db,
-        Dispatcher $events
-    ) {
-        $this->settings = $settings;
-        $this->blindBoxService = $blindBoxService;
-        $this->db = $db;
-        $this->events = $events;
-    }
+        protected SettingsRepositoryInterface $settings,
+        protected BlindBoxService $blindBoxService,
+        protected ConnectionInterface $db,
+        protected Dispatcher $events
+    ) {}
 
+    /**
+     * Performs a daily check-in for the given user and grants the configured reward.
+     *
+     * Validates that the user has not already checked in today, then creates and saves
+     * the check-in record, awards blind boxes, updates the user's last check-in time,
+     * and dispatches the check-in event within a single database transaction.
+     *
+     * @param  User  $user  The user performing the check-in.
+     * @return CheckinRecord The persisted check-in record.
+     *
+     * @throws ValidationException If the user has already checked in today.
+     */
     public function performCheckin(User $user): CheckinRecord
     {
         if ($this->hasCheckedInToday($user)) {
@@ -55,6 +57,15 @@ class CheckinService
         });
     }
 
+    /**
+     * Determine whether the given user has checked in today.
+     *
+     * This checks for an existing check-in record for the user
+     * where the check-in date matches the current date.
+     *
+     * @param  User  $user  The user to evaluate.
+     * @return bool True if a check-in exists for today; otherwise false.
+     */
     public function hasCheckedInToday(User $user): bool
     {
         $today = Carbon::today();

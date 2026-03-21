@@ -9,13 +9,13 @@ use RuntimeException;
 
 class IPFSService
 {
-    protected SettingsRepositoryInterface $settings;
     protected Client $client;
 
-    public function __construct(SettingsRepositoryInterface $settings)
-    {
-        $this->settings = $settings;
-        $this->client = new Client([
+    public function __construct(
+        protected SettingsRepositoryInterface $settings,
+        ?Client $client = null
+    ) {
+        $this->client = $client ?? new Client([
             'timeout' => 60,
         ]);
     }
@@ -25,7 +25,7 @@ class IPFSService
         $apiUrl = $this->getApiUrl();
 
         try {
-            $response = $this->client->post($apiUrl . '/api/v0/add', [
+            $response = $this->client->post($apiUrl.'/api/v0/add', [
                 'multipart' => [
                     [
                         'name' => 'file',
@@ -40,13 +40,13 @@ class IPFSService
 
             $body = json_decode($response->getBody()->getContents(), true);
 
-            if (!isset($body['Hash'])) {
+            if (! isset($body['Hash'])) {
                 throw new RuntimeException('Unexpected IPFS API response format.');
             }
 
             return $body['Hash'];
         } catch (GuzzleException $e) {
-            throw new RuntimeException('IPFS upload failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('IPFS upload failed: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -57,7 +57,7 @@ class IPFSService
         $apiUrl = $this->getApiUrl();
 
         try {
-            $response = $this->client->post($apiUrl . '/api/v0/add', [
+            $response = $this->client->post($apiUrl.'/api/v0/add', [
                 'multipart' => [
                     [
                         'name' => 'file',
@@ -72,13 +72,13 @@ class IPFSService
 
             $body = json_decode($response->getBody()->getContents(), true);
 
-            if (!isset($body['Hash'])) {
+            if (! isset($body['Hash'])) {
                 throw new RuntimeException('Unexpected IPFS API response format.');
             }
 
             return $body['Hash'];
         } catch (GuzzleException $e) {
-            throw new RuntimeException('IPFS metadata upload failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('IPFS metadata upload failed: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -86,7 +86,7 @@ class IPFSService
     {
         $gatewayUrl = $this->settings->get('donk-aigc-collectibles.ipfs-gateway-url', 'https://ipfs.io/ipfs/');
 
-        return rtrim($gatewayUrl, '/') . '/' . $cid;
+        return rtrim($gatewayUrl, '/').'/'.$cid;
     }
 
     protected function getApiUrl(): string

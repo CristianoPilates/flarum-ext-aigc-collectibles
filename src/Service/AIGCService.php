@@ -7,19 +7,47 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use RuntimeException;
 
+/**
+ * Service responsible for generating collectible card images via the configured AIGC API.
+ *
+ * This service enhances the input prompt based on rarity, sends an image generation
+ * request, and returns the decoded binary image content.
+ */
 class AIGCService
 {
-    protected SettingsRepositoryInterface $settings;
     protected Client $client;
 
-    public function __construct(SettingsRepositoryInterface $settings)
-    {
-        $this->settings = $settings;
-        $this->client = new Client([
+    /**
+     * Create a new instance.
+     *
+     * Initializes the settings repository and HTTP client. If no client is provided,
+     * a default client is created with a 120-second timeout.
+     *
+     * @param  SettingsRepositoryInterface  $settings  Settings repository instance.
+     * @param  Client|null  $client  Optional HTTP client instance.
+     */
+    public function __construct(
+        protected SettingsRepositoryInterface $settings,
+        ?Client $client = null
+    ) {
+        $this->client = $client ?? new Client([
             'timeout' => 120,
         ]);
     }
 
+    /**
+     * Generates a collectible image using the configured AIGC API.
+     *
+     * Builds an enhanced prompt from the provided input and rarity, requests a single
+     * 512x512 image as base64 JSON, and returns the decoded binary image data.
+     *
+     * @param  string  $prompt  Base prompt describing the desired image.
+     * @param  string  $rarity  Rarity level used to augment the prompt.
+     * @return string Decoded binary image contents.
+     *
+     * @throws RuntimeException If API configuration is missing, the response format is invalid,
+     *                          or the API request fails.
+     */
     public function generateImage(string $prompt, string $rarity): string
     {
         $apiUrl = $this->settings->get('donk-aigc-collectibles.aigc-api-url');
@@ -34,7 +62,7 @@ class AIGCService
         try {
             $response = $this->client->post($apiUrl, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Authorization' => 'Bearer '.$apiKey,
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
@@ -47,16 +75,26 @@ class AIGCService
 
             $body = json_decode($response->getBody()->getContents(), true);
 
-            if (!isset($body['data'][0]['b64_json'])) {
+            if (! isset($body['data'][0]['b64_json'])) {
                 throw new RuntimeException('Unexpected AIGC API response format.');
             }
 
             return base64_decode($body['data'][0]['b64_json']);
         } catch (GuzzleException $e) {
-            throw new RuntimeException('AIGC API request failed: ' . $e->getMessage(), 0, $e);
+            throw new RuntimeException('AIGC API request failed: '.$e->getMessage(), 0, $e);
         }
     }
 
+    /**
+     * Build a finalized card-art prompt by appending a rarity-based quality modifier
+     * and standard composition directives to the provided base prompt.
+     *
+     * Unknown rarity values fall back to the "common" modifier.
+     *
+     * @param  string  $basePrompt  Base prompt describing the card subject.
+     * @param  string  $rarity  Card rarity used to select visual quality.
+     * @return string Complete prompt for image generation.
+     */
     protected function buildPrompt(string $basePrompt, string $rarity): string
     {
         $qualityModifiers = [
@@ -68,14 +106,20 @@ class AIGCService
 
         $modifier = $qualityModifiers[$rarity] ?? $qualityModifiers['common'];
 
-        return $basePrompt . ', ' . $modifier . ', collectible card art, centered composition, no text';
+        return $basePrompt.', '.$modifier.', collectible card art, centered composition, no text';
     }
 
+    /**
+     * Determine whether the AIGC integration is fully configured.
+     *
+     * The integration is considered configured only when both the API URL
+     * and API key are present and non-empty.
+     */
     public function isConfigured(): bool
     {
         $apiUrl = $this->settings->get('donk-aigc-collectibles.aigc-api-url');
         $apiKey = $this->settings->get('donk-aigc-collectibles.aigc-api-key');
 
-        return !empty($apiUrl) && !empty($apiKey);
+        return ! empty($apiUrl) && ! empty($apiKey);
     }
 }
