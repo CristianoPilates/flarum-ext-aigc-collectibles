@@ -2,6 +2,7 @@
 
 namespace Donk\AigcCollectibles\Api\Resource;
 
+use Donk\AigcCollectibles\Command\MintCollectible;
 use Donk\AigcCollectibles\Command\OpenBlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
@@ -56,6 +57,15 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->action(function (Context $context) {
                     return $this->bus->dispatch(
                         new OpenBlindBox($context->getActor(), $context->body())
+                    );
+                }),
+
+            Endpoint\Endpoint::make('mint')
+                ->route('POST', '/{id}/mint')
+                ->authenticated()
+                ->action(function (Context $context) {
+                    return $this->bus->dispatch(
+                        new MintCollectible((int) $context->modelId, $context->getActor())
                     );
                 }),
 

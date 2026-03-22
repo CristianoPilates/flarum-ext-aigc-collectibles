@@ -1221,3 +1221,168 @@ donk/flarum-ext-aigc-collectibles/
 | `sycho/flarum-profile-cover`        | Image display on user profile, file handling                             |
 | `fof/byobu`                         | Private messaging between two users (reference for trade negotiation UX) |
 | `blomstra/web3`                     | Web3Account model, wallet binding flow, EVM signature verification       |
+
+---
+
+## Coding Guidelines — Patterns & Anti-Patterns
+
+> This section codifies conventions already established in the codebase. Follow these rules to prevent drift as the project grows.
+
+### MUST Follow (Good Patterns to Preserve)
+
+#### 1. Interface-Oriented DI for All Services
+Every service class MUST have a corresponding interface in `src/Service/Contracts/` and MUST be bound via `CollectibleServiceProvider`. Handlers and jobs type-hint the interface, never the concrete class.
+```php
+// GOOD — in Handler constructor
+public function __construct(private BlindBoxServiceInterface $blindBox) {}
+
+// BAD — concrete class coupling
+public function __construct(private BlindBoxService $blindBox) {}
+```
+
+#### 2. CQRS Command/Handler Separation
+All mutating API actions MUST flow through Command → Handler → Service. Resource endpoints dispatch commands; they do NOT contain business logic.
+```php
+// GOOD — resource endpoint dispatches command
+$this->bus->dispatch(new Checkin($actor));
+
+// BAD — business logic in endpoint closure
+$user->blind_box_count += 1; $user->save();
+```
+
+#### 3. Transaction Safety for Balance & Ownership Operations
+Any operation that modifies `blind_box_count`, `collectible.user_id`, or `trade.status` MUST be wrapped in `$this->db->transaction()` with `lockForUpdate()` on the rows being modified.
+```php
+// GOOD — atomic balance operations in BlindBoxService
+$affected = $this->db->table('users')
+    ->where('id', $user->id)
+    ->where('blind_box_count', '>=', $amount)
+    ->decrement('blind_box_count', $amount);
+if ($affected !== 1) { throw new ValidationException(...); }
+```
+
+#### 4. Event Dispatching After State Changes
+All significant state transitions MUST dispatch a domain event. Events live in `src/Event/` and carry the actor, the affected model, and relevant context.
+```
+State change → dispatch event → listeners react
+Checkin → CheckedIn → (award blind boxes)
+Trade accepted → TradeCompleted → (log event, notify users)
+```
+
+#### 5. Eloquent Model Conventions
+- Models extend `Flarum\Database\AbstractModel`
+- Define `$table`, typed relationship methods, and `@property` PHPDoc
+- Use factory methods for creation: `Collectible::createForUser(...)`, `Trade::createOffer(...)`
+- Use `ScopeVisibilityTrait` for models that need access control scoping
+
+#### 6. Resource-Based API (Flarum 2.x)
+Each API entity is a single Resource class extending `AbstractDatabaseResource` that defines `type()`, `model()`, `endpoints()`, `fields()`. This replaces the old Controller+Serializer pair.
+
+#### 7. Frontend Component Structure
+- Components use Mithril.js class-based components extending Flarum base classes
+- State is managed via class properties + `m.redraw()`
+- Models extend `flarum/common/Model` and are registered via `app.store`
+- Flarum imports use path aliases (`'flarum/common/...'`), NOT node_modules paths
+
+#### 8. Unit Test Conventions
+- Tests live in `tests/unit/` and `tests/integration/`
+- Unit tests mock dependencies via Mockery; use `Flarum\Testing\unit\TestCase`
+- External services (AIGC, IPFS, Blockchain) use injected HTTP clients that can be replaced with Guzzle `MockHandler` or Mockery mocks
+- Test methods use `@test` annotation + descriptive `it_*` naming
+
+---
+
+### MUST NOT Do (Anti-Patterns to Avoid)
+
+#### 1. No Magic Strings for Status Values or Setting Keys
+Status values (`'pending'`, `'accepted'`, `'generating'`, `'completed'`) and rarity levels (`'common'`, `'rare'`, `'epic'`, `'legendary'`) appear as bare strings throughout the codebase. When adding new code, use the same string values consistently. (TODO: Extract to class constants in a future refactor.)
+```php
+// Current pattern (acceptable for now, keep consistent):
+$trade->status = 'accepted';
+$collectible->rarity = 'legendary';
+
+// DO NOT invent new values or misspell existing ones.
+```
+
+#### 2. No Business Logic in Resource Endpoint Closures
+Resource `creating()`, `updating()`, and custom endpoint closures should only: extract parameters, dispatch commands, and return results. All validation and state mutation belongs in Handlers or Services.
+
+#### 3. No Silent Exception Swallowing
+Never catch exceptions without at least logging them. The job layer had a case of `catch (\Throwable) { /* silent */ }` — this makes debugging impossible.
+```php
+// BAD
+catch (\Throwable $e) { /* non-critical, skip */ }
+
+// GOOD
+catch (\Throwable $e) {
+    resolve('log')->warning('NFT minting failed', ['error' => $e->getMessage()]);
+}
+```
+
+#### 4. No Direct DB Queries in Handlers
+Handlers orchestrate Commands → Services. They should NOT write raw DB queries. Balance operations go through `BlindBoxService`; model persistence goes through Eloquent models or repositories.
+
+#### 5. No Hardcoded Timeouts or URLs
+Service constructors accept injected HTTP clients. Timeouts and base URLs come from `SettingsRepositoryInterface`. When adding new external service calls, follow the same pattern as `AIGCService` (settings + injectable client).
+
+#### 6. No Inconsistent Constructor Patterns in Handlers
+All Handlers MUST use PHP 8.1+ constructor promotion and use `$this->` to access injected dependencies. Do not assign constructor parameters to properties and then re-read from `$command->actor` instead.
+```php
+// GOOD
+public function __construct(
+    private CheckinServiceInterface $checkinService,
+    private Dispatcher $bus,
+) {}
+
+// BAD — assigns to $this but reads from $command
+protected $checkinService;
+public function __construct($service) { $this->checkinService = $service; }
+// then later: $command->actor instead of using injected deps
+```
+
+#### 7. No Empty Validators
+If a Validator class has no rules, delete it. An empty validator adds confusion without value.
+
+---
+
+### Frontend-Specific Rules
+
+#### 1. Error Handling Consistency
+All API calls MUST show user-facing error messages on failure. Use `app.alerts.show()` for errors. Do NOT silently swallow fetch failures.
+
+#### 2. State Reset on View Changes
+When switching tabs, filters, or modals: reset pagination offset, loading state, and error state. The `CollectibleGallery` filter change must reset `offset = 0`.
+
+#### 3. WebSocket + Polling Fallback
+Long-running async operations (AIGC generation) MUST implement both WebSocket listening AND polling fallback with `MAX_POLL_ATTEMPTS` to prevent infinite loops.
+
+#### 4. Correct HTTP Methods
+Match the HTTP method to the backend endpoint. `GET` for nonce retrieval, `POST` for state mutations. The `WalletConnector` nonce request should use the method matching the backend Resource endpoint definition.
+
+---
+
+### Testing Strategy
+
+#### Test Pyramid
+```
+Integration Tests (API → Handler → Service → DB)
+         ▲ covers full call chains
+Unit Tests (Service logic with mocked deps)
+         ▲ covers business rules
+```
+
+#### What to Mock
+| Dependency | Mock Strategy |
+|-----------|--------------|
+| AIGC API | Guzzle `MockHandler` or fake implementation of `AIGCServiceInterface` |
+| IPFS API | Guzzle `MockHandler` or fake implementation of `IPFSServiceInterface` |
+| Blockchain | Fake `BlockchainServiceInterface` (returns predetermined token_ids) |
+| Database | Real SQLite (integration) or Mockery `ConnectionInterface` (unit) |
+| Events | Mockery `Dispatcher` (unit) or assert via DB state (integration) |
+
+#### Five Call Chains to Test
+1. **Checkin**: POST /api/checkin-records → CheckinHandler → CheckinService → blind_box_count++
+2. **OpenBlindBox**: POST /api/collectibles → OpenBlindBoxHandler → BlindBoxService → GenerateCollectibleJob
+3. **BindWallet**: POST /api/web3-accounts → BindWalletHandler → BlockchainService.verify → Web3Account created
+4. **MintCollectible**: POST /api/collectibles/{id}/mint → MintCollectibleHandler → BlockchainService.mint → token_id set
+5. **Trade**: POST /api/trades → CreateTradeHandler; POST /api/trades/{id}/accept → AcceptTradeHandler → ownership transfer

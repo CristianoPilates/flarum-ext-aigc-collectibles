@@ -11,7 +11,9 @@ use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Bus\Dispatcher;
 use Flarum\Foundation\ValidationException;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 
 /**
@@ -22,6 +24,7 @@ class Web3AccountResource extends AbstractDatabaseResource
     public function __construct(
         protected Dispatcher $bus,
         protected BlockchainServiceInterface $blockchainService,
+        protected CacheRepository $cache,
     ) {
     }
 
@@ -88,9 +91,26 @@ class Web3AccountResource extends AbstractDatabaseResource
                 ->route('POST', '/nonce')
                 ->authenticated()
                 ->action(function (Context $context) {
+                    $actor = $context->getActor();
+                    $payload = $context->body();
+                    $address = strtolower((string) Arr::get($payload, 'data.attributes.address', ''));
+
+                    if (! preg_match('/^0x[0-9a-fA-F]{40}$/', $address)) {
+                        throw new ValidationException([
+                            'address' => 'A valid wallet address is required to request nonce.',
+                        ]);
+                    }
+
                     $nonce = $this->blockchainService->generateNonce();
                     $domain = $context->request->getUri()->getHost() ?: 'localhost';
                     $message = $this->blockchainService->buildSignMessage($nonce, $domain);
+
+                    $nonceCacheKey = "donk-aigc-collectibles.web3-nonce.{$actor->id}.{$nonce}";
+                    $this->cache->put($nonceCacheKey, [
+                        'address' => $address,
+                        'domain' => $domain,
+                        'message' => $message,
+                    ], new \DateTimeImmutable('+5 minutes'));
 
                     return [
                         'nonce' => $nonce,
