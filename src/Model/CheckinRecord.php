@@ -25,22 +25,6 @@ class CheckinRecord extends AbstractModel
         'checked_in_at' => 'datetime',
     ];
 
-    public int $id;
-
-    public int $user_id;
-
-    public int $reward_amount;
-
-    /**
-     * @var Carbon\Carbon
-     */
-    public Carbon $checked_in_at;
-
-    /**
-     * @var Flarum\User\User
-     */
-    public User $user;
-
     /**
      * @return BelongsTo<User,CheckinRecord>
      */

@@ -2,12 +2,17 @@
 
 {
   dotenv.enable = true;
+  env = {
+    GO111MODULE = "on";
+    CGO_ENABLED = "0";
+  };
 
-  packages = [
-    pkgs.foundry # anvil / forge / cast
-    pkgs.kubo # ipfs
-    pkgs.jq
-    pkgs.curl
+  packages = with pkgs; [
+    foundry # anvil / forge / cast
+    kubo # ipfs
+    jq
+    curl
+    gnumake
   ];
 
   languages = {
@@ -28,6 +33,10 @@
         xdebug.client_host = 127.0.0.1
         xdebug.client_port = 9003
       '';
+    };
+    go = {
+      enable = true;
+      package = pkgs.go_1_25;
     };
   };
 
@@ -74,6 +83,11 @@
       . "$CONTRACT_ENV_FILE" || true
       set +a
     fi
+
+    echo "AkashGen API dev shell ready"
+    echo "- Start once: run"
+    echo "- Keep running with process manager: devenv up"
+    echo "- Health check: curl http://127.0.0.1:6571/health"
   '';
 
   processes.ipfs.exec = "ipfs daemon --migrate=true --enable-gc";
@@ -90,7 +104,13 @@
   # one-shot: 幂等确保合约已部署
   processes.contract-ensure.exec = "bash scripts/ensure-contract.sh";
 
-  processes.forum.exec = ''
-    php -S 127.0.0.1:8080 -t /home/donk/development/flarum-site/public/
-  '';
+  processes.forum = {
+    exec = "php -S 127.0.0.1:8080 -t public";
+    cwd = "/home/donk/development/flarum-site/";
+  };
+
+  processes.akashgen-api-go = {
+    exec = "go run ./main.go";
+    cwd = "/home/donk/development/akashgen-api-go/";
+  };
 }
