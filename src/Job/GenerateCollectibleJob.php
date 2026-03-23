@@ -6,7 +6,7 @@ use Donk\AigcCollectibles\Event\CollectibleGenerated;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
@@ -34,7 +34,7 @@ class GenerateCollectibleJob implements ShouldQueue
     public function handle(
         AIGCServiceInterface $aigcService,
         IPFSServiceInterface $ipfsService,
-        BlockchainServiceInterface $blockchainService,
+        NftMintingServiceInterface $nftMintingService,
         SettingsRepositoryInterface $settings,
         ConnectionInterface $db,
         Dispatcher $events
@@ -72,7 +72,7 @@ class GenerateCollectibleJob implements ShouldQueue
 
             $tokenId = null;
 
-            if ($blockchainService->isMintingConfigured()) {
+            if ($nftMintingService->isMintingConfigured()) {
                 $walletAccount = Web3Account::query()
                     ->where('user_id', $user->id)
                     ->first();
@@ -80,7 +80,7 @@ class GenerateCollectibleJob implements ShouldQueue
                 if ($walletAccount) {
                     try {
                         $tokenURI = 'ipfs://' . $metadataCid;
-                        $tokenId = $blockchainService->mintNFT($walletAccount->address, $tokenURI);
+                        $tokenId = $nftMintingService->mintNFT($walletAccount->address, $tokenURI);
                     } catch (\Throwable $e) {
                         // Minting failure is non-critical; user can mint later
                     }

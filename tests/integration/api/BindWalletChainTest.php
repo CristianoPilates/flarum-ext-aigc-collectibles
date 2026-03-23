@@ -2,9 +2,10 @@
 
 namespace Donk\AigcCollectibles\Tests\integration\api;
 
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
-use Donk\AigcCollectibles\Tests\Fake\FakeBlockchainService;
+use Donk\AigcCollectibles\Service\Contracts\WalletVerificationServiceInterface;
+use Donk\AigcCollectibles\Tests\Fake\FakeWalletVerificationService;
 use Flarum\Extend;
+use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 
@@ -18,9 +19,9 @@ class BindWalletChainTest extends TestCase
 
         $this->extension('donk-aigc-collectibles');
 
-        // Override BlockchainService with our fake
+        // Override WalletVerificationService with our fake
         $this->extend(
-            (new Extend\ServiceProvider())
+            (new Extend\ServiceProvider)
                 ->register(WalletTestServiceOverrides::class)
         );
 
@@ -30,45 +31,38 @@ class BindWalletChainTest extends TestCase
                 ['id' => 3, 'username' => 'walletUser', 'email' => 'wallet@test.com', 'is_email_confirmed' => 1],
             ],
             'web3_accounts' => [
-                ['id' => 1, 'user_id' => 3, 'address' => '0xalreadybound1234567890abcdef12345678', 'source' => 'metamask', 'type' => 'evm', 'attached_at' => '2026-01-01 00:00:00', 'last_verified_at' => '2026-01-01 00:00:00'],
+                ['id' => 1, 'user_id' => 3, 'address' => '0x1111111111111111111111111111111111111111', 'source' => 'metamask', 'type' => 'evm', 'attached_at' => '2026-01-01 00:00:00', 'last_verified_at' => '2026-01-01 00:00:00'],
             ],
         ]);
     }
 
     /** @test */
-public function guest_cannot_request_nonce(): void
-{
-    $response = $this->send(
-        $this->request('POST', '/api/web3-accounts/nonce', [
-            'authenticatedAs' => null,           // 明确是 guest
+    public function guest_cannot_request_nonce(): void
+    {
+        $request = $this->request('POST', '/api/web3-accounts/nonce', [
+            'authenticatedAs' => null,
             'json' => [
                 'data' => [
-                    'type' => 'web3-accounts',   // ← 关键！（99% 是这个）
-                    // 如果你的 Resource 里定义的 type 不是这个，再改
+                    'type' => 'web3-accounts',
                     'attributes' => [
                         'address' => '0x1234567890abcdef1234567890abcdef12345678',
                     ],
                 ],
             ],
-        ])
-    );
+        ])->withAttribute('bypassCsrfToken', true);
 
-    $this->assertEquals(401, $response->getStatusCode());
+        $response = $this->send($request);
+        $body = (string) $response->getBody();
 
-    // 保险起见：如果还是 400，打印真实错误
-    if ($response->getStatusCode() === 400) {
-        echo "=== 400 真实返回体 ===\n";
-        echo (string) $response->getBody() . "\n";
-        $this->fail('Still 400，请把上面输出贴给我');
-    }
-}
+        if ($response->getStatusCode() !== 401) {
+            fwrite(STDERR, sprintf(
+                "[guest_cannot_request_nonce] unexpected response. status=%d body=%s\n",
+                $response->getStatusCode(),
+                $body
+            ));
+        }
 
-        $this->assertEquals(401, $response->getStatusCode());
-    if ($response->getStatusCode() === 400) {
-        echo "=== 400 真实返回 ===\n";
-        echo (string) $response->getBody() . "\n";
-        $this->fail('Guest 请求仍返回 400，请把上面输出贴给我');
-    }
+        $this->assertSame(401, $response->getStatusCode(), $body);
     }
 
     /** @test */
@@ -92,8 +86,8 @@ public function guest_cannot_request_nonce(): void
         $body = json_decode((string) $response->getBody(), true);
         $this->assertArrayHasKey('data', $body);
         $this->assertArrayHasKey('attributes', $body['data']);
-        $this->assertNotEmpty($body['data']['attributes']['nonce']);
-        $this->assertNotEmpty($body['data']['attributes']['message']);
+        $this->assertNotEmpty($body['data']['attributes']['nonce'] ?? null, json_encode($body));
+        $this->assertNotEmpty($body['data']['attributes']['message'] ?? null, json_encode($body));
     }
 
     /** @test */
@@ -146,7 +140,7 @@ public function guest_cannot_request_nonce(): void
                     'data' => [
                         'attributes' => [
                             'address' => $address,
-                            'signature' => '0xfakesignature',
+                            'signature' => '0x' . str_repeat('a', 130),
                             'nonce' => $nonce,
                         ],
                     ],
@@ -154,7 +148,7 @@ public function guest_cannot_request_nonce(): void
             ])
         );
 
-        $this->assertEquals(200, $verifyResponse->getStatusCode());
+        $this->assertEquals(200, $verifyResponse->getStatusCode(), (string) $verifyResponse->getBody());
 
         $body = json_decode((string) $verifyResponse->getBody(), true);
         $this->assertEquals('web3-accounts', $body['data']['type']);
@@ -200,7 +194,7 @@ public function guest_cannot_request_nonce(): void
                     'data' => [
                         'attributes' => [
                             'address' => $address,
-                            'signature' => '0xfakesignature',
+                            'signature' => '0x' . str_repeat('b', 130),
                             'nonce' => $nonce,
                         ],
                     ],
@@ -208,14 +202,14 @@ public function guest_cannot_request_nonce(): void
             ])
         );
 
-        $this->assertEquals(422, $verifyResponse->getStatusCode());
+        $this->assertEquals(422, $verifyResponse->getStatusCode(), (string) $verifyResponse->getBody());
     }
 
     /** @test */
     public function already_bound_address_cannot_be_rebound(): void
     {
         // Try to bind the address that user 3 already has
-        $address = '0xalreadybound1234567890abcdef12345678';
+        $address = '0x1111111111111111111111111111111111111111';
 
         $nonceResponse = $this->send(
             $this->request('POST', '/api/web3-accounts/nonce', [
@@ -241,7 +235,7 @@ public function guest_cannot_request_nonce(): void
                     'data' => [
                         'attributes' => [
                             'address' => $address,
-                            'signature' => '0xfakesig',
+                            'signature' => '0x' . str_repeat('c', 130),
                             'nonce' => $nonce,
                         ],
                     ],
@@ -249,14 +243,15 @@ public function guest_cannot_request_nonce(): void
             ])
         );
 
-        $this->assertEquals(422, $verifyResponse->getStatusCode());
+        $this->assertEquals(422, $verifyResponse->getStatusCode(), (string) $verifyResponse->getBody());
     }
 }
 
-class WalletTestServiceOverrides extends \Flarum\Foundation\AbstractServiceProvider
+class WalletTestServiceOverrides extends AbstractServiceProvider
 {
     public function register(): void
     {
-        $this->container->singleton(BlockchainServiceInterface::class, FakeBlockchainService::class);
+        $this->container->singleton(WalletVerificationServiceInterface::class, FakeWalletVerificationService::class);
     }
 }
+

@@ -44,6 +44,7 @@ class CheckinService implements CheckinServiceInterface
 
         $rewardAmount = (int) $this->settings->get('donk-aigc-collectibles.checkin-reward', 1);
 
+        // Model是数据实体，不是服务. 永远直接 new / ::create() / ::find()，不要走容器
         return $this->db->transaction(function () use ($user, $rewardAmount) {
             $record = CheckinRecord::create($user, $rewardAmount);
             $record->save();

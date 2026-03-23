@@ -7,30 +7,18 @@ use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\CollectibleEvent;
 use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Illuminate\Contracts\Events\Dispatcher;
 use RuntimeException;
 
 class MintCollectibleHandler
 {
-    protected CollectibleRepository $collectibleRepository;
-    protected BlockchainServiceInterface $blockchainService;
-    protected IPFSServiceInterface $ipfsService;
-    protected Dispatcher $events;
-
     public function __construct(
-        CollectibleRepository $collectibleRepository,
-        BlockchainServiceInterface $blockchainService,
-        IPFSServiceInterface $ipfsService,
-        Dispatcher $events
-    ) {
-        $this->collectibleRepository = $collectibleRepository;
-        $this->blockchainService = $blockchainService;
-        $this->ipfsService = $ipfsService;
-        $this->events = $events;
-    }
+        protected readonly CollectibleRepository $collectibleRepository,
+        protected readonly NftMintingServiceInterface $nftMintingService,
+        protected readonly Dispatcher $events,
+    ) {}
 
     public function handle(MintCollectible $command): Collectible
     {
@@ -42,7 +30,7 @@ class MintCollectibleHandler
 
         $actor->assertCan('mint', $collectible);
 
-        if (!$this->blockchainService->isMintingConfigured()) {
+        if (!$this->nftMintingService->isMintingConfigured()) {
             throw new RuntimeException('NFT minting is not configured.');
         }
 
@@ -64,7 +52,7 @@ class MintCollectibleHandler
 
         $tokenURI = 'ipfs://' . $collectible->metadata_cid;
 
-        $tokenId = $this->blockchainService->mintNFT($walletAccount->address, $tokenURI);
+        $tokenId = $this->nftMintingService->mintNFT($walletAccount->address, $tokenURI);
 
         $collectible->token_id = $tokenId;
         $collectible->save();

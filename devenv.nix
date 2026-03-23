@@ -90,27 +90,26 @@
     echo "- Health check: curl http://127.0.0.1:6571/health"
   '';
 
-  processes.ipfs.exec = "ipfs daemon --migrate=true --enable-gc";
-
-  processes.anvil.exec = ''
-    anvil \
-      --host 127.0.0.1 \
-      --port 8545 \
-      --chain-id 31337 \
-      --mnemonic "test test test test test test test test test test test junk" \
-      --state "$DEVENV_STATE/anvil/state.json"
-  '';
-
-  # one-shot: 幂等确保合约已部署
-  processes.contract-ensure.exec = "bash scripts/ensure-contract.sh";
-
+  # processes.ipfs.exec = "ipfs daemon --migrate=true --enable-gc";
+  #
+  # processes.anvil.exec = ''
+  #   anvil \
+  #     --host 127.0.0.1 \
+  #     --port 8545 \
+  #     --chain-id 31337 \
+  #     --mnemonic "test test test test test test test test test test test junk" \
+  #     --state "$DEVENV_STATE/anvil/state.json"
+  # '';
+  #
+  # processes.contract-ensure.exec = "bash scripts/ensure-contract.sh";
+  #
   processes.forum = {
     exec = "php -S 127.0.0.1:8080 -t public";
     cwd = "/home/donk/development/flarum-site/";
   };
-
-  processes.akashgen-api-go = {
-    exec = "go run ./main.go";
-    cwd = "/home/donk/development/akashgen-api-go/";
-  };
+  #
+  # processes.akashgen-api-go = {
+  #   exec = "go run ./main.go";
+  #   cwd = "/home/donk/development/akashgen-api-go/";
+  # };
 }

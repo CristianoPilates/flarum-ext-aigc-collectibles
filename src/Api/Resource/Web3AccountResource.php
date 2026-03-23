@@ -3,18 +3,21 @@
 namespace Donk\AigcCollectibles\Api\Resource;
 
 use Donk\AigcCollectibles\Command\BindWallet;
+use Donk\AigcCollectibles\Command\UnbindWallet;
 use Donk\AigcCollectibles\Model\Web3Account;
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\WalletVerificationServiceInterface;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
+use Flarum\Api\Serializer;
 use Flarum\Bus\Dispatcher;
 use Flarum\Foundation\ValidationException;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
+
+use function Tobyz\JsonApiServer\json_api_response;
 
 /**
  * @extends AbstractDatabaseResource<Web3Account>
@@ -23,10 +26,8 @@ class Web3AccountResource extends AbstractDatabaseResource
 {
     public function __construct(
         protected Dispatcher $bus,
-        protected BlockchainServiceInterface $blockchainService,
-        protected CacheRepository $cache,
-    ) {
-    }
+        protected WalletVerificationServiceInterface $walletService,
+    ) {}
 
     public function type(): string
     {
@@ -40,10 +41,7 @@ class Web3AccountResource extends AbstractDatabaseResource
 
     public function scope(Builder $query, \Tobyz\JsonApiServer\Context $context): void
     {
-        $actor = $context->getActor();
-
-        // Users can only see their own web3 accounts
-        $query->where('user_id', $actor->id);
+        $query->where('user_id', $context->getActor()->id);
     }
 
     public function endpoints(): array
@@ -62,62 +60,55 @@ class Web3AccountResource extends AbstractDatabaseResource
                     return $this->bus->dispatch(
                         new BindWallet($context->getActor(), $data)
                     );
+                })
+                ->response(function (Context $context, Web3Account $account) {
+                    $serializer = new Serializer($context);
+                    $serializer->addPrimary(
+                        $context->resource($context->collection->resource($account, $context)),
+                        $account,
+                        []
+                    );
+
+                    [$primary, $included] = $serializer->serialize();
+                    $document = ['data' => $primary[0]];
+
+                    if (count($included)) {
+                        $document['included'] = $included;
+                    }
+
+                    return json_api_response($document);
                 }),
 
             Endpoint\Endpoint::make('delete')
                 ->route('DELETE', '/{id}')
                 ->authenticated()
                 ->action(function (Context $context) {
-                    $actor = $context->getActor();
-                    $accountId = (int) $context->modelId;
-
-                    $account = Web3Account::query()
-                        ->where('id', $accountId)
-                        ->firstOrFail();
-
-                    if ($account->user_id !== $actor->id) {
-                        throw new ValidationException([
-                            'account' => 'You can only unbind your own wallet.',
-                        ]);
-                    }
-
-                    $account->delete();
+                    $this->bus->dispatch(
+                        new UnbindWallet($context->getActor(), (int) $context->modelId)
+                    );
 
                     return null;
                 })
-                ->response(fn () => new \Nyholm\Psr7\Response(204)),
+                ->response(fn () => new Response(204)),
 
             Endpoint\Endpoint::make('nonce')
                 ->route('POST', '/nonce')
                 ->authenticated()
                 ->action(function (Context $context) {
                     $actor = $context->getActor();
-                    $payload = $context->body();
-                    $address = strtolower((string) Arr::get($payload, 'data.attributes.address', ''));
+                    $address = strtolower((string) Arr::get($context->body(), 'data.attributes.address', ''));
 
-                    if (! preg_match('/^0x[0-9a-fA-F]{40}$/', $address)) {
+                    if (! preg_match('/^0x[0-9a-f]{40}$/', $address)) {
                         throw new ValidationException([
                             'address' => 'A valid wallet address is required to request nonce.',
                         ]);
                     }
 
-                    $nonce = $this->blockchainService->generateNonce();
                     $domain = $context->request->getUri()->getHost() ?: 'localhost';
-                    $message = $this->blockchainService->buildSignMessage($nonce, $domain);
 
-                    $nonceCacheKey = "donk-aigc-collectibles.web3-nonce.{$actor->id}.{$nonce}";
-                    $this->cache->put($nonceCacheKey, [
-                        'address' => $address,
-                        'domain' => $domain,
-                        'message' => $message,
-                    ], new \DateTimeImmutable('+5 minutes'));
-
-                    return [
-                        'nonce' => $nonce,
-                        'message' => $message,
-                    ];
+                    return $this->walletService->createNonceChallenge($actor->id, $address, $domain);
                 })
-                ->response(function (Context $context, $data) {
+                ->response(function (Context $context, array $data) {
                     return new JsonResponse([
                         'data' => [
                             'attributes' => $data,

@@ -2,73 +2,20 @@
 
 namespace Donk\AigcCollectibles\Service;
 
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Elliptic\EC;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
 use kornrunner\Keccak;
 use RuntimeException;
 
-class BlockchainService implements BlockchainServiceInterface
+class NftMintingService implements NftMintingServiceInterface
 {
-    protected SettingsRepositoryInterface $settings;
-    protected Client $client;
-
     public function __construct(
-        SettingsRepositoryInterface $settings,
-        ?Client $client = null
+        protected SettingsRepositoryInterface $settings,
+        protected ?Client $client = null,
     ) {
-        $this->settings = $settings;
         $this->client = $client ?? new Client(['timeout' => 30]);
-    }
-
-    public function verifySignature(string $message, string $signature, string $expectedAddress): bool
-    {
-        $address = $this->recoverAddress($message, $signature);
-
-        return strtolower($address) === strtolower($expectedAddress);
-    }
-
-    public function recoverAddress(string $message, string $signature): string
-    {
-        $personalMessage = "\x19Ethereum Signed Message:\n" . strlen($message) . $message;
-        $msgHash = Keccak::hash($personalMessage, 256);
-
-        $sign = [
-            'r' => substr($signature, 2, 64),
-            's' => substr($signature, 66, 64),
-        ];
-
-        $v = hexdec(substr($signature, 130, 2));
-
-        if ($v < 27) {
-            $v += 27;
-        }
-
-        $recId = $v - 27;
-
-        $ec = new EC('secp256k1');
-        $pubKey = $ec->recoverPubKey($msgHash, $sign, $recId);
-
-        $pubKeyHex = $pubKey->encode('hex');
-        $pubKeyWithoutPrefix = substr($pubKeyHex, 2);
-
-        $address = '0x' . substr(Keccak::hash(hex2bin($pubKeyWithoutPrefix), 256), -40);
-
-        return $address;
-    }
-
-    public function generateNonce(): string
-    {
-        return bin2hex(random_bytes(16));
-    }
-
-    public function buildSignMessage(string $nonce, string $domain): string
-    {
-        return "Sign this message to verify your wallet ownership.\n\n"
-            . "Domain: {$domain}\n"
-            . "Nonce: {$nonce}\n"
-            . "Timestamp: " . time();
     }
 
     public function mintNFT(string $toAddress, string $tokenURI): int
@@ -105,10 +52,18 @@ class BlockchainService implements BlockchainServiceInterface
         return $tokenId;
     }
 
+    public function isMintingConfigured(): bool
+    {
+        return !empty($this->settings->get('donk-aigc-collectibles.blockchain-rpc-url'))
+            && !empty($this->settings->get('donk-aigc-collectibles.nft-contract-address'))
+            && !empty($this->settings->get('donk-aigc-collectibles.minter-private-key'));
+    }
+
     protected function sendRawTransaction(string $rpcUrl, string $to, string $data, string $privateKey): string
     {
         $ec = new EC('secp256k1');
-        $key = $ec->keyFromPrivate(ltrim($privateKey, '0x'));
+        $cleanKey = str_starts_with($privateKey, '0x') ? substr($privateKey, 2) : $privateKey;
+        $key = $ec->keyFromPrivate($cleanKey);
         $fromAddress = '0x' . substr(Keccak::hash(hex2bin(substr($key->getPublic('hex'), 2)), 256), -40);
 
         $nonce = $this->rpcCall($rpcUrl, 'eth_getTransactionCount', [$fromAddress, 'pending']);
@@ -262,12 +217,5 @@ class BlockchainService implements BlockchainServiceInterface
         }
 
         return dechex(0xb7 + strlen($lengthHex) / 2) . $lengthHex . $hexValue;
-    }
-
-    public function isMintingConfigured(): bool
-    {
-        return !empty($this->settings->get('donk-aigc-collectibles.blockchain-rpc-url'))
-            && !empty($this->settings->get('donk-aigc-collectibles.nft-contract-address'))
-            && !empty($this->settings->get('donk-aigc-collectibles.minter-private-key'));
     }
 }

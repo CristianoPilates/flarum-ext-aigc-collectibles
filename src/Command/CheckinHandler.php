@@ -7,17 +7,16 @@ use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 
 class CheckinHandler
 {
-    protected CheckinServiceInterface $checkinService;
-
-    public function __construct(CheckinServiceInterface $checkinService)
-    {
-        $this->checkinService = $checkinService;
-    }
+    public function __construct(
+        private CheckinServiceInterface $checkinService
+    ) {}
 
     public function handle(Checkin $command): CheckinRecord
     {
+        // 从DTO中取出actor
         $actor = $command->actor;
 
+        // 权限检查（Guest 会在这里抛异常 → 401）
         $actor->assertRegistered();
 
         return $this->checkinService->performCheckin($actor);

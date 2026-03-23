@@ -2,9 +2,9 @@
 
 namespace Donk\AigcCollectibles\Tests\integration\api;
 
-use Donk\AigcCollectibles\Service\Contracts\BlockchainServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
-use Donk\AigcCollectibles\Tests\Fake\FakeBlockchainService;
+use Donk\AigcCollectibles\Tests\Fake\FakeNftMintingService;
 use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
 use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
@@ -179,7 +179,7 @@ class MintTestServiceOverrides extends \Flarum\Foundation\AbstractServiceProvide
 {
     public function register(): void
     {
-        $this->container->singleton(BlockchainServiceInterface::class, FakeBlockchainService::class);
+        $this->container->singleton(NftMintingServiceInterface::class, FakeNftMintingService::class);
         $this->container->singleton(IPFSServiceInterface::class, FakeIPFSService::class);
     }
 }

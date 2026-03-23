@@ -30,11 +30,14 @@ class CheckinChainTest extends TestCase
     /** @test */
     public function guest_cannot_checkin(): void
     {
-        $response = $this->send(
-            $this->request('POST', '/api/checkin-records/checkin')
-        );
+        $request = $this->request('POST', '/api/checkin-records/checkin')
+            ->withAttribute('bypassCsrfToken', true);
 
-        $this->assertEquals(401, $response->getStatusCode());
+        $response = $this->send($request);
+        $this->assertSame(401, $response->getStatusCode(), (string) $response->getBody());
+
+        $payload = json_decode((string) $response->getBody(), true);
+        $this->assertSame('not_authenticated', $payload['errors'][0]['code'] ?? null);
     }
 
     /** @test */
