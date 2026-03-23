@@ -25,9 +25,7 @@ class TradeChainTest extends TestCase
             'collectibles' => [
                 [
                     'id' => 1,
-                    'user_id' => 3,
-                    'original_user_id' => 3,
-                    'name' => 'Tradeable Gem',
+                    'owner_id' => 3,
                     'rarity' => 'rare',
                     'status' => 'completed',
                     'ipfs_cid' => 'QmTradeImage',
@@ -39,9 +37,7 @@ class TradeChainTest extends TestCase
                 ],
                 [
                     'id' => 2,
-                    'user_id' => 3,
-                    'original_user_id' => 3,
-                    'name' => 'Another Gem',
+                    'owner_id' => 3,
                     'rarity' => 'epic',
                     'status' => 'completed',
                     'ipfs_cid' => 'QmAnotherImage',
@@ -73,18 +69,18 @@ class TradeChainTest extends TestCase
     /** @test */
     public function guest_cannot_create_trade(): void
     {
-        $response = $this->send(
-            $this->request('POST', '/api/trades', [
-                'json' => [
-                    'data' => [
-                        'attributes' => [
-                            'collectibleId' => 1,
-                            'offeredBoxes' => 3,
-                        ],
+        $request = $this->request('POST', '/api/trades', [
+            'json' => [
+                'data' => [
+                    'attributes' => [
+                        'collectibleId' => 1,
+                        'offeredBoxes' => 3,
                     ],
                 ],
-            ])
-        );
+            ],
+        ])->withAttribute('bypassCsrfToken', true);
+
+        $response = $this->send($request);
 
         $this->assertEquals(401, $response->getStatusCode());
     }
@@ -182,7 +178,7 @@ class TradeChainTest extends TestCase
 
         // Verify ownership transferred
         $collectible = $this->database()->table('collectibles')->where('id', 2)->first();
-        $this->assertEquals(4, $collectible->user_id);
+        $this->assertEquals(4, $collectible->owner_id);
         $this->assertEquals(1, $collectible->times_traded);
 
         // Verify blind box transfer: buyer -5, seller +5
@@ -265,7 +261,7 @@ class TradeChainTest extends TestCase
 
         // Verify no ownership or balance change
         $collectible = $this->database()->table('collectibles')->where('id', 2)->first();
-        $this->assertEquals(3, $collectible->user_id);
+        $this->assertEquals(3, $collectible->owner_id);
 
         $buyer = $this->database()->table('users')->where('id', 4)->first();
         $this->assertEquals(20, $buyer->blind_box_count);
@@ -348,8 +344,7 @@ class TradeChainTest extends TestCase
 
         // Verify final state
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
-        $this->assertEquals(4, $collectible->user_id);         // Buyer now owns it
-        $this->assertEquals(3, $collectible->original_user_id); // Original creator unchanged
+        $this->assertEquals(4, $collectible->owner_id);         // Buyer now owns it
         $this->assertEquals(1, $collectible->times_traded);
 
         $buyer = $this->database()->table('users')->where('id', 4)->first();

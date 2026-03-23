@@ -28,7 +28,7 @@ class CollectibleRepository
     public function findByUser(User $user, ?User $actor = null): Collection
     {
         $query = $this->query()
-            ->where('user_id', $user->id)
+            ->where('owner_id', $user->id)
             ->where('status', 'completed')
             ->orderBy('created_at', 'desc');
 
@@ -37,14 +37,5 @@ class CollectibleRepository
         }
 
         return $query->get();
-    }
-
-    public function findByOriginalUser(User $user): Collection
-    {
-        return $this->query()
-            ->where('original_user_id', $user->id)
-            ->where('status', 'completed')
-            ->orderBy('created_at', 'desc')
-            ->get();
     }
 }

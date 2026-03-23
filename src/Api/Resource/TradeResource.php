@@ -55,8 +55,7 @@ class TradeResource extends AbstractDatabaseResource
                 ->defaultSort('-createdAt')
                 ->defaultInclude(['collectible', 'fromUser', 'toUser']),
 
-            Endpoint\Endpoint::make('create')
-                ->route('POST', '/')
+            Endpoint\Create::make()
                 ->authenticated()
                 ->action(function (Context $context) {
                     return $this->bus->dispatch(

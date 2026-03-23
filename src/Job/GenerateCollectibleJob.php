@@ -45,7 +45,7 @@ class GenerateCollectibleJob implements ShouldQueue
             return;
         }
 
-        $user = User::query()->find($collectible->user_id);
+        $user = User::query()->find($collectible->owner_id);
 
         if (!$user) {
             $this->markFailed($collectible, $db);
@@ -60,7 +60,7 @@ class GenerateCollectibleJob implements ShouldQueue
             $imageCid = $ipfsService->upload($imageData);
 
             $metadata = [
-                'name' => $collectible->name,
+                'name' => 'Collectible #' . $collectible->id,
                 'image' => 'ipfs://' . $imageCid,
                 'attributes' => [
                     ['trait_type' => 'rarity', 'value' => ucfirst($collectible->rarity)],
@@ -118,7 +118,7 @@ class GenerateCollectibleJob implements ShouldQueue
 
         $theme = $rarityThemes[$collectible->rarity] ?? $rarityThemes['common'];
 
-        return $basePrompt . ', ' . $theme . ', named "' . $collectible->name . '"';
+        return $basePrompt . ', ' . $theme;
     }
 
     protected function markFailed(Collectible $collectible, ConnectionInterface $db): void
@@ -129,7 +129,7 @@ class GenerateCollectibleJob implements ShouldQueue
 
             // Refund the blind box
             $db->table('users')
-                ->where('id', $collectible->user_id)
+                ->where('id', $collectible->owner_id)
                 ->increment('blind_box_count', 1);
         });
     }

@@ -4,7 +4,7 @@ EXT_NAME    := donk/flarum-ext-aigc-collectibles
 FLARUM_VER  := ^2.0.0
 
 .PHONY: up site link unlink enable disable migrate test \
-        js-install js-dev js-build reset clean help
+        js-install js-dev js-build reset clean help migrate-reset
 
 # === 启动开发环境 ===
 up: site link
@@ -45,6 +45,9 @@ disable:
 # === 运行迁移（扩展已启用后，新增迁移文件时用） ===
 migrate:
 	cd $(SITE_DIR) && php flarum migrate
+
+migrate-reset:
+	cd $(SITE_DIR) && php flarum migrate:reset
 
 # === 运行测试 ===
 test:

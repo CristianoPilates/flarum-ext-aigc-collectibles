@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 
+// TODO 需要重写这些测试
 class CheckinChainTest extends TestCase
 {
     use RetrievesAuthorizedUsers;
@@ -19,7 +20,7 @@ class CheckinChainTest extends TestCase
         $this->prepareDatabase([
             'users' => [
                 $this->normalUser(),
-                ['id' => 3, 'username' => 'checkedUser', 'email' => 'checked@test.com', 'is_email_confirmed' => 1, 'blind_box_count' => 0],
+                ['id' => 3, 'username' => 'checkedUser', 'email' => 'checked@test.com', 'is_email_confirmed' => 1, 'blind_box_count' => 0, 'last_checkin_at' => Carbon::today()->toDateTimeString()],
             ],
             'checkin_records' => [
                 ['id' => 1, 'user_id' => 3, 'reward_amount' => 1, 'checked_in_at' => Carbon::today()->toDateTimeString()],

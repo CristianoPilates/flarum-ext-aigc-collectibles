@@ -2,15 +2,13 @@
 
 namespace Donk\AigcCollectibles\Event;
 
-use Donk\AigcCollectibles\Model\BlindBox;
-use Donk\AigcCollectibles\Model\Collectible;
 use Flarum\User\User;
+use Donk\AigcCollectibles\Model\BlindBox;
 
-class BlindBoxOpened
+class BlindBoxAppraised
 {
     public function __construct(
         public readonly User $actor,
         public readonly BlindBox $blindBox,
-        public readonly Collectible $collectible,
     ) {}
 }

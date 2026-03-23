@@ -3,14 +3,27 @@
 namespace Donk\AigcCollectibles\Service\Contracts;
 
 use Flarum\User\User;
+use Donk\AigcCollectibles\Model\BlindBox;
 
 interface BlindBoxServiceInterface
 {
+    /**
+     * Verify PoW result, quantify budget, transition to appraised.
+     */
+    public function appraise(User $actor, int $boxId, string $nonce, string $hash): BlindBox;
+
+    /**
+     * Spend budget on phrases, assemble prompt, create collectible, transition to opened.
+     */
+    public function open(User $actor, int $boxId): BlindBox;
+
+    /**
+     * Get user's blind box balance.
+     */
     public function balanceOf(User $user): int;
 
-    public function award(User $user, int $amount): void;
-
-    public function spend(User $user, int $amount): void;
-
+    /**
+     * Transfer blind boxes from one user to another atomically.
+     */
     public function transfer(User $from, User $to, int $amount): void;
 }

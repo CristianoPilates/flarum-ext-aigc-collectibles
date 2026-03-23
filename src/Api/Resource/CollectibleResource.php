@@ -3,7 +3,6 @@
 namespace Donk\AigcCollectibles\Api\Resource;
 
 use Donk\AigcCollectibles\Command\MintCollectible;
-use Donk\AigcCollectibles\Command\OpenBlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
 use Flarum\Api\Context;
@@ -46,19 +45,10 @@ class CollectibleResource extends AbstractDatabaseResource
             Endpoint\Index::make()
                 ->paginate(20, 50)
                 ->defaultSort('-createdAt')
-                ->defaultInclude(['user']),
+                ->defaultInclude(['owner']),
 
             Endpoint\Show::make()
-                ->defaultInclude(['user', 'originalUser']),
-
-            Endpoint\Endpoint::make('generate')
-                ->route('POST', '/generate')
-                ->authenticated()
-                ->action(function (Context $context) {
-                    return $this->bus->dispatch(
-                        new OpenBlindBox($context->getActor(), $context->body())
-                    );
-                }),
+                ->defaultInclude(['owner']),
 
             Endpoint\Endpoint::make('mint')
                 ->route('POST', '/{id}/mint')
@@ -77,7 +67,6 @@ class CollectibleResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
-            Schema\Str::make('name'),
             Schema\Str::make('rarity'),
             Schema\Str::make('status'),
             Schema\Str::make('ipfsCid')
@@ -86,17 +75,17 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->property('metadata_cid'),
             Schema\Str::make('aigcPrompt')
                 ->property('aigc_prompt')
-                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->user_id),
+                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id),
             Schema\Integer::make('tokenId')
                 ->property('token_id')
                 ->nullable(),
             Schema\Integer::make('timesTraded')
                 ->property('times_traded'),
             Schema\Boolean::make('canTrade')
-                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->user_id)
+                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
                 ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('trade', $model)),
             Schema\Boolean::make('canMint')
-                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->user_id)
+                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
                 ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('mint', $model)),
             Schema\Boolean::make('isShowcase')
                 ->get(fn (Collectible $model, Context $context) => $context->getActor()->showcase_collectible_id === $model->id)
@@ -107,10 +96,7 @@ class CollectibleResource extends AbstractDatabaseResource
             Schema\DateTime::make('updatedAt')
                 ->property('updated_at'),
 
-            Schema\Relationship\ToOne::make('user')
-                ->type('users')
-                ->includable(),
-            Schema\Relationship\ToOne::make('originalUser')
+            Schema\Relationship\ToOne::make('owner')
                 ->type('users')
                 ->includable(),
             Schema\Relationship\ToMany::make('events')

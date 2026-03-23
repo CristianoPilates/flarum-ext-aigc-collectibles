@@ -33,9 +33,7 @@ class MintCollectibleChainTest extends TestCase
             'collectibles' => [
                 [
                     'id' => 1,
-                    'user_id' => 2,
-                    'original_user_id' => 2,
-                    'name' => 'Mintable Artifact',
+                    'owner_id' => 2,
                     'rarity' => 'rare',
                     'status' => 'completed',
                     'ipfs_cid' => 'QmTestImageCid',
@@ -48,9 +46,7 @@ class MintCollectibleChainTest extends TestCase
                 ],
                 [
                     'id' => 2,
-                    'user_id' => 2,
-                    'original_user_id' => 2,
-                    'name' => 'Already Minted',
+                    'owner_id' => 2,
                     'rarity' => 'epic',
                     'status' => 'completed',
                     'ipfs_cid' => 'QmMintedImage',
@@ -63,9 +59,7 @@ class MintCollectibleChainTest extends TestCase
                 ],
                 [
                     'id' => 3,
-                    'user_id' => 2,
-                    'original_user_id' => 2,
-                    'name' => 'No Metadata',
+                    'owner_id' => 2,
                     'rarity' => 'common',
                     'status' => 'generating',
                     'ipfs_cid' => null,
@@ -86,9 +80,10 @@ class MintCollectibleChainTest extends TestCase
     /** @test */
     public function guest_cannot_mint(): void
     {
-        $response = $this->send(
-            $this->request('POST', '/api/collectibles/1/mint')
-        );
+        $request = $this->request('POST', '/api/collectibles/1/mint')
+            ->withAttribute('bypassCsrfToken', true);
+
+        $response = $this->send($request);
 
         $this->assertEquals(401, $response->getStatusCode());
     }
@@ -139,9 +134,7 @@ class MintCollectibleChainTest extends TestCase
         // Give user 3 a collectible to mint
         $this->database()->table('collectibles')->insert([
             'id' => 10,
-            'user_id' => 3,
-            'original_user_id' => 3,
-            'name' => 'User3 Collectible',
+            'owner_id' => 3,
             'rarity' => 'common',
             'status' => 'completed',
             'ipfs_cid' => 'QmUser3Image',

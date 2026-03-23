@@ -4,8 +4,8 @@ namespace Donk\AigcCollectibles\Service;
 
 use Carbon\Carbon;
 use Donk\AigcCollectibles\Event\CheckedIn;
+use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\CheckinRecord;
-use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -16,24 +16,12 @@ use Illuminate\Database\ConnectionInterface;
 class CheckinService implements CheckinServiceInterface
 {
     public function __construct(
-        protected SettingsRepositoryInterface $settings,
-        protected BlindBoxServiceInterface $blindBoxService,
-        protected ConnectionInterface $db,
-        protected Dispatcher $events
+        private readonly ConnectionInterface $db,
+        private readonly Dispatcher $events,
+        private readonly SettingsRepositoryInterface $settings,
+        // BlindBoxServiceInterface removed — creation uses Model factory directly
     ) {}
 
-    /**
-     * Performs a daily check-in for the given user and grants the configured reward.
-     *
-     * Validates that the user has not already checked in today, then creates and saves
-     * the check-in record, awards blind boxes, updates the user's last check-in time,
-     * and dispatches the check-in event within a single database transaction.
-     *
-     * @param  User  $user  The user performing the check-in.
-     * @return CheckinRecord The persisted check-in record.
-     *
-     * @throws ValidationException If the user has already checked in today.
-     */
     public function performCheckin(User $user): CheckinRecord
     {
         if ($this->hasCheckedInToday($user)) {
@@ -44,12 +32,17 @@ class CheckinService implements CheckinServiceInterface
 
         $rewardAmount = (int) $this->settings->get('donk-aigc-collectibles.checkin-reward', 1);
 
-        // Model是数据实体，不是服务. 永远直接 new / ::create() / ::find()，不要走容器
         return $this->db->transaction(function () use ($user, $rewardAmount) {
             $record = CheckinRecord::create($user, $rewardAmount);
             $record->save();
 
-            $this->blindBoxService->award($user, $rewardAmount);
+            for ($i = 0; $i < $rewardAmount; $i++) {
+                BlindBox::createForUser($user, 'checkin_reward');
+            }
+
+            $this->db->table('users')
+                ->where('id', $user->id)
+                ->increment('blind_box_count', $rewardAmount);
 
             $user->last_checkin_at = Carbon::now();
             $user->save();
@@ -60,22 +53,9 @@ class CheckinService implements CheckinServiceInterface
         });
     }
 
-    /**
-     * Determine whether the given user has checked in today.
-     *
-     * This checks for an existing check-in record for the user
-     * where the check-in date matches the current date.
-     *
-     * @param  User  $user  The user to evaluate.
-     * @return bool True if a check-in exists for today; otherwise false.
-     */
     public function hasCheckedInToday(User $user): bool
     {
-        $today = Carbon::today();
-
-        return CheckinRecord::query()
-            ->where('user_id', $user->id)
-            ->whereDate('checked_in_at', $today)
-            ->exists();
+        return $user->last_checkin_at
+            && Carbon::parse($user->last_checkin_at)->isToday();
     }
 }

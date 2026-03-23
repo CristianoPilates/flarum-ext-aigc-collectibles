@@ -55,7 +55,7 @@ class TradeService implements TradeServiceInterface
             ->firstOrFail();
 
         $seller = User::query()
-            ->where('id', $collectible->user_id)
+            ->where('id', $collectible->owner_id)
             ->firstOrFail();
 
         if ($buyer->id === $seller->id) {
@@ -125,7 +125,7 @@ class TradeService implements TradeServiceInterface
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($collectible->user_id !== $seller->id) {
+            if ($collectible->owner_id !== $seller->id) {
                 throw new ValidationException([
                     'trade' => 'The collectible is no longer owned by the seller.',
                 ]);
@@ -133,7 +133,7 @@ class TradeService implements TradeServiceInterface
 
             $this->blindBoxService->transfer($buyer, $seller, $trade->offered_boxes);
 
-            $collectible->user_id = $buyer->id;
+            $collectible->owner_id = $buyer->id;
             $collectible->times_traded += 1;
             $collectible->save();
 

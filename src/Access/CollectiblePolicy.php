@@ -14,21 +14,21 @@ class CollectiblePolicy extends AbstractPolicy
             return $this->allow();
         }
 
-        if ($actor->id === $collectible->user_id) {
+        if ($actor->id === $collectible->owner_id) {
             return $this->allow();
         }
     }
 
     public function update(User $actor, Collectible $collectible)
     {
-        if ($actor->id === $collectible->user_id) {
+        if ($actor->id === $collectible->owner_id) {
             return $this->allow();
         }
     }
 
     public function trade(User $actor, Collectible $collectible)
     {
-        if ($actor->id === $collectible->user_id && $collectible->status === 'completed') {
+        if ($actor->id === $collectible->owner_id && $collectible->status === 'completed') {
             return $this->allow();
         }
 
@@ -37,7 +37,7 @@ class CollectiblePolicy extends AbstractPolicy
 
     public function mint(User $actor, Collectible $collectible)
     {
-        if ($actor->id === $collectible->user_id
+        if ($actor->id === $collectible->owner_id
             && $collectible->status === 'completed'
             && $collectible->token_id === null) {
             return $this->allow();

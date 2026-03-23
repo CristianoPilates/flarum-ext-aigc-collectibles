@@ -8,15 +8,16 @@ use Flarum\User\User;
 
 return [
     (new Extend\Frontend('forum'))
-        ->js(__DIR__ . '/js/dist/forum.js')
-        ->css(__DIR__ . '/resources/less/forum.less'),
+        ->js(__DIR__.'/js/dist/forum.js')
+        ->css(__DIR__.'/resources/less/forum.less'),
 
     (new Extend\Frontend('admin'))
-        ->js(__DIR__ . '/js/dist/admin.js'),
+        ->js(__DIR__.'/js/dist/admin.js'),
 
-    new Extend\Locales(__DIR__ . '/resources/locale'),
+    new Extend\Locales(__DIR__.'/resources/locale'),
 
     // API Resources (replaces Routes + ApiSerializer)
+    new Extend\ApiResource(Api\Resource\BlindBoxResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleResource::class),
     new Extend\ApiResource(Api\Resource\TradeResource::class),
     new Extend\ApiResource(Api\Resource\CheckinRecordResource::class),
@@ -38,14 +39,14 @@ return [
         ->default('blind_box_count', 0)
         ->cast('blind_box_count', 'integer'),
 
-    (new Extend\ServiceProvider())
+    (new Extend\ServiceProvider)
         ->register(Provider\CollectibleServiceProvider::class),
 
-    (new Extend\Policy())
+    (new Extend\Policy)
         ->modelPolicy(Model\Collectible::class, Access\CollectiblePolicy::class)
         ->modelPolicy(Model\Trade::class, Access\TradePolicy::class),
 
-    (new Extend\Settings())
+    (new Extend\Settings)
         ->default('donk-aigc-collectibles.checkin-reward', 1)
         ->default('donk-aigc-collectibles.rarity-common', 60)
         ->default('donk-aigc-collectibles.rarity-rare', 25)
