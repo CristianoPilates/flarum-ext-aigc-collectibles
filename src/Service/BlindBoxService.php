@@ -2,11 +2,6 @@
 
 namespace Donk\AigcCollectibles\Service;
 
-use Flarum\Foundation\ValidationException;
-use Flarum\User\User;
-use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Collection;
 use Donk\AigcCollectibles\Event\BlindBoxAppraised;
 use Donk\AigcCollectibles\Event\BlindBoxOpened;
 use Donk\AigcCollectibles\Model\BlindBox;
@@ -14,12 +9,19 @@ use Donk\AigcCollectibles\Model\BlindBoxDrawRule;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\PhrasePool;
 use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Flarum\Foundation\ValidationException;
+use Flarum\User\User;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Collection;
+use SM\Factory\FactoryInterface;
 
 class BlindBoxService implements BlindBoxServiceInterface
 {
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly Dispatcher $events,
+        private readonly FactoryInterface $stateMachines,
     ) {}
 
     /* ───────────────────── Appraise ───────────────────── */
@@ -47,8 +49,8 @@ class BlindBoxService implements BlindBoxServiceInterface
             $leadingZeros = strspn($hash, '0');
             $budget = $this->zerosToBudget($leadingZeros);
 
-            $box->status = BlindBox::STATUS_APPRAISED;
             $box->budget = $budget;
+            $this->stateMachines->get($box, 'blindBox')->apply('appraise');
             $box->save();
 
             $this->events->dispatch(new BlindBoxAppraised($actor, $box));
@@ -89,7 +91,7 @@ class BlindBoxService implements BlindBoxServiceInterface
             // 3. Determine rarity from budget
             $rarity = $this->budgetToRarity($box->budget);
 
-            // 4. Create collectible (draft — no image until Phase 4)
+            // 4. Create collectible
             $collectible = Collectible::createDraft(
                 ownerId: $actor->id,
                 aigcPrompt: $aigcPrompt,
@@ -97,7 +99,7 @@ class BlindBoxService implements BlindBoxServiceInterface
             );
 
             // 5. Transition blind box
-            $box->status = BlindBox::STATUS_OPENED;
+            $this->stateMachines->get($box, 'blindBox')->apply('open');
             $box->collectible_id = $collectible->id;
             $box->save();
 

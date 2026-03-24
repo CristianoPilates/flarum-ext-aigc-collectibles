@@ -174,7 +174,7 @@ class TradeChainTest extends TestCase
         $this->assertEquals(200, $response->getStatusCode());
 
         $body = json_decode((string) $response->getBody(), true);
-        $this->assertEquals('accepted', $body['data']['attributes']['status']);
+        $this->assertEquals('completed', $body['data']['attributes']['status']);
 
         // Verify ownership transferred
         $collectible = $this->database()->table('collectibles')->where('id', 2)->first();
@@ -189,7 +189,7 @@ class TradeChainTest extends TestCase
 
         // Verify trade record updated
         $trade = $this->database()->table('trades')->where('id', 100)->first();
-        $this->assertEquals('accepted', $trade->status);
+        $this->assertEquals('completed', $trade->status);
         $this->assertNotNull($trade->completed_at);
 
         // Verify collectible_event logged

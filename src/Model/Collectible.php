@@ -3,6 +3,7 @@
 namespace Donk\AigcCollectibles\Model;
 
 use Carbon\Carbon;
+use Donk\AigcCollectibles\StateMachine\HasStateMachine;
 use Flarum\Database\AbstractModel;
 use Flarum\Database\ScopeVisibilityTrait;
 use Flarum\User\User;
@@ -27,7 +28,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Collectible extends AbstractModel
 {
+    use HasStateMachine;
     use ScopeVisibilityTrait;
+
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_GENERATING = 'generating';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_FAILED = 'failed';
+
+    public const STATUS_BURNED = 'burned';
 
     protected $table = 'collectibles';
 
@@ -59,7 +71,7 @@ class Collectible extends AbstractModel
         $collectible->owner_id = $ownerId;
         $collectible->aigc_prompt = $aigcPrompt;
         $collectible->rarity = $rarity;
-        $collectible->status = 'draft';
+        $collectible->status = self::STATUS_DRAFT;
         $collectible->times_traded = 0;
         $collectible->save();
 

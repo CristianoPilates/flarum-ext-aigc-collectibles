@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import TradeModel from '../models/Trade';
 import TradeRequestModal from './TradeRequestModal';
 
 interface TradePanelAttrs {
@@ -9,10 +10,13 @@ interface TradePanelAttrs {
 }
 
 const STATUS_ICONS: Record<string, string> = {
-  pending: 'fas fa-clock',
-  accepted: 'fas fa-check-circle',
-  rejected: 'fas fa-times-circle',
-  cancelled: 'fas fa-ban',
+  [TradeModel.STATUS_PENDING]: 'fas fa-clock',
+  [TradeModel.STATUS_ACCEPTED]: 'fas fa-handshake',
+  [TradeModel.STATUS_SETTLING]: 'fas fa-spinner fa-spin',
+  [TradeModel.STATUS_COMPLETED]: 'fas fa-check-circle',
+  [TradeModel.STATUS_REJECTED]: 'fas fa-times-circle',
+  [TradeModel.STATUS_CANCELLED]: 'fas fa-ban',
+  [TradeModel.STATUS_FAILED]: 'fas fa-exclamation-triangle',
 };
 
 export default class TradePanel extends Component<TradePanelAttrs> {
@@ -88,7 +92,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
     const isIncoming = trade.toUser()?.id() === currentUser.id();
     const otherUser = isIncoming ? trade.fromUser() : trade.toUser();
     const collectible = trade.collectible();
-    const isPending = status === 'pending';
+    const isPending = status === TradeModel.STATUS_PENDING;
 
     return (
       <li className={'TradePanel-item TradePanel-item--' + status}>
@@ -166,11 +170,11 @@ export default class TradePanel extends Component<TradePanelAttrs> {
 
       switch (this.activeTab) {
         case 'incoming':
-          return isIncoming && status === 'pending';
+          return isIncoming && status === TradeModel.STATUS_PENDING;
         case 'outgoing':
-          return isOutgoing && status === 'pending';
+          return isOutgoing && status === TradeModel.STATUS_PENDING;
         case 'history':
-          return status !== 'pending';
+          return status !== TradeModel.STATUS_PENDING;
         default:
           return true;
       }

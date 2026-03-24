@@ -40,7 +40,7 @@ class TradeRepository
     {
         return $this->query()
             ->where('collectible_id', $collectibleId)
-            ->where('status', 'pending')
+            ->where('status', Trade::STATUS_PENDING)
             ->get();
     }
 }

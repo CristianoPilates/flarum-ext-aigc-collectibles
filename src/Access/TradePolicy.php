@@ -14,14 +14,14 @@ class TradePolicy extends AbstractPolicy
             return $this->allow();
         }
 
-        if ($trade->status === 'accepted') {
+        if (in_array($trade->status, [Trade::STATUS_ACCEPTED, Trade::STATUS_COMPLETED], true)) {
             return $this->allow();
         }
     }
 
     public function accept(User $actor, Trade $trade)
     {
-        if ($actor->id === $trade->to_user_id && $trade->status === 'pending') {
+        if ($actor->id === $trade->to_user_id && $trade->status === Trade::STATUS_PENDING) {
             return $this->allow();
         }
 
@@ -30,7 +30,7 @@ class TradePolicy extends AbstractPolicy
 
     public function reject(User $actor, Trade $trade)
     {
-        if ($actor->id === $trade->to_user_id && $trade->status === 'pending') {
+        if ($actor->id === $trade->to_user_id && $trade->status === Trade::STATUS_PENDING) {
             return $this->allow();
         }
 
@@ -39,7 +39,7 @@ class TradePolicy extends AbstractPolicy
 
     public function cancel(User $actor, Trade $trade)
     {
-        if ($actor->id === $trade->from_user_id && $trade->status === 'pending') {
+        if ($actor->id === $trade->from_user_id && $trade->status === Trade::STATUS_PENDING) {
             return $this->allow();
         }
 

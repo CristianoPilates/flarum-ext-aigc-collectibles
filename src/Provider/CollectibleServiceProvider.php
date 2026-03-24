@@ -16,12 +16,23 @@ use Donk\AigcCollectibles\Service\IPFSService;
 use Donk\AigcCollectibles\Service\NftMintingService;
 use Donk\AigcCollectibles\Service\TradeService;
 use Donk\AigcCollectibles\Service\WalletVerificationService;
+use Donk\AigcCollectibles\StateMachine\StateMachineConfig;
 use Flarum\Foundation\AbstractServiceProvider;
+use SM\Factory\Factory;
+use SM\Factory\FactoryInterface;
 
 class CollectibleServiceProvider extends AbstractServiceProvider
 {
     public function register(): void
     {
+        $this->container->singleton(FactoryInterface::class, static function () {
+            return new Factory([
+                StateMachineConfig::collectible(),
+                StateMachineConfig::blindBox(),
+                StateMachineConfig::trade(),
+            ]);
+        });
+
         $this->container->singleton(BlindBoxServiceInterface::class, BlindBoxService::class);
         $this->container->singleton(CheckinServiceInterface::class, CheckinService::class);
         $this->container->singleton(AIGCServiceInterface::class, AIGCService::class);

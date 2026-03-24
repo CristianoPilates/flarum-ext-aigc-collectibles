@@ -16,6 +16,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use SM\Factory\FactoryInterface;
 
 class GenerateCollectibleJob implements ShouldQueue
 {
@@ -37,18 +38,30 @@ class GenerateCollectibleJob implements ShouldQueue
         NftMintingServiceInterface $nftMintingService,
         SettingsRepositoryInterface $settings,
         ConnectionInterface $db,
-        Dispatcher $events
+        Dispatcher $events,
+        FactoryInterface $stateMachines
     ): void {
         $collectible = Collectible::query()->find($this->collectibleId);
 
-        if (!$collectible || $collectible->status !== 'generating') {
+        if (!$collectible) {
+            return;
+        }
+
+        $stateMachine = $stateMachines->get($collectible, 'collectible');
+
+        if ($collectible->status === Collectible::STATUS_DRAFT) {
+            $stateMachine->apply('start_generating');
+            $collectible->save();
+        }
+
+        if ($collectible->status !== Collectible::STATUS_GENERATING) {
             return;
         }
 
         $user = User::query()->find($collectible->owner_id);
 
         if (!$user) {
-            $this->markFailed($collectible, $db);
+            $this->markFailed($collectible, $db, $stateMachines);
             return;
         }
 
@@ -91,14 +104,14 @@ class GenerateCollectibleJob implements ShouldQueue
             $collectible->metadata_cid = $metadataCid;
             $collectible->aigc_prompt = $prompt;
             $collectible->token_id = $tokenId;
-            $collectible->status = 'completed';
+            $stateMachine->apply('complete');
             $collectible->save();
 
             $events->dispatch(new CollectibleGenerated($user, $collectible));
 
         } catch (\Throwable $e) {
             if ($this->attempts() >= $this->tries) {
-                $this->markFailed($collectible, $db);
+                $this->markFailed($collectible, $db, $stateMachines);
             } else {
                 throw $e;
             }
@@ -121,11 +134,13 @@ class GenerateCollectibleJob implements ShouldQueue
         return $basePrompt . ', ' . $theme;
     }
 
-    protected function markFailed(Collectible $collectible, ConnectionInterface $db): void
+    protected function markFailed(Collectible $collectible, ConnectionInterface $db, FactoryInterface $stateMachines): void
     {
-        $db->transaction(function () use ($collectible, $db) {
-            $collectible->status = 'failed';
-            $collectible->save();
+        $db->transaction(function () use ($collectible, $db, $stateMachines) {
+            if ($collectible->status === Collectible::STATUS_GENERATING) {
+                $stateMachines->get($collectible, 'collectible')->apply('fail');
+                $collectible->save();
+            }
 
             // Refund the blind box
             $db->table('users')

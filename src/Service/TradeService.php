@@ -2,7 +2,6 @@
 
 namespace Donk\AigcCollectibles\Service;
 
-use Carbon\Carbon;
 use Donk\AigcCollectibles\Event\TradeCompleted;
 use Donk\AigcCollectibles\Event\TradeCreated;
 use Donk\AigcCollectibles\Model\Collectible;
@@ -14,6 +13,7 @@ use Flarum\Foundation\ValidationException;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
+use SM\Factory\FactoryInterface;
 
 /**
  * Handles P2P collectible trading between users.
@@ -27,7 +27,8 @@ class TradeService implements TradeServiceInterface
     public function __construct(
         protected BlindBoxServiceInterface $blindBoxService,
         protected ConnectionInterface $db,
-        protected Dispatcher $events
+        protected Dispatcher $events,
+        protected FactoryInterface $stateMachines,
     ) {}
 
     /**
@@ -51,7 +52,7 @@ class TradeService implements TradeServiceInterface
     {
         $collectible = Collectible::query()
             ->where('id', $collectibleId)
-            ->where('status', 'completed')
+            ->where('status', Collectible::STATUS_COMPLETED)
             ->firstOrFail();
 
         $seller = User::query()
@@ -97,7 +98,7 @@ class TradeService implements TradeServiceInterface
      */
     public function acceptTrade(Trade $trade, User $actor): Trade
     {
-        if ($trade->status !== 'pending') {
+        if ($trade->status !== Trade::STATUS_PENDING) {
             throw new ValidationException([
                 'trade' => 'This trade is no longer pending.',
             ]);
@@ -109,60 +110,126 @@ class TradeService implements TradeServiceInterface
             ]);
         }
 
-        return $this->db->transaction(function () use ($trade, $actor) {
-            $buyer = User::query()
-                ->where('id', $trade->from_user_id)
+        $trade = $this->db->transaction(function () use ($trade, $actor) {
+            $trade = Trade::query()
+                ->where('id', $trade->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $seller = User::query()
-                ->where('id', $trade->to_user_id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            if ($trade->status !== Trade::STATUS_PENDING) {
+                throw new ValidationException([
+                    'trade' => 'This trade is no longer pending.',
+                ]);
+            }
 
             $collectible = Collectible::query()
                 ->where('id', $trade->collectible_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($collectible->owner_id !== $seller->id) {
+            if ($collectible->owner_id !== $actor->id) {
                 throw new ValidationException([
                     'trade' => 'The collectible is no longer owned by the seller.',
                 ]);
             }
 
-            $this->blindBoxService->transfer($buyer, $seller, $trade->offered_boxes);
-
-            $collectible->owner_id = $buyer->id;
-            $collectible->times_traded += 1;
-            $collectible->save();
-
-            $trade->status = 'accepted';
-            $trade->completed_at = Carbon::now();
+            $stateMachine = $this->stateMachines->get($trade, 'trade');
+            $stateMachine->apply('accept');
+            $stateMachine->apply('settle');
             $trade->save();
 
-            Trade::query()
+            $otherTrades = Trade::query()
                 ->where('collectible_id', $trade->collectible_id)
                 ->where('id', '!=', $trade->id)
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'cancelled',
-                    'updated_at' => Carbon::now(),
-                ]);
+                ->where('status', Trade::STATUS_PENDING)
+                ->lockForUpdate()
+                ->get();
 
-            $event = CollectibleEvent::log(
-                $collectible,
-                'traded',
-                $seller->id,
-                $buyer->id,
-                $trade->id
-            );
-            $event->save();
-
-            $this->events->dispatch(new TradeCompleted($actor, $trade, 'accepted'));
+            foreach ($otherTrades as $otherTrade) {
+                $this->stateMachines->get($otherTrade, 'trade')->apply('cancel');
+                $otherTrade->save();
+            }
 
             return $trade;
         });
+
+        try {
+            $trade = $this->db->transaction(function () use ($trade) {
+                $trade = Trade::query()
+                    ->where('id', $trade->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($trade->status !== Trade::STATUS_SETTLING) {
+                    throw new ValidationException([
+                        'trade' => 'This trade is no longer settling.',
+                    ]);
+                }
+
+                $buyer = User::query()
+                    ->where('id', $trade->from_user_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $seller = User::query()
+                    ->where('id', $trade->to_user_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $collectible = Collectible::query()
+                    ->where('id', $trade->collectible_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($collectible->owner_id !== $seller->id) {
+                    throw new ValidationException([
+                        'trade' => 'The collectible is no longer owned by the seller.',
+                    ]);
+                }
+
+                $this->blindBoxService->transfer($buyer, $seller, $trade->offered_boxes);
+
+                $collectible->owner_id = $buyer->id;
+                $collectible->times_traded += 1;
+                $collectible->save();
+
+                $this->stateMachines->get($trade, 'trade')->apply('complete');
+                $trade->save();
+
+                $event = CollectibleEvent::log(
+                    $collectible,
+                    'traded',
+                    $seller->id,
+                    $buyer->id,
+                    $trade->id
+                );
+                $event->save();
+
+                return $trade;
+            });
+        } catch (\Throwable $exception) {
+            $trade = $this->db->transaction(function () use ($trade) {
+                $trade = Trade::query()
+                    ->where('id', $trade->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($trade->status === Trade::STATUS_SETTLING) {
+                    $this->stateMachines->get($trade, 'trade')->apply('fail');
+                    $trade->save();
+                }
+
+                return $trade;
+            });
+
+            $this->events->dispatch(new TradeCompleted($actor, $trade, Trade::STATUS_FAILED));
+
+            return $trade;
+        }
+
+        $this->events->dispatch(new TradeCompleted($actor, $trade, Trade::STATUS_ACCEPTED));
+
+        return $trade;
     }
 
     /**
@@ -180,7 +247,7 @@ class TradeService implements TradeServiceInterface
      */
     public function rejectTrade(Trade $trade, User $actor): Trade
     {
-        if ($trade->status !== 'pending') {
+        if ($trade->status !== Trade::STATUS_PENDING) {
             throw new ValidationException([
                 'trade' => 'This trade is no longer pending.',
             ]);
@@ -192,11 +259,10 @@ class TradeService implements TradeServiceInterface
             ]);
         }
 
-        $trade->status = 'rejected';
-        $trade->completed_at = Carbon::now();
+        $this->stateMachines->get($trade, 'trade')->apply('reject');
         $trade->save();
 
-        $this->events->dispatch(new TradeCompleted($actor, $trade, 'rejected'));
+        $this->events->dispatch(new TradeCompleted($actor, $trade, Trade::STATUS_REJECTED));
 
         return $trade;
     }
@@ -216,7 +282,7 @@ class TradeService implements TradeServiceInterface
      */
     public function cancelTrade(Trade $trade, User $actor): Trade
     {
-        if ($trade->status !== 'pending') {
+        if ($trade->status !== Trade::STATUS_PENDING) {
             throw new ValidationException([
                 'trade' => 'This trade is no longer pending.',
             ]);
@@ -228,11 +294,10 @@ class TradeService implements TradeServiceInterface
             ]);
         }
 
-        $trade->status = 'cancelled';
-        $trade->completed_at = Carbon::now();
+        $this->stateMachines->get($trade, 'trade')->apply('cancel');
         $trade->save();
 
-        $this->events->dispatch(new TradeCompleted($actor, $trade, 'cancelled'));
+        $this->events->dispatch(new TradeCompleted($actor, $trade, Trade::STATUS_CANCELLED));
 
         return $trade;
     }

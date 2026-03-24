@@ -29,7 +29,7 @@ class CollectibleRepository
     {
         $query = $this->query()
             ->where('owner_id', $user->id)
-            ->where('status', 'completed')
+            ->where('status', Collectible::STATUS_COMPLETED)
             ->orderBy('created_at', 'desc');
 
         if ($actor) {

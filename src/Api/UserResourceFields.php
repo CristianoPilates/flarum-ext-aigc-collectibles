@@ -27,7 +27,7 @@ class UserResourceFields
 
             if (!array_key_exists($user->id, $showcaseCache)) {
                 $collectible = Collectible::query()->find($user->showcase_collectible_id);
-                $showcaseCache[$user->id] = ($collectible && $collectible->status === 'completed') ? $collectible : null;
+                $showcaseCache[$user->id] = ($collectible && $collectible->status === Collectible::STATUS_COMPLETED) ? $collectible : null;
             }
 
             return $showcaseCache[$user->id];
