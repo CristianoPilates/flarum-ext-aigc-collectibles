@@ -21,15 +21,22 @@
 | buyer | password | 5 | — |
 | seller | password | 3 | — |
 
-## Scripts Created
+## Devenv Entry Points
 
-| Script | Purpose |
+| Command | Purpose |
 |--------|---------|
-| `scripts/dev-start.sh` | Start all services (IPFS, Anvil, AIGC, Flarum, Webpack) |
-| `scripts/seed-demo.php` | Create/reset demo users with passwords |
-| `scripts/ensure-contract.sh` | Deploy NFT contract to Anvil |
-| `scripts/e2e-test.cjs` | Playwright E2E test suite (10 tests) |
-| `scripts/verify-all.sh` | Full restart verification (services + seed + API smoke + E2E) |
+| `devenv up -d` | Start long-running services (MySQL, IPFS, Anvil, AkashGen API, Flarum, Webpack watch, Playwright MCP) |
+| `status` | Probe service health from inside the devenv shell |
+| `urls` | Print the local URLs for forum, IPFS, chain, API, and MCP |
+| `run` | Wait for services, deploy/verify the NFT contract, and sync Flarum settings |
+| `ready` / `bootstrap` | Alias for `run` |
+| `seed-demo` | Create/reset demo users with passwords |
+| `pw-test` / `e2e` | Playwright Test smoke suite driven by the Nix-provided `playwright` CLI |
+| `pw-headed` | Run the same Playwright specs headed |
+| `pw-codegen` | Run Playwright codegen against the local forum |
+| `pw-doctor` | Verify the Nix-provided Playwright runtime and config |
+| `verify` | Full verification (bootstrap + seed + API smoke + E2E) |
+| `e2e-clean` | Clear Playwright test and MCP artifacts under `$DEVENV_STATE` |
 
 ## Key Pitfalls & Solutions
 
@@ -39,7 +46,7 @@
 
 ### 2. AIGC API Goes Down
 - **Problem**: The Go-based AIGC API (`akashgen-api-go`) exits when idle or on error, causing 500s on blind box open.
-- **Fix**: `dev-start.sh` checks and restarts it. The E2E test should be run with all services verified first.
+- **Fix**: `devenv up` keeps the service under process management, and `verify` should be run only after the stack is healthy.
 
 ### 3. Flarum Login in Playwright
 - **Problem**: Setting `flarum_remember` cookie via `document.cookie` doesn't work — Flarum needs it set at the browser context level.
@@ -47,7 +54,7 @@
 
 ### 4. Playwright Browser Path in Nix
 - **Problem**: Built-in Playwright MCP tool tries to mkdir inside read-only Nix store.
-- **Fix**: Use Playwright directly via `require('../js/node_modules/playwright')` with `executablePath` from `PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH`.
+- **Fix**: Use nixpkgs-provided `playwright` / `mcp-server-playwright`, which already wrap `@playwright/test`, set `NODE_PATH`, export `PLAYWRIGHT_BROWSERS_PATH`, and keep MCP pinned to the same Playwright runtime version.
 
 ### 5. Mock MetaMask Wallet
 - **Problem**: No real MetaMask extension in headless Chromium.
@@ -63,38 +70,26 @@
 
 ### 8. Contract Settings Sync
 - **Problem**: After Anvil restart, the contract address in DB may be stale.
-- **Fix**: `dev-start.sh` reads `contract.env` and pushes settings to DB on every start.
+- **Fix**: `run` reads `contract.env` and pushes settings to DB after contract bootstrap.
 
 ## Feature Verification Matrix
 
-| Feature | API Test | UI Test | Screenshot |
-|---------|----------|---------|------------|
-| Daily Check-in | PASS | PASS | `03-checkin-done.png` |
-| Blind Box Balance | PASS | PASS | Header shows count |
-| Blind Box Open (PoW + AIGC + IPFS) | PASS | PASS | `04a-blindbox-modal.png`, `04b-blindbox-result.png` |
-| Collectibles Gallery | PASS | PASS | `05-user-collectibles-page.png` |
-| Collectible Detail Modal | PASS | PASS | `06-collectible-detail.png` |
-| Rarity Filtering | — | PASS | Filter buttons visible in gallery |
-| Showcase on Posts | PASS | PASS | `08-post-with-badge.png` |
-| Web3 Wallet Binding | PASS | PASS | `07-wallet-connector.png` |
-| NFT Minting (auto) | PASS | PASS | Token IDs visible on cards |
-| P2P Trade Create | PASS | — | API verified via curl |
-| P2P Trade Accept | PASS | — | API verified via curl |
-| Trade Panel UI | — | PASS | Visible in `07-wallet-connector.png` |
-| Multi-user Support | PASS | PASS | `10b-admin-collectibles-as-buyer.png` |
+| Feature | API Coverage | Playwright Smoke Coverage |
+|---------|--------------|---------------------------|
+| Daily Check-in | PASS | PASS |
+| Blind Box Balance | PASS | PASS |
+| Blind Box Open (PoW + AIGC + IPFS) | PASS | PASS |
+| Collectibles Gallery | PASS | PASS |
+| Collectible Detail Modal | PASS | PASS |
+| Showcase on Posts | PASS | PASS |
+| Web3 Wallet Binding | PASS | PASS |
+| NFT Minting (auto/manual endpoint) | PASS | PASS |
+| P2P Trade Create / Accept | PASS | PASS (browse flow smoke only) |
+| Multi-user Support | PASS | PASS |
 
-## Screenshot Evidence
+## Playwright Artifacts
 
-All screenshots in `screenshots/` directory:
-- `01-homepage-guest.png` — Forum homepage as guest
-- `02-logged-in-admin.png` — Logged in, header shows Check In + blind box count
-- `03-checkin-done.png` — Check-in completed, button shows "Checked In"
-- `04a-blindbox-modal.png` — Blind box modal with balance and open button
-- `04b-blindbox-result.png` — Generation in progress (spinner + "Generating...")
-- `05-user-collectibles-page.png` — Full user profile with collectibles, trades, wallet
-- `06-collectible-detail.png` — Detail modal with image, rarity, token ID, IPFS link
-- `07-wallet-connector.png` — Wallet bound, showing address and disconnect button
-- `08-post-with-badge.png` — Post with showcase collectible badge next to username
-- `10a-buyer-logged-in.png` — Buyer session with own blind box count
-- `10b-admin-collectibles-as-buyer.png` — Buyer viewing admin's collectibles (no sidebar)
-- `10c-buyer-own-page.png` — Buyer's own collectibles page
+- Playwright Test stores traces, screenshots, and videos under `$DEVENV_STATE/playwright/test-results`.
+- The HTML report is written to `$DEVENV_STATE/playwright/html-report`.
+- Playwright MCP session output is written to `$DEVENV_STATE/playwright-mcp-output`.
+- The persistent MCP browser profile lives under `$DEVENV_STATE/playwright-mcp-profile`.

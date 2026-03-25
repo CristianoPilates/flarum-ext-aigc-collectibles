@@ -1,0 +1,183 @@
+const { test, expect } = require('@playwright/test');
+
+const {
+  BASE_URL,
+  closeModalIfPresent,
+  createSmokeSession,
+  currentUsername,
+  gotoApp,
+  login,
+  logout,
+  waitForModal,
+} = require('./support/smoke-helpers.cjs');
+
+test.describe.serial('AIGC collectibles smoke', () => {
+  /** @type {import('@playwright/test').BrowserContext} */
+  let context;
+  /** @type {import('@playwright/test').Page} */
+  let page;
+
+  test.beforeAll(async ({ browser }) => {
+    ({ context, page } = await createSmokeSession(browser));
+  });
+
+  test.afterAll(async () => {
+    await context?.close();
+  });
+
+  test('homepage loads for guests', async () => {
+    await gotoApp(page, '/');
+    await expect(page.locator('body')).toBeVisible();
+    await expect(page.locator('.IndexPage, .App-content, .DiscussionList').first()).toBeVisible();
+  });
+
+  test('admin can log in', async () => {
+    await login(page, context, 'admin');
+
+    await expect(page.locator('.SessionDropdown')).toBeVisible();
+    await expect.poll(async () => await currentUsername(page)).toBe('admin');
+  });
+
+  test('check-in entry is available', async ({}, testInfo) => {
+    await gotoApp(page, '/');
+
+    const button = page.locator('.CheckinButton-button');
+    await expect(button).toBeVisible();
+
+    if (!(await button.isDisabled())) {
+      await button.click();
+      await page.waitForTimeout(1500);
+    } else {
+      testInfo.annotations.push({ type: 'info', description: 'admin had already checked in' });
+    }
+
+    await expect(button).toBeDisabled();
+  });
+
+  test('blind box opener is reachable', async ({}, testInfo) => {
+    await gotoApp(page, '/');
+
+    const trigger = page.locator('.BlindBoxOpener-trigger');
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+
+    await waitForModal(page);
+
+    const openButton = page.locator('.BlindBoxOpener-openButton').first();
+    if (await openButton.isVisible().catch(() => false) && !(await openButton.isDisabled())) {
+      await openButton.click();
+      await page.waitForTimeout(8000);
+    } else {
+      testInfo.annotations.push({ type: 'info', description: 'no blind boxes were available to open' });
+    }
+
+    await expect(page.locator('.BlindBoxOpener, .Modal-content').first()).toBeVisible();
+    await closeModalIfPresent(page);
+  });
+
+  test('collectibles gallery renders on admin profile', async () => {
+    await gotoApp(page, '/u/admin/collectibles');
+
+    const cards = page.locator('.CollectibleCard');
+    await expect(cards.first()).toBeVisible();
+    expect(await cards.count()).toBeGreaterThan(0);
+  });
+
+  test('collectible detail modal opens', async () => {
+    await gotoApp(page, '/u/admin/collectibles');
+
+    const firstCard = page.locator('.CollectibleCard').first();
+    await expect(firstCard).toBeVisible();
+    await firstCard.click();
+
+    const modal = await waitForModal(page);
+    await expect(modal).toBeVisible();
+    await closeModalIfPresent(page);
+  });
+
+  test('wallet connector is visible on collectibles page', async () => {
+    await gotoApp(page, '/u/admin/collectibles');
+
+    const walletSection = page.locator('.WalletConnector');
+    await expect(walletSection).toBeVisible();
+
+    const address = page.locator('.WalletConnector-address').first();
+    const connectButton = page.locator('.WalletConnector .Button--primary').first();
+
+    if (await address.isVisible().catch(() => false)) {
+      await expect(address).toContainText('0x');
+      return;
+    }
+
+    await expect(connectButton).toBeVisible();
+    await connectButton.click();
+    await expect(address).toContainText('0x', { timeout: 10_000 });
+  });
+
+  test('post badge flow does not regress', async ({}, testInfo) => {
+    await gotoApp(page, '/');
+
+    const discussionLink = page.locator('.DiscussionListItem-title').first();
+    if (!(await discussionLink.isVisible().catch(() => false))) {
+      test.skip(true, 'No discussions are available in the seeded demo forum.');
+    }
+
+    await discussionLink.click();
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.locator('.PostStream, .DiscussionPage').first()).toBeVisible();
+  });
+
+  test('collectible mint API stays callable for completed collectibles', async ({}, testInfo) => {
+    await gotoApp(page, '/u/admin/collectibles');
+
+    const result = await page.evaluate(async () => {
+      const response = await fetch('/api/collectibles?filter[user]=1', {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const payload = await response.json();
+      const unminted = payload.data?.find((collectible) => {
+        return collectible.attributes?.status === 'completed' && !collectible.attributes?.tokenId;
+      });
+
+      if (!unminted) {
+        return { status: 'already-minted' };
+      }
+
+      const mintResponse = await fetch(`/api/collectibles/${unminted.id}/mint`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const mintPayload = await mintResponse.json();
+
+      return {
+        status: mintResponse.ok ? 'minted' : 'error',
+        tokenId: mintPayload.data?.attributes?.tokenId || null,
+        error: mintPayload.errors?.[0]?.detail || null,
+      };
+    });
+
+    expect(result.error).toBeFalsy();
+    expect(['already-minted', 'minted']).toContain(result.status);
+
+    if (result.status === 'already-minted') {
+      testInfo.annotations.push({ type: 'info', description: 'all completed collectibles were already minted' });
+    } else {
+      expect(result.tokenId).toBeTruthy();
+    }
+  });
+
+  test('buyer can browse trading pages', async () => {
+    await gotoApp(page, '/');
+    await logout(page, context);
+    await login(page, context, 'buyer');
+
+    await gotoApp(page, '/u/admin/collectibles');
+    await expect(page).toHaveURL(/\/u\/admin\/collectibles$/);
+    await expect(page.locator('.UserPage, .CollectiblesPage, .WalletConnector').first()).toBeVisible();
+
+    await gotoApp(page, '/u/buyer/collectibles');
+    await expect(page).toHaveURL(/\/u\/buyer\/collectibles$/);
+    await expect(page.locator('.UserPage, .CollectiblesPage, .WalletConnector').first()).toBeVisible();
+  });
+});

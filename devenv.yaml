@@ -2,5 +2,5 @@ inputs:
   nixpkgs:
     url: github:cachix/devenv-nixpkgs/rolling
   nixpkgsPlaywright:
-    # Pinned to the nixpkgs snapshot that packages Playwright 1.52.0.
-    url: github:NixOS/nixpkgs/979daf34c8cacebcd917d540070b52a3c2b9b16e
+    # Pinned via devenv.lock to a nixos-25.11 revision that includes playwright-test and playwright-mcp.
+    url: github:NixOS/nixpkgs/nixos-25.11

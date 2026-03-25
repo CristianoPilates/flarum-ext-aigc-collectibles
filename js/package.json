@@ -3,7 +3,6 @@
   "name": "@donk/flarum-ext-aigc-collectibles",
   "devDependencies": {
     "@flarum/prettier-config": "^1.0.0",
-    "@playwright/test": "1.52.0",
     "flarum-tsconfig": "^2.0.0",
     "flarum-webpack-config": "^3.0.0",
     "prettier": "^2.5.1",
@@ -23,9 +22,9 @@
     "post-build-typings": "find dist-typings -type f -name '*.d.ts' -print0 | xargs -0 sed -i 's,../src/@types,@types,g'",
     "check-typings": "tsc --noEmit --emitDeclarationOnly false",
     "check-typings-coverage": "typescript-coverage-report",
-    "playwright:test": "playwright test",
-    "playwright:test:headed": "playwright test --headed",
-    "playwright:codegen": "playwright codegen http://127.0.0.1:8080",
-    "playwright:doctor": "node -e \"console.log('PLAYWRIGHT_BROWSERS_PATH=' + (process.env.PLAYWRIGHT_BROWSERS_PATH || '')); console.log('PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH=' + (process.env.PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH || ''));\""
+    "playwright:test": "devenv shell -- pw-test",
+    "playwright:test:headed": "devenv shell -- pw-headed",
+    "playwright:codegen": "devenv shell -- pw-codegen",
+    "playwright:doctor": "devenv shell -- pw-doctor"
   }
 }
