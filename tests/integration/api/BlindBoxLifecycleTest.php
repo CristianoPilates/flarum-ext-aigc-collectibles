@@ -2,6 +2,13 @@
 
 namespace Donk\AigcCollectibles\Tests\integration\api;
 
+use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
+use Donk\AigcCollectibles\Tests\Fake\FakeAIGCService;
+use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
+use Donk\AigcCollectibles\Tests\Fake\FakeNftMintingService;
+use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 
@@ -10,16 +17,21 @@ class BlindBoxLifecycleTest extends TestCase
     use RetrievesAuthorizedUsers;
 
     private const SEED = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+    private const BOX_TYPE = 'test_reward';
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->extension('donk-aigc-collectibles');
+        $this->extend(
+            (new Extend\ServiceProvider())
+                ->register(BlindBoxLifecycleTestServiceOverrides::class)
+        );
 
         $this->prepareDatabase([
             'users' => [
-                $this->normalUser(),
+                array_merge($this->normalUser(), ['blind_box_count' => 1]),
             ],
             'phrase_pools' => [
                 ['id' => 1, 'category' => 'subject', 'phrase' => 'dragon',       'cost' => 5, 'is_active' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
@@ -30,12 +42,12 @@ class BlindBoxLifecycleTest extends TestCase
                 ['id' => 6, 'category' => 'mood',    'phrase' => 'dark',          'cost' => 1, 'is_active' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
             ],
             'blindbox_draw_rules' => [
-                ['id' => 1, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'subject', 'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
-                ['id' => 2, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'style',   'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
-                ['id' => 3, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'mood',    'required' => 0, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+                ['id' => 1, 'blindbox_type' => self::BOX_TYPE, 'pool_category' => 'subject', 'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+                ['id' => 2, 'blindbox_type' => self::BOX_TYPE, 'pool_category' => 'style',   'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+                ['id' => 3, 'blindbox_type' => self::BOX_TYPE, 'pool_category' => 'mood',    'required' => 0, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
             ],
             'blindboxes' => [
-                ['id' => 1, 'user_id' => 2, 'type' => 'checkin_reward', 'seed' => self::SEED, 'status' => 'unappraised', 'budget' => null, 'collectible_id' => null, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+                ['id' => 1, 'user_id' => 2, 'type' => self::BOX_TYPE, 'seed' => self::SEED, 'status' => 'unappraised', 'budget' => null, 'collectible_id' => null, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
             ],
         ]);
     }
@@ -56,7 +68,7 @@ class BlindBoxLifecycleTest extends TestCase
                 ],
             ])
         );
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('appraised', $box->status);
@@ -77,7 +89,7 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('unappraised', $box->status);
@@ -102,7 +114,7 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
     }
 
     /** @test */
@@ -124,7 +136,7 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(404, $response->getStatusCode());
+        $this->assertEquals(404, $response->getStatusCode(), (string) $response->getBody());
     }
 
     /* ═══════════════════════ Open ═══════════════════════ */
@@ -142,18 +154,21 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('opened', $box->status);
         $this->assertNotNull($box->collectible_id);
+
+        $user = $this->database()->table('users')->where('id', 2)->first();
+        $this->assertSame(0, (int) $user->blind_box_count);
 
         $collectible = $this->database()->table('collectibles')
             ->where('id', $box->collectible_id)->first();
         $this->assertNotNull($collectible);
         $this->assertEquals(2, $collectible->owner_id);
         $this->assertEquals('common', $collectible->rarity);
-        $this->assertEquals('draft', $collectible->status);
+        $this->assertEquals('completed', $collectible->status);
         $this->assertNotEmpty($collectible->aigc_prompt);
         $this->assertEquals(0, $collectible->times_traded);
     }
@@ -171,12 +186,39 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $collectible = $this->database()->table('collectibles')
             ->where('id', $box->collectible_id)->first();
         $this->assertEquals('epic', $collectible->rarity);
+    }
+
+    /** @test */
+    public function trade_reward_boxes_fallback_to_default_reward_rules_when_specific_rules_are_missing(): void
+    {
+        $this->database()->table('blindboxes')
+            ->where('id', 1)
+            ->update(['type' => 'trade_reward', 'status' => 'appraised', 'budget' => 20]);
+
+        $this->database()->table('blindbox_draw_rules')->delete();
+        $this->database()->table('blindbox_draw_rules')->insert([
+            ['id' => 11, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'subject', 'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+            ['id' => 12, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'style', 'required' => 1, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+            ['id' => 13, 'blindbox_type' => 'checkin_reward', 'pool_category' => 'mood', 'required' => 0, 'created_at' => '2025-01-01 00:00:00', 'updated_at' => '2025-01-01 00:00:00'],
+        ]);
+
+        $response = $this->send(
+            $this->request('POST', '/api/blindboxes/1/open', [
+                'authenticatedAs' => 2,
+            ])
+        );
+
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $box = $this->database()->table('blindboxes')->where('id', 1)->first();
+        $this->assertEquals('opened', $box->status);
+        $this->assertNotNull($box->collectible_id);
     }
 
     /** @test */
@@ -189,7 +231,7 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('unappraised', $box->status);
@@ -209,7 +251,7 @@ class BlindBoxLifecycleTest extends TestCase
             ])
         );
 
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
     }
 
     /* ═══════════════════════ Full Lifecycle ═══════════════════════ */
@@ -229,7 +271,7 @@ class BlindBoxLifecycleTest extends TestCase
                 ],
             ])
         );
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('appraised', $box->status);
@@ -241,7 +283,7 @@ class BlindBoxLifecycleTest extends TestCase
                 'authenticatedAs' => 2,
             ])
         );
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $response->getStatusCode(), (string) $response->getBody());
 
         $box = $this->database()->table('blindboxes')->where('id', 1)->first();
         $this->assertEquals('opened', $box->status);
@@ -250,6 +292,9 @@ class BlindBoxLifecycleTest extends TestCase
             ->where('id', $box->collectible_id)->first();
         $this->assertEquals(2, $collectible->owner_id);
         $this->assertNotEmpty($collectible->aigc_prompt);
+
+        $user = $this->database()->table('users')->where('id', 2)->first();
+        $this->assertSame(0, (int) $user->blind_box_count);
 
         // Prompt should contain at least one subject and one style (both required)
         $prompt = $collectible->aigc_prompt;
@@ -291,5 +336,15 @@ class BlindBoxLifecycleTest extends TestCase
         }
 
         return ['nonce' => $nonce, 'hash' => $hash, 'zeros' => $bestZeros];
+    }
+}
+
+class BlindBoxLifecycleTestServiceOverrides extends \Flarum\Foundation\AbstractServiceProvider
+{
+    public function register(): void
+    {
+        $this->container->singleton(AIGCServiceInterface::class, FakeAIGCService::class);
+        $this->container->singleton(IPFSServiceInterface::class, FakeIPFSService::class);
+        $this->container->singleton(NftMintingServiceInterface::class, FakeNftMintingService::class);
     }
 }

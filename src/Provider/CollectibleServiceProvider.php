@@ -2,6 +2,7 @@
 
 namespace Donk\AigcCollectibles\Provider;
 
+use Donk\AigcCollectibles\Api\UserResourceFields;
 use Donk\AigcCollectibles\Service\AIGCService;
 use Donk\AigcCollectibles\Service\BlindBoxService;
 use Donk\AigcCollectibles\Service\CheckinService;
@@ -17,6 +18,7 @@ use Donk\AigcCollectibles\Service\NftMintingService;
 use Donk\AigcCollectibles\Service\TradeService;
 use Donk\AigcCollectibles\Service\WalletVerificationService;
 use Donk\AigcCollectibles\StateMachine\StateMachineConfig;
+use Flarum\Api\Resource\UserResource;
 use Flarum\Foundation\AbstractServiceProvider;
 use SM\Factory\Factory;
 use SM\Factory\FactoryInterface;
@@ -40,5 +42,14 @@ class CollectibleServiceProvider extends AbstractServiceProvider
         $this->container->singleton(WalletVerificationServiceInterface::class, WalletVerificationService::class);
         $this->container->singleton(NftMintingServiceInterface::class, NftMintingService::class);
         $this->container->singleton(TradeServiceInterface::class, TradeService::class);
+    }
+
+    public function boot(): void
+    {
+        UserResource::mutateFields(function (array $fields) {
+            $userResourceFields = $this->container->make(UserResourceFields::class);
+
+            return array_merge($fields, $userResourceFields());
+        });
     }
 }

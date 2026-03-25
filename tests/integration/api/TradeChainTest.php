@@ -61,6 +61,10 @@ class TradeChainTest extends TestCase
                     'updated_at' => '2026-01-15 00:00:00',
                 ],
             ],
+            'blindboxes' => array_merge(
+                $this->makeBlindBoxes(startId: 300, userId: 3, count: 5),
+                $this->makeBlindBoxes(startId: 400, userId: 4, count: 20),
+            ),
         ]);
     }
 
@@ -186,6 +190,15 @@ class TradeChainTest extends TestCase
         $seller = $this->database()->table('users')->where('id', 3)->first();
         $this->assertEquals(15, $buyer->blind_box_count);  // 20 - 5
         $this->assertEquals(10, $seller->blind_box_count);  // 5 + 5
+
+        $this->assertEquals(
+            15,
+            $this->database()->table('blindboxes')->where('user_id', 4)->where('status', 'unappraised')->count()
+        );
+        $this->assertEquals(
+            10,
+            $this->database()->table('blindboxes')->where('user_id', 3)->where('status', 'unappraised')->count()
+        );
 
         // Verify trade record updated
         $trade = $this->database()->table('trades')->where('id', 100)->first();
@@ -351,5 +364,37 @@ class TradeChainTest extends TestCase
         $seller = $this->database()->table('users')->where('id', 3)->first();
         $this->assertEquals(13, $buyer->blind_box_count);  // 20 - 7
         $this->assertEquals(12, $seller->blind_box_count);  // 5 + 7
+        $this->assertEquals(
+            13,
+            $this->database()->table('blindboxes')->where('user_id', 4)->where('status', 'unappraised')->count()
+        );
+        $this->assertEquals(
+            12,
+            $this->database()->table('blindboxes')->where('user_id', 3)->where('status', 'unappraised')->count()
+        );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function makeBlindBoxes(int $startId, int $userId, int $count): array
+    {
+        $boxes = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $boxes[] = [
+                'id' => $startId + $i,
+                'user_id' => $userId,
+                'type' => 'trade_reward',
+                'seed' => str_pad(dechex($startId + $i), 64, '0', STR_PAD_LEFT),
+                'status' => 'unappraised',
+                'budget' => null,
+                'collectible_id' => null,
+                'created_at' => '2026-01-01 00:00:00',
+                'updated_at' => '2026-01-01 00:00:00',
+            ];
+        }
+
+        return $boxes;
     }
 }

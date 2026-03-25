@@ -37,6 +37,14 @@ class CollectibleResource extends AbstractDatabaseResource
     public function scope(Builder $query, \Tobyz\JsonApiServer\Context $context): void
     {
         $query->whereVisibleTo($context->getActor());
+
+        $queryParams = $context->request->getQueryParams();
+        $filters = $queryParams['filter'] ?? [];
+        $ownerId = $queryParams['owner'] ?? $queryParams['user'] ?? $filters['owner'] ?? $filters['user'] ?? null;
+
+        if ($ownerId !== null && is_numeric($ownerId)) {
+            $query->where('owner_id', (int) $ownerId);
+        }
     }
 
     public function endpoints(): array
@@ -67,6 +75,7 @@ class CollectibleResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
+            Schema\Str::make('name'),
             Schema\Str::make('rarity'),
             Schema\Str::make('status'),
             Schema\Str::make('ipfsCid')

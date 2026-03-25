@@ -175,37 +175,133 @@ export default class BlindBoxOpener extends Modal {
     this.error = null;
     this.generatedCollectible = null;
 
-    app
-      .request({
+    void this.openBlindBoxFlow();
+  }
+
+  async openBlindBoxFlow() {
+    try {
+      const box = await this.fetchOpenableBlindBox();
+
+      if (!box) {
+        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')));
+      }
+
+      let readyBox = box;
+
+      if (readyBox.attributes?.status === 'unappraised') {
+        readyBox = await this.appraiseBlindBox(readyBox);
+      }
+
+      const response: any = await app.request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/collectibles/generate',
-      })
-      .then((response: any) => {
-        // The API returns 202 with the collectible in "generating" status
-        if (response?.data?.id) {
-          this.pendingCollectibleId = response.data.id;
-          this.pendingRarity = response.data.attributes?.rarity || null;
-        }
-
-        // Update user's blind box count
-        const user = app.session?.user;
-        if (user && response?.data?.attributes) {
-          const currentCount = user.attribute<number>('blindBoxCount') || 0;
-          user.pushAttributes({ blindBoxCount: Math.max(0, currentCount - 1) });
-        }
-
-        m.redraw();
-
-        // Start polling as fallback for WebSocket
-        this.startPolling();
-      })
-      .catch((error: any) => {
-        this.generating = false;
-        this.error =
-          error.response?.errors?.[0]?.detail ||
-          String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
-        m.redraw();
+        url: app.forum.attribute('apiUrl') + '/blindboxes/' + readyBox.id + '/open',
       });
+
+      const collectibleId = response?.data?.relationships?.collectible?.data?.id;
+      if (!collectibleId) {
+        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed')));
+      }
+
+      this.pendingCollectibleId = collectibleId;
+
+      const user = app.session?.user;
+      if (user) {
+        const currentCount = user.attribute<number>('blindBoxCount') || 0;
+        user.pushAttributes({ blindBoxCount: Math.max(0, currentCount - 1) });
+      }
+
+      m.redraw();
+      this.startPolling();
+    } catch (error: any) {
+      this.generating = false;
+      this.error =
+        error?.response?.errors?.[0]?.detail ||
+        error?.message ||
+        String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+      m.redraw();
+    }
+  }
+
+  async fetchOpenableBlindBox(): Promise<any | null> {
+    const response: any = await app.request({
+      method: 'GET',
+      url: app.forum.attribute('apiUrl') + '/blindboxes',
+      params: {
+        'page[limit]': 50,
+        sort: '-createdAt',
+      },
+    });
+
+    const items = Array.isArray(response?.data) ? response.data : [];
+
+    return (
+      items.find((item: any) => item.attributes?.status === 'appraised') ||
+      items.find((item: any) => item.attributes?.status === 'unappraised') ||
+      null
+    );
+  }
+
+  async appraiseBlindBox(box: any): Promise<any> {
+    const seed = box.attributes?.seed;
+    if (!seed) {
+      throw new Error('Blind box seed is missing.');
+    }
+
+    const pow = await this.computePow(seed);
+
+    const response: any = await app.request({
+      method: 'POST',
+      url: app.forum.attribute('apiUrl') + '/blindboxes/' + box.id + '/appraise',
+      body: {
+        nonce: pow.nonce,
+        hash: pow.hash,
+      },
+    });
+
+    return response?.data ?? response;
+  }
+
+  async computePow(seed: string, maxIterations: number = 100000): Promise<{ nonce: string; hash: string; zeros: number }> {
+    let nonce = '0';
+    let hash = await this.sha256(seed + nonce);
+    let bestZeros = this.leadingZeros(hash);
+
+    for (let i = 1; i < maxIterations; i++) {
+      const candidateNonce = i.toString(16);
+      const candidateHash = await this.sha256(seed + candidateNonce);
+      const zeros = this.leadingZeros(candidateHash);
+
+      if (zeros > bestZeros) {
+        nonce = candidateNonce;
+        hash = candidateHash;
+        bestZeros = zeros;
+
+        if (zeros >= 2) {
+          break;
+        }
+      }
+    }
+
+    return { nonce, hash, zeros: bestZeros };
+  }
+
+  async sha256(value: string): Promise<string> {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  leadingZeros(hash: string): number {
+    let count = 0;
+
+    while (count < hash.length && hash[count] === '0') {
+      count++;
+    }
+
+    return count;
   }
 
   onCollectibleReady(data: any) {

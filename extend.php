@@ -2,8 +2,8 @@
 
 namespace Donk\AigcCollectibles;
 
-use Flarum\Api\Resource\UserResource;
 use Flarum\Extend;
+use Flarum\Search\Database\DatabaseSearchDriver;
 use Flarum\User\User;
 
 return [
@@ -24,13 +24,13 @@ return [
     new Extend\ApiResource(Api\Resource\Web3AccountResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleEventResource::class),
 
-    // Extend UserResource with collectible-related fields
-    (new Extend\ApiResource(UserResource::class))
-        ->fields(Api\UserResourceFields::class),
+    (new Extend\SearchDriver(DatabaseSearchDriver::class))
+        ->addSearcher(Model\Collectible::class, Search\CollectibleSearcher::class)
+        ->addFilter(Search\CollectibleSearcher::class, Search\Filter\CollectibleUserFilter::class)
+        ->addFilter(Search\CollectibleSearcher::class, Search\Filter\CollectibleOwnerFilter::class),
 
     (new Extend\Model(User::class))
-        ->hasMany('collectibles', Model\Collectible::class, 'user_id')
-        ->hasMany('originatedCollectibles', Model\Collectible::class, 'original_user_id')
+        ->hasMany('collectibles', Model\Collectible::class, 'owner_id')
         ->hasMany('tradesInitiated', Model\Trade::class, 'from_user_id')
         ->hasMany('tradesReceived', Model\Trade::class, 'to_user_id')
         ->hasMany('checkinRecords', Model\CheckinRecord::class, 'user_id')

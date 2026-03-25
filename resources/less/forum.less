@@ -426,6 +426,113 @@
 }
 
 // ============================================
+// Collectible Detail Modal
+// ============================================
+
+.CollectibleDetailModal {
+  &-body {
+    padding: 20px;
+  }
+
+  &-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  &-media {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+  }
+
+  &-image {
+    width: 100%;
+    display: block;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  &-placeholder {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+
+    i {
+      font-size: 40px;
+    }
+  }
+
+  &-name {
+    margin: 0 0 12px;
+    font-size: 22px;
+  }
+
+  &-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  &-status,
+  &-token {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #F3F4F6;
+    color: #4B5563;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &-line,
+  &-linkRow {
+    margin: 0 0 10px;
+    color: #4B5563;
+    font-size: 14px;
+  }
+
+  &-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  &-error {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #DC2626;
+    font-size: 13px;
+  }
+}
+
+// ============================================
+// User Collectibles Page
+// ============================================
+
+.UserCollectiblesPage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+
+  &-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+// ============================================
 // Trade Panel
 // ============================================
 
@@ -714,6 +821,14 @@
 // ============================================
 
 @media (max-width: 768px) {
+  .CollectibleDetailModal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .UserCollectiblesPage {
+    grid-template-columns: 1fr;
+  }
+
   .CollectibleGallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 8px;

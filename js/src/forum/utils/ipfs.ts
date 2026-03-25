@@ -8,7 +8,16 @@ export function gatewayUrl(cid: string): string {
   // Normalize: strip ipfs:// prefix if present
   const cleanCid = cid.replace(/^ipfs:\/\//, '');
 
-  // Ensure gateway ends with /
+  // Support both path-style gateways (`.../ipfs/`) and query-style
+  // gateways (`.../api/v0/cat?arg=`), plus explicit `{cid}` templates.
+  if (gateway.includes('{cid}')) {
+    return gateway.replaceAll('{cid}', encodeURIComponent(cleanCid));
+  }
+
+  if (gateway.includes('?')) {
+    return gateway + encodeURIComponent(cleanCid);
+  }
+
   const base = gateway.endsWith('/') ? gateway : gateway + '/';
 
   return base + cleanCid;

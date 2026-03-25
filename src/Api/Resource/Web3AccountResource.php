@@ -16,6 +16,7 @@ use Flarum\Foundation\ValidationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
+use Nyholm\Psr7\Response;
 
 use function Tobyz\JsonApiServer\json_api_response;
 

@@ -8,6 +8,7 @@ use Donk\AigcCollectibles\Model\BlindBox;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
+use Flarum\Api\Sort\SortColumn;
 use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
 use Illuminate\Support\Arr;
 use Tobyz\JsonApiServer\Context;
@@ -92,6 +93,15 @@ class BlindBoxResource extends AbstractDatabaseResource
             Schema\Relationship\ToOne::make('collectible')
                 ->type('collectibles')
                 ->includable(),
+        ];
+    }
+
+    public function sorts(): array
+    {
+        return [
+            SortColumn::make('createdAt'),
+            SortColumn::make('updatedAt'),
+            SortColumn::make('status'),
         ];
     }
 }

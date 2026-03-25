@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $ipfs_cid
  * @property string|null $metadata_cid
  * @property string|null $aigc_prompt
+ * @property string $name
  * @property string $rarity
  * @property string $status
  * @property int|null $token_id
@@ -63,6 +64,11 @@ class Collectible extends AbstractModel
     public function trades(): HasMany
     {
         return $this->hasMany(Trade::class, 'collectible_id');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return 'Collectible #' . ($this->id ?: 'Draft');
     }
 
     public static function createDraft(int $ownerId, string $aigcPrompt, string $rarity): self

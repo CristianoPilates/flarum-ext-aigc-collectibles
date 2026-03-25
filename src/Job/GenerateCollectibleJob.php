@@ -3,6 +3,7 @@
 namespace Donk\AigcCollectibles\Job;
 
 use Donk\AigcCollectibles\Event\CollectibleGenerated;
+use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
@@ -110,7 +111,7 @@ class GenerateCollectibleJob implements ShouldQueue
             $events->dispatch(new CollectibleGenerated($user, $collectible));
 
         } catch (\Throwable $e) {
-            if ($this->attempts() >= $this->tries) {
+            if ($this->shouldFailPermanently()) {
                 $this->markFailed($collectible, $db, $stateMachines);
             } else {
                 throw $e;
@@ -121,6 +122,7 @@ class GenerateCollectibleJob implements ShouldQueue
     protected function buildPrompt(Collectible $collectible, SettingsRepositoryInterface $settings): string
     {
         $basePrompt = $settings->get('donk-aigc-collectibles.aigc-base-prompt', 'A mystical digital collectible');
+        $phrasePrompt = trim((string) $collectible->aigc_prompt);
 
         $rarityThemes = [
             'common' => 'a simple everyday object with subtle magical qualities',
@@ -130,22 +132,53 @@ class GenerateCollectibleJob implements ShouldQueue
         ];
 
         $theme = $rarityThemes[$collectible->rarity] ?? $rarityThemes['common'];
+        $segments = array_filter([
+            trim((string) $basePrompt),
+            $phrasePrompt,
+            $theme,
+        ]);
 
-        return $basePrompt . ', ' . $theme;
+        return implode(', ', $segments);
     }
 
     protected function markFailed(Collectible $collectible, ConnectionInterface $db, FactoryInterface $stateMachines): void
     {
         $db->transaction(function () use ($collectible, $db, $stateMachines) {
-            if ($collectible->status === Collectible::STATUS_GENERATING) {
-                $stateMachines->get($collectible, 'collectible')->apply('fail');
-                $collectible->save();
+            /** @var Collectible|null $lockedCollectible */
+            $lockedCollectible = Collectible::query()
+                ->lockForUpdate()
+                ->find($collectible->id);
+
+            if (!$lockedCollectible || $lockedCollectible->status !== Collectible::STATUS_GENERATING) {
+                return;
             }
 
-            // Refund the blind box
+            $stateMachines->get($lockedCollectible, 'collectible')->apply('fail');
+            $lockedCollectible->save();
+
+            $user = User::query()->find($lockedCollectible->owner_id);
+            if (!$user) {
+                return;
+            }
+
+            $replacementBoxType = $db->table('blindboxes')
+                ->where('collectible_id', $lockedCollectible->id)
+                ->value('type') ?: 'checkin_reward';
+
+            BlindBox::createForUser($user, (string) $replacementBoxType);
+
             $db->table('users')
-                ->where('id', $collectible->owner_id)
+                ->where('id', $lockedCollectible->owner_id)
                 ->increment('blind_box_count', 1);
         });
+    }
+
+    protected function shouldFailPermanently(): bool
+    {
+        if ($this->attempts() >= $this->tries) {
+            return true;
+        }
+
+        return $this->job?->getConnectionName() === 'sync';
     }
 }

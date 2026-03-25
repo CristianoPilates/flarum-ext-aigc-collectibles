@@ -3,10 +3,11 @@ import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import TradeModel from '../models/Trade';
-import TradeRequestModal from './TradeRequestModal';
+import { displayUserName } from '../utils/users';
 
 interface TradePanelAttrs {
   user: any;
+  onChanged?: () => void;
 }
 
 const STATUS_ICONS: Record<string, string> = {
@@ -98,7 +99,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
       <li className={'TradePanel-item TradePanel-item--' + status}>
         <div className="TradePanel-itemInfo">
           <span className="TradePanel-itemUser">
-            {otherUser ? otherUser.displayName() : app.translator.trans('donk-aigc-collectibles.forum.trade.unknown_user')}
+            {otherUser ? displayUserName(otherUser) : app.translator.trans('donk-aigc-collectibles.forum.trade.unknown_user')}
           </span>
           <span className="TradePanel-itemArrow">
             {isIncoming ? (
@@ -218,6 +219,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
       })
       .then(() => {
         this.loadTrades();
+        this.attrs.onChanged?.();
       });
   }
 
@@ -229,6 +231,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
       })
       .then(() => {
         this.loadTrades();
+        this.attrs.onChanged?.();
       });
   }
 
@@ -240,6 +243,7 @@ export default class TradePanel extends Component<TradePanelAttrs> {
       })
       .then(() => {
         this.loadTrades();
+        this.attrs.onChanged?.();
       });
   }
 }

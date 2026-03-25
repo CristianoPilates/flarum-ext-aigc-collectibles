@@ -32,6 +32,8 @@ export const extend = [
 
   new Extend.Model(User)
     .attribute<number>("blindBoxCount")
+    .attribute<boolean>("canCheckin")
+    .attribute<boolean>("hasCheckedInToday")
     .attribute<string>("lastCheckinAt")
     .attribute<number>("showcaseCollectibleId")
     .attribute<string>("showcaseCollectibleName")

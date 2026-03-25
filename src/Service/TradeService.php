@@ -189,6 +189,11 @@ class TradeService implements TradeServiceInterface
 
                 $this->blindBoxService->transfer($buyer, $seller, $trade->offered_boxes);
 
+                if ((int) $seller->showcase_collectible_id === (int) $collectible->id) {
+                    $seller->showcase_collectible_id = null;
+                    $seller->save();
+                }
+
                 $collectible->owner_id = $buyer->id;
                 $collectible->times_traded += 1;
                 $collectible->save();

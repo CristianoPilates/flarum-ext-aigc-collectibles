@@ -45,4 +45,14 @@ class CollectiblePolicy extends AbstractPolicy
 
         return $this->deny();
     }
+
+    public function showcase(User $actor, Collectible $collectible)
+    {
+        if ($actor->id === $collectible->owner_id
+            && $collectible->status === Collectible::STATUS_COMPLETED) {
+            return $this->allow();
+        }
+
+        return $this->deny();
+    }
 }

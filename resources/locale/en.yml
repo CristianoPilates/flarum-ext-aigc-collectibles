@@ -165,7 +165,7 @@ donk-aigc-collectibles:
       available: available
       from_user: "From: {username}"
       to_user: "To: {username}"
-      owned_by: "Owned by {user}"
+      owned_by: "Owned by {username}"
       unknown_user: Unknown User
       offers_you: offers you
       you_offered: you offered

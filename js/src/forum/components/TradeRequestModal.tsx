@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
+import { displayUserName } from '../utils/users';
 
 interface TradeRequestModalAttrs {
   collectible: any;
@@ -45,7 +46,7 @@ export default class TradeRequestModal extends Modal {
             {owner && (
               <span className="TradeRequestModal-owner">
                 {app.translator.trans('donk-aigc-collectibles.forum.trade.owned_by', {
-                  user: owner.displayName(),
+                  username: displayUserName(owner),
                 })}
               </span>
             )}

@@ -185,7 +185,7 @@ donk-aigc-collectibles:
       available: 可用
       from_user: 来自：{username}
       to_user: 发送至：{username}
-      owned_by: 由 {user} 持有
+      owned_by: 由 {username} 持有
       unknown_user: 未知用户
       offers_you: 向你出价
       you_offered: 你出价了

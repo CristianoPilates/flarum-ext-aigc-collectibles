@@ -1,10 +1,23 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
+
+let
+  pkgsPlaywright = import inputs.nixpkgsPlaywright { system = pkgs.stdenv.system; };
+  playwrightBrowsers = pkgsPlaywright.playwright.browsers;
+  browsers = (builtins.fromJSON (builtins.readFile "${pkgsPlaywright.playwright-driver}/browsers.json")).browsers;
+  chromiumRev = (builtins.head (builtins.filter (browser: browser.name == "chromium") browsers)).revision;
+in
 
 {
   dotenv.enable = true;
   env = {
     GO111MODULE = "on";
     CGO_ENABLED = "0";
+    PLAYWRIGHT_BROWSERS_PATH = "${playwrightBrowsers}";
+    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+    PLAYWRIGHT_NODEJS_PATH = "${pkgs.nodejs}/bin/node";
+    PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH = "${playwrightBrowsers}/chromium-${chromiumRev}/chrome-linux/chrome";
+    PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = "ubuntu-24.04";
   };
 
   packages = with pkgs; [
@@ -51,6 +64,7 @@
     initialDatabases = [
       { name = "flarum"; }
       { name = "flarum_test"; }
+      { name = "flarum_aigc_collectibles_test"; }
     ];
     ensureUsers = [
       {
@@ -59,6 +73,7 @@
         ensurePermissions = {
           "flarum.*" = "ALL PRIVILEGES";
           "flarum_test.*" = "ALL PRIVILEGES";
+          "flarum_aigc_collectibles_test.*" = "ALL PRIVILEGES";
         };
       }
     ];
@@ -88,6 +103,8 @@
     echo "- Start once: run"
     echo "- Keep running with process manager: devenv up"
     echo "- Health check: curl http://127.0.0.1:6571/health"
+    echo "- Playwright browsers: $PLAYWRIGHT_BROWSERS_PATH"
+    echo "- Playwright executable: $PLAYWRIGHT_LAUNCH_OPTIONS_EXECUTABLE_PATH"
   '';
 
   # processes.ipfs.exec = "ipfs daemon --migrate=true --enable-gc";
