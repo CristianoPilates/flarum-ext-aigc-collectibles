@@ -12,7 +12,7 @@ const ACCOUNT_INDEX_BY_ADDRESS = {
 };
 
 const INIT_SCRIPT_PATH = path.join(__dirname, 'playwright-mcp-init-script.js');
-const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
+const BASE_URL = process.env.FORUM_URL || 'http://127.0.0.1:8080';
 
 function normalizeAddress(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';

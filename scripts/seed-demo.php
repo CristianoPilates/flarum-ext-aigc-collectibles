@@ -6,9 +6,14 @@
  */
 
 $db = new PDO(
-    'mysql:host=127.0.0.1;port=3306;dbname=flarum',
-    'flarum',
-    'flarum',
+    sprintf(
+        'mysql:host=%s;port=%s;dbname=%s',
+        getenv('DB_HOST') ?: '127.0.0.1',
+        getenv('DB_PORT') ?: '3306',
+        getenv('DB_DATABASE') ?: 'flarum'
+    ),
+    getenv('DB_USERNAME') ?: 'flarum',
+    getenv('DB_PASSWORD') ?: 'flarum',
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
 );
 

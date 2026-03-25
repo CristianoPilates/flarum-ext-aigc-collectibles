@@ -21,7 +21,7 @@ module.exports = defineConfig({
     ],
   ],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:8080",
+    baseURL: process.env.FORUM_URL || "http://127.0.0.1:8080",
     headless: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
