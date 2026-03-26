@@ -2,10 +2,11 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd -- "$script_dir/../.." && pwd)"
 
-"$script_dir/status.sh"
-"$script_dir/chain-ready.sh"
-php "$script_dir/seed-demo.php"
+PROBE_STRICT=1 "$project_root/scripts/health/probe.sh"
+make -C "$project_root" init-chain
+make -C "$project_root" init-test-data
 
 mysql \
   -u "${DB_USERNAME:?DB_USERNAME is required}" \
@@ -35,7 +36,7 @@ else
   exit 1
 fi
 
-collectibles="$(curl -fsS "${FORUM_URL:?FORUM_URL is required}/api/collectibles?filter[user]=1" \
+collectibles="$(curl --globoff -fsS "${FORUM_URL:?FORUM_URL is required}/api/collectibles?filter[user]=1" \
   -H "Authorization: Token $token" | jq -r '.data | length')"
 echo "[verify] collectibles: $collectibles"
 

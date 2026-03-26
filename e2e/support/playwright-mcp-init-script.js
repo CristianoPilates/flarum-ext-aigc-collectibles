@@ -29,7 +29,6 @@
     try {
       window.localStorage.setItem(storageKey, address);
     } catch (_error) {
-      // Ignore storage errors on opaque origins.
     }
   }
 

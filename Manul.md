@@ -1,408 +1,479 @@
 # Manual
 
-这份手册描述当前项目收缩后的真实开发边界。
+这份手册只做一件事：
 
-原则：
+把这个项目压成少量稳定入口，并且把“运行层”和“初始化层”彻底分开。
 
-- `Makefile` 只负责高层编排
-- 前端开发与构建使用 `npm run ...`
-- Playwright 直接使用 `playwright ...`
-- `status` 只做检查，不修改系统状态
-- 区块链准备动作集中到 `make chain-ready`
-- 只使用两个数据库：`flarum` 和 `flarum_test`
-- 前端开发模式固定为：`npm run dev` + Flarum `debug=true`
-- `.env` 只保留项目配置；`devenv.nix` 只保留 Nix/runtime 派生变量
+它不是命令百科。
+它不是架构总览。
+它是你回到这个项目时，可以直接照着执行的工作手册。
 
-## 1. 先理解几个边界
+当前只有 3 条主闭环：
 
-### `forum` 与 `frontend` 的区别
+1. 开发闭环
+2. Playwright 测试闭环
+3. Playwright MCP 闭环
 
-项目里有两个不同进程：
+---
 
-- `forum`
-- `frontend`
+## 1. 先记住这几个入口
 
-`forum` 是 PHP 内置服务器，负责提供 Flarum 站点。
-
-`frontend` 是前端 watch 进程，负责在你修改 `js/` 后重新编译前端资源。
-
-所以：
-
-- PHP 代码不需要 HMR
-- 前端资源需要 `webpack --watch`
-- 这里不是 webpack dev server / browser HMR
-- 这里是“修改源码 -> 重新生成 `js/dist/*.js` -> Flarum 下次请求读取新文件”
-
-Flarum 官方文档给出的标准扩展前端脚本就是：
-
-```json
-"dev": "webpack --mode development --watch",
-"build": "webpack --mode production"
-```
-
-并且官方文档明确写了：
-
-- `npm run dev` 会“compile ... into the `js/dist/forum.js` file, and keep watching for changes to the source files”
-- 扩展通过 `extend.php` 的 `->js(__DIR__.'/js/dist/forum.js')` / `->js(__DIR__.'/js/dist/admin.js')` 注册产物
-- 开发扩展时应当开启 debug mode，这样 “Flarum recompiles assets automatically, so you don't have to manually clear the cache every time you make a change to your extension JavaScript.”
-
-这意味着开发时你不需要担心“旧缓存卡住前端改动”这个问题，前提是：
-
-- `npm run dev` 正在运行
-- Flarum 站点处于 debug mode
-
-如果这两个条件成立，前端开发的社区标准做法就是：
+你平时主要只需要记住这 4 个命令：
 
 ```bash
-make up-forum
+make dev
+make pw-test
+make pw-mcp
+make down
 ```
 
-这个命令现在还会确保站点 `config.php` 处于开发模式：
+含义：
 
-- `debug = true`
-- `url = $FORUM_URL`
+- `make dev`
+  启动完整开发编排
 
-或者你自己分别管理：
+- `make pw-test`
+  启动完整 Playwright smoke 测试编排，并保留现场
+
+- `make pw-mcp`
+  前台启动 Playwright MCP
+
+- `make down`
+  清理当前项目的运行现场
+
+除此之外，还有一层低频初始化命令：
 
 ```bash
-devenv up -d forum
-cd js && npm run dev
+make init
+make init-site
+make init-chain
+make init-test-data
+make reset-state
 ```
 
-这里的关键不是 HMR，而是：
+这层不属于“日常启动”。
 
-- watch 持续写入 `js/dist/admin.js` 和 `js/dist/forum.js`
-- Flarum 扩展入口直接引用这两个文件
-- debug mode 下 Flarum 会强制重新提交前端资产，并给聚合资产 URL 带 revision 参数，避免你反复手动清缓存
+它只在这些情况使用：
 
-### Playwright MCP 的边界
+- 第一次建环境
+- 完全重建之后
+- MySQL / 链 / 站点状态被清空之后
 
-项目里已经有 `processes.playwright-mcp`，所以 Playwright MCP 应该只由本项目管理。
+也就是说：
 
-如果你在 `~/.codex/config.toml` 里还有全局：
+- `dev / pw-test / pw-mcp` 是运行层
+- `init-* / reset-state` 是持久化初始化层
 
-```toml
-[mcp_servers.playwright]
-command = "mcp-server-playwright"
-args = ["--headless"]
+---
+
+## 2. 当前脚本分层
+
+当前 `scripts/` 目录按职责拆成 5 层：
+
+```text
+scripts/
+├── chain/
+│   └── bootstrap.sh
+├── forum/
+│   ├── install.sh
+│   └── configure.sh
+├── health/
+│   └── probe.sh
+├── playwright/
+│   └── prepare-data.php
+├── runtime/
+│   └── stack.sh
+└── verify/
+    └── run.sh
 ```
 
-那通常是多余的。  
-项目内已经定义了：
+含义：
 
-- `--port`
-- `--user-data-dir`
-- `--init-page`
-- `--init-script`
-- `--output-dir`
+- `scripts/health/probe.sh`
+  纯探针，负责测活，不修改状态
 
-全局那条配置既重复，又缺少项目需要的初始化参数。
+- `scripts/forum/install.sh`
+  从无到有创建 Flarum 站点
 
-## 2. 当前保留的命令
+- `scripts/forum/configure.sh`
+  把已安装站点收口到开发配置
 
-### 进程编排
+- `scripts/playwright/prepare-data.php`
+  准备 Playwright smoke 所需 demo 用户和数据
 
-```bash
-make up
-make status
-make up-mysql
-make up-ipfs
-make up-anvil
-make up-akashgen
-make up-forum
-make up-playwright
-```
+- `scripts/runtime/stack.sh`
+  管理当前项目的运行现场：列出、阻止重复启动、显式清理
 
-### 业务编排
+- `scripts/chain/bootstrap.sh`
+  部署或复用链上合约，并把配置回写到论坛 settings
 
-```bash
-make chain-ready
-make seed-demo
-make verify
-make reset
-```
+- `scripts/verify/run.sh`
+  做更高层的完整验收
 
-### Flarum / 扩展
+这是当前最重要的结构边界：
 
-```bash
-make site
-make enable
-make disable
-make migrate
-make migrate-reset
-make test
-```
+- `status` 不做初始化
+- `verify` 不承担底层探针职责
+- `runtime` 只处理当前项目进程，不处理持久化状态
+- `forum` 只负责站点
+- `playwright` 只负责测试数据
 
-### 直接使用，不再包一层 Makefile
+---
 
-```bash
-playwright test
-playwright test --headed
-playwright codegen
-npm run dev
-npm run build
-```
+## 3. 闭环一：开发闭环
 
-## 3. 首次进入项目怎么做
+### 3.1 目标
+
+开发闭环的目标是：
+
+- 论坛可访问
+- 扩展已经启用
+- 前端 watch 正在运行
+- 你改代码后可以立即看到结果
+
+它回答的问题是：
+
+> 我现在能不能开始开发？
+
+### 3.2 使用方式
+
+进入项目目录：
 
 ```bash
 cd /home/donk/development/flarum-ext-aigc-collectibles
+```
+
+进入 devenv shell：
+
+```bash
 devenv shell
-make site
-make enable
-make up
+```
+
+启动完整开发编排：
+
+```bash
+make dev
+```
+
+这个命令会前台拉起：
+
+- `mysql`
+- `ipfs`
+- `anvil`
+- `akashgen`
+- `forum`
+- `frontend`
+
+它不会自动做初始化。
+
+所以第一次建环境或完全重建之后，你应该先执行：
+
+```bash
+make init
+```
+
+### 3.3 常见变体
+
+如果你只想拉起站点本体：
+
+```bash
+make up-site
+```
+
+它会启动：
+
+- `mysql`
+- `forum`
+- `frontend`
+
+如果你只想拉起外部服务：
+
+```bash
+make up-external
+```
+
+它会启动：
+
+- `ipfs`
+- `anvil`
+- `akashgen`
+
+### 3.4 如何确认环境正常
+
+执行：
+
+```bash
 make status
-make chain-ready
-make seed-demo
 ```
 
-完成后你应该具备：
+它会探测：
 
-- Flarum 站点已存在
-- 扩展已链接并启用
-- mysql/ipfs/anvil/forum/frontend/akashgen/playwright-mcp 已启动
-- 合约已部署或确认可用
-- 合约配置已同步到 Flarum
-- demo 用户已恢复
+- `mysql`
+- `ipfs`
+- `anvil`
+- `forum`
+- `akashgen`
+- `frontend`
+- `playwright-mcp`
 
-## 4. 日常开发流程
+这是纯测活命令，不会修改状态。
 
-### 改 PHP / 后端逻辑
+补充两点：
+
+- 如果你没有单独执行 `make pw-mcp`，那么 `playwright-mcp` 显示 `[down]` 是正常现象
+- `make status` 只负责探测，不会因为某项是 `[down]` 自动失败
+
+还有一条关键规则：
+
+- 如果当前项目已经有旧的运行现场，新的启动命令会直接拒绝继续
+- 这不是报错设计过度，而是为了避免同一份 `.devenv/state` 被重复占用
+
+这里的“新的启动命令”包括：
+
+- `make dev`
+- `make up`
+- `make up-site`
+- `make up-external`
+- `make up-mysql`
+- `make up-ipfs`
+- `make up-anvil`
+- `make up-akashgen`
+- `make pw-test`
+
+这些命令都会先执行当前项目运行现场检查。
+
+---
+
+## 4. 闭环二：Playwright 测试闭环
+
+### 4.1 目标
+
+测试闭环的目标是：
+
+- 拉起 smoke 所需依赖
+- 完成站点、链和测试数据初始化
+- 跑 `@smoke` 子集
+- 保留失败现场
+
+它回答的问题是：
+
+> 核心路径现在还通不通？
+
+### 4.2 使用方式
+
+进入 shell：
 
 ```bash
 devenv shell
-make up
-make status
-make test
 ```
 
-如果后端改动影响链配置或业务流程：
+运行：
 
 ```bash
-make chain-ready
-make seed-demo
-playwright test
+make pw-test
 ```
 
-### 改前端逻辑
+这个命令会做这些事：
+
+1. 拉起 `mysql/ipfs/anvil/akashgen`
+2. 执行 `make init-site`
+3. 拉起 `forum/frontend`
+4. 执行 `make init-chain`
+5. 执行 `make init-test-data`
+6. 执行 `playwright test --grep @smoke`
+7. 保留现场，供你继续排查或继续联调
+
+### 4.3 为什么不自动清理
+
+`pw-test` 不自动清理，是刻意设计的。
+
+而且这里的“保留现场”不只发生在失败时。
+
+即使 smoke 全部通过，它也会保留现场。
+
+因为通过之后你通常仍然会继续看：
+
+- forum 页面状态
+- frontend watch 是否还活着
+- 链和 API 是否仍然可用
+- `.devenv/state/pw-test-*.log` 的进程输出
+
+排查完成后，再执行：
 
 ```bash
-devenv shell
-make up-forum
-npm run dev
+make down
 ```
 
-说明：
+`make down` 会尝试：
 
-- `make up-forum` 会把论坛和前端 watch 拉起来
-- 如果你已经用 Overseer 或其他工具单独管理 `frontend`，那 `npm run dev` 也可以自己控制
+- 停掉 `pw-test` 保留的后台进程
+- 停掉当前项目目录对应的 `devenv` 进程
 
-### 跑 Playwright
+它不会清理别的项目目录下的运行现场。
+
+如果你只是想看当前项目到底还残留了哪些运行现场，可以直接执行：
 
 ```bash
-devenv shell
-playwright test
+./scripts/runtime/stack.sh list
 ```
 
-如果要肉眼看浏览器：
+### 4.4 如果你只想重复跑 smoke
 
 ```bash
-playwright test --headed
+playwright test --grep @smoke
 ```
 
-如果要录制交互：
+这条命令只负责执行测试，不负责准备依赖。
+
+所以：
+
+- 要完整闭环，用 `make pw-test`
+- 环境已经准备好了，只想重复执行时，再直接跑 `playwright test --grep @smoke`
+
+---
+
+## 5. 闭环三：Playwright MCP 闭环
+
+### 5.1 目标
+
+这个闭环的目标是：
+
+- 启动 Playwright MCP
+- 确认 MCP 已经开始监听
+- 保持进程存活
+
+它回答的问题是：
+
+> 我现在能不能把浏览器作为 MCP 服务来驱动？
+
+### 5.2 使用方式
+
+先确保 forum 已经起来，再执行：
 
 ```bash
-playwright codegen
+make pw-mcp
 ```
 
-## 5. 每个高层命令的真实含义
+它会：
 
-### `make up`
+1. 创建输出目录和 profile 目录
+2. 清掉占用 MCP 端口的旧进程
+3. 前台启动 `mcp-server-playwright`
+4. 等待 `PLAYWRIGHT_MCP_URL` 可访问
+5. 保持 MCP 进程继续运行
+
+这是前台长驻任务，不会自己退出。
+
+---
+
+## 6. 初始化层怎么用
+
+### 6.1 `make init`
+
+完整低频初始化入口：
 
 ```bash
-make up
+make init
 ```
+
+它等价于：
+
+```bash
+make init-site
+make init-chain
+make init-test-data
+```
+
+如果你要清理持久化状态，而不是清理运行现场，用：
+
+```bash
+make reset-state
+```
+
+这条命令只清理 `.devenv/state` 里的持久化数据。
+
+它不会自动帮你停进程。
+
+而且如果当前项目运行现场还活着，它会直接拒绝执行。
+
+所以正确顺序是：
+
+```bash
+make down
+make reset-state
+```
+
+### 6.2 `make init-site`
 
 作用：
 
-- 启动整套 `devenv` 进程
-
-它不负责：
-
-- 创建站点
+- 安装论坛站点
+- 同步 `config.php`
 - 启用扩展
-- 部署合约
-- 写入 demo 数据
 
-所以它只是“把系统拉起来”，不是“把系统准备完毕”。
-
-### `make status`
-
-```bash
-make status
-```
+### 6.3 `make init-chain`
 
 作用：
 
-- 只做检查
-- 不修改状态
+- 等待 anvil 可用
+- 编译并部署或复用合约
+- 把链配置写回论坛 settings
 
-它检查：
-
-- mysql
-- ipfs
-- anvil
-- forum
-- akashgen
-- playwright-mcp
-
-### `make chain-ready`
-
-```bash
-make chain-ready
-```
+### 6.4 `make init-test-data`
 
 作用：
 
-- 运行 `scripts/ensure-contract.sh`
-- 运行 `scripts/sync-contract-settings.sh`
+- 确保 `admin`、`buyer`、`seller` 存在
+- 确保密码统一为 `password`
+- 确保测试所需盲盒数量和群组关系存在
 
-这是现在唯一的链上准备入口。
+这一步不属于“论坛安装”，它属于“测试数据准备”。
 
-### `make seed-demo`
+---
 
-```bash
-make seed-demo
-```
+## 7. 完整验收
 
-作用：
-
-- 恢复 demo 用户和业务初始数据
-
-### `make verify`
+如果你要做更高层的完整验收：
 
 ```bash
 make verify
 ```
 
-作用：
+它会执行：
 
-- 跑一次完整验收流程
+- 严格进程探针
+- `make init-chain`
+- `make init-test-data`
+- API 级验收
+- `playwright test`
 
-它当前会做：
+这是比 `pw-test` 更重的验收入口。
 
-1. `status`
-2. `chain-ready`
-3. `seed-demo`
-4. API smoke
-5. `playwright test`
+这里的“严格”意思是：
 
-所以它不是“轻量检查”，而是“完整跑一轮”。
+- `mysql / ipfs / anvil / forum / akashgen / frontend` 任一项没起来，`verify` 会直接失败
+- `playwright-mcp` 仍然只是可选探针，不会阻塞 `verify`
 
-### `make reset`
+---
 
-```bash
-make reset
-```
+## 8. 最短记忆版本
 
-作用：
-
-- 删除 `.devenv/state` 里容易污染下一轮测试的状态
-
-它当前会清掉：
-
-- anvil state
-- ipfs state
-- playwright output
-- playwright-mcp output
-- playwright-mcp profile
-- contract.env
-
-这是“回归下一轮干净测试”的高层命令。
-
-## 6. 测试后，怎么回到下一轮干净状态
-
-### 轻量回归
-
-适用：
-
-- 你只想继续下一轮测试
-- 不想重置太多状态
+如果以后忘了，只记这些就够了：
 
 ```bash
-make seed-demo
-make chain-ready
+make dev
+make pw-test
+make pw-mcp
+make down
+make init
+make reset-state
 ```
 
-### 标准回归
+对应含义：
 
-适用：
-
-- 你怀疑链状态或 profile 被污染
-
-```bash
-make reset
-make up
-make chain-ready
-make seed-demo
-```
-
-### 站点级回归
-
-适用：
-
-- 你怀疑 Flarum 站点本身坏了
-
-```bash
-make disable
-make site
-make enable
-make up
-make chain-ready
-make seed-demo
-```
-
-## 7. 关于数据库策略
-
-当前策略是只保留两个数据库：
-
-- `flarum`
-- `flarum_test`
-
-这意味着：
-
-- 开发环境使用 `flarum`
-- integration test 使用 `flarum_test`
-- 不再保留第三个项目专用测试库
-
-这样做的理由是：
-
-- 开发数据和 integration test 数据仍然隔离
-- 数据库数量控制在两个，复杂度比三库低
-- 这比“单库同时承担开发与 integration test”更安全
-
-这是一种更平衡的简化方案。
-
-## 8. 你下一步怎么试
-
-建议你按这个顺序亲自走一遍：
-
-```bash
-devenv shell
-make site
-make enable
-make up
-make status
-make chain-ready
-make seed-demo
-playwright test
-make verify
-make reset
-```
-
-试完后，你再决定：
-
-- `up-mysql/up-ipfs/up-anvil/...` 是否还要保留
-- `verify` 这个高层命令是否还值得保留
-- `migrate-reset` 是否应该继续暴露
+- `dev`: 整套开发环境起来没有
+- `pw-test`: smoke 路径还通不通
+- `pw-mcp`: MCP 服务能不能接
+- `down`: 当前项目现场看完后怎么清理
+- `init`: 持久化初始化要不要重做
+- `reset-state`: 持久化状态要不要整份清空

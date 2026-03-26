@@ -1,7 +1,7 @@
 const { defineConfig, devices } = require("@playwright/test");
 
 module.exports = defineConfig({
-  testDir: "./tests/e2e",
+  testDir: "./e2e",
   fullyParallel: false,
   outputDir: process.env.PLAYWRIGHT_TEST_OUTPUT_DIR || "./test-results",
   timeout: 60 * 1000,

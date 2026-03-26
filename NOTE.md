@@ -25,18 +25,16 @@
 
 | Command | Purpose |
 |--------|---------|
-| `devenv up -d` | Start long-running services (MySQL, IPFS, Anvil, AkashGen API, Flarum, Webpack watch, Playwright MCP) |
-| `status` | Probe service health from inside the devenv shell |
-| `urls` | Print the local URLs for forum, IPFS, chain, API, and MCP |
-| `run` | Wait for services, deploy/verify the NFT contract, and sync Flarum settings |
-| `ready` / `bootstrap` | Alias for `run` |
-| `seed-demo` | Create/reset demo users with passwords |
-| `pw-test` / `e2e` | Playwright Test smoke suite driven by the Nix-provided `playwright` CLI |
-| `pw-headed` | Run the same Playwright specs headed |
-| `pw-codegen` | Run Playwright codegen against the local forum |
-| `pw-doctor` | Verify the Nix-provided Playwright runtime and config |
-| `verify` | Full verification (bootstrap + seed + API smoke + E2E) |
-| `e2e-clean` | Clear Playwright test and MCP artifacts under `$DEVENV_STATE` |
+| `make dev` | Start the full dev stack |
+| `make up-site` | Start forum, mysql, and frontend watch |
+| `make up-external` | Start ipfs, anvil, and akashgen |
+| `make status` | Probe process health |
+| `make init-site` | Install and configure the forum site |
+| `make init-chain` | Bootstrap contract state and sync settings |
+| `make init-test-data` | Create/reset Playwright demo users and data |
+| `make pw-test` | Full smoke test loop with retained scene |
+| `make pw-mcp` | Start Playwright MCP |
+| `make verify` | Full verification run |
 
 ## Key Pitfalls & Solutions
 
@@ -46,7 +44,7 @@
 
 ### 2. AIGC API Goes Down
 - **Problem**: The Go-based AIGC API (`akashgen-api-go`) exits when idle or on error, causing 500s on blind box open.
-- **Fix**: `devenv up` keeps the service under process management, and `verify` should be run only after the stack is healthy.
+- **Fix**: Keep the stack under process management and run `make status` before `make verify`.
 
 ### 3. Flarum Login in Playwright
 - **Problem**: Setting `flarum_remember` cookie via `document.cookie` doesn't work — Flarum needs it set at the browser context level.
@@ -62,7 +60,7 @@
 
 ### 6. Sync Queue + AIGC Timing
 - **Problem**: With `queue.driver = sync`, the blind box open endpoint blocks until AIGC + IPFS + NFT minting all complete (~5-20s).
-- **Fix**: This is expected in dev. The frontend shows "Generating..." spinner and polls. Test waits 8s for sync completion.
+- **Fix**: This is expected in dev. The frontend shows "Generating..." spinner and polls. Smoke tests wait for sync completion.
 
 ### 7. NFT Auto-Minting
 - **Problem**: E2E test for manual mint says "no unminted collectibles".
@@ -70,7 +68,7 @@
 
 ### 8. Contract Settings Sync
 - **Problem**: After Anvil restart, the contract address in DB may be stale.
-- **Fix**: `run` reads `contract.env` and pushes settings to DB after contract bootstrap.
+- **Fix**: `init-chain` reads `contract.env` and pushes settings to DB after contract bootstrap.
 
 ## Feature Verification Matrix
 

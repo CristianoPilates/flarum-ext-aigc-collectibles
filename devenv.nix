@@ -121,8 +121,8 @@ in
     fi
 
     echo "AkashGen API dev shell ready"
-    echo "- Start services: devenv up -d"
-    echo "- Chain sync: make chain-ready"
+    echo "- Start services: make dev"
+    echo "- Init stack: make init"
     echo "- Playwright: playwright test"
     echo "- Playwright browsers: $PLAYWRIGHT_BROWSERS_PATH"
   '';
@@ -185,8 +185,8 @@ in
       --browser chromium \
       --port "$port" \
       --user-data-dir "$PLAYWRIGHT_MCP_USER_DATA_DIR" \
-      --init-page "${projectRoot}/tests/e2e/support/playwright-mcp-init-page.ts" \
-      --init-script "${projectRoot}/tests/e2e/support/playwright-mcp-init-script.js" \
+      --init-page "${projectRoot}/e2e/support/playwright-mcp-init-page.ts" \
+      --init-script "${projectRoot}/e2e/support/playwright-mcp-init-script.js" \
       --output-dir "$PLAYWRIGHT_MCP_OUTPUT_DIR"
   '';
 }

@@ -1,17 +1,15 @@
 const { test, expect } = require('@playwright/test');
 
 const {
-  BASE_URL,
   closeModalIfPresent,
   createSmokeSession,
   currentUsername,
   gotoApp,
   login,
-  logout,
   waitForModal,
 } = require('./support/smoke-helpers.cjs');
 
-test.describe.serial('AIGC collectibles smoke', () => {
+test.describe.serial('app smoke @smoke', () => {
   /** @type {import('@playwright/test').BrowserContext} */
   let context;
   /** @type {import('@playwright/test').Page} */
@@ -25,20 +23,19 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await context?.close();
   });
 
-  test('homepage loads for guests', async () => {
+  test('homepage loads for guests @smoke', async () => {
     await gotoApp(page, '/');
     await expect(page.locator('body')).toBeVisible();
     await expect(page.locator('.IndexPage, .App-content, .DiscussionList').first()).toBeVisible();
   });
 
-  test('admin can log in', async () => {
+  test('admin can log in @smoke', async () => {
     await login(page, context, 'admin');
-
     await expect(page.locator('.SessionDropdown')).toBeVisible();
     await expect.poll(async () => await currentUsername(page)).toBe('admin');
   });
 
-  test('check-in entry is available', async ({}, testInfo) => {
+  test('check-in entry is available @smoke', async ({}, testInfo) => {
     await gotoApp(page, '/');
 
     const button = page.locator('.CheckinButton-button');
@@ -54,7 +51,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await expect(button).toBeDisabled();
   });
 
-  test('blind box opener is reachable', async ({}, testInfo) => {
+  test('blind box opener is reachable @smoke', async ({}, testInfo) => {
     await gotoApp(page, '/');
 
     const trigger = page.locator('.BlindBoxOpener-trigger');
@@ -75,7 +72,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await closeModalIfPresent(page);
   });
 
-  test('collectibles gallery renders on admin profile', async () => {
+  test('collectibles gallery renders on admin profile @smoke', async () => {
     await gotoApp(page, '/u/admin/collectibles');
 
     const cards = page.locator('.CollectibleCard');
@@ -83,7 +80,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     expect(await cards.count()).toBeGreaterThan(0);
   });
 
-  test('collectible detail modal opens', async () => {
+  test('collectible detail modal opens @smoke', async () => {
     await gotoApp(page, '/u/admin/collectibles');
 
     const firstCard = page.locator('.CollectibleCard').first();
@@ -95,7 +92,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await closeModalIfPresent(page);
   });
 
-  test('wallet connector is visible on collectibles page', async () => {
+  test('wallet connector is visible on collectibles page @smoke', async () => {
     await gotoApp(page, '/u/admin/collectibles');
 
     const walletSection = page.locator('.WalletConnector');
@@ -114,7 +111,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await expect(address).toContainText('0x', { timeout: 10_000 });
   });
 
-  test('post badge flow does not regress', async ({}, testInfo) => {
+  test('post badge flow does not regress @smoke', async ({}, testInfo) => {
     await gotoApp(page, '/');
 
     const discussionLink = page.locator('.DiscussionListItem-title').first();
@@ -128,7 +125,7 @@ test.describe.serial('AIGC collectibles smoke', () => {
     await expect(page.locator('.PostStream, .DiscussionPage').first()).toBeVisible();
   });
 
-  test('collectible mint API stays callable for completed collectibles', async ({}, testInfo) => {
+  test('collectible mint API stays callable for completed collectibles @smoke', async ({}, testInfo) => {
     await gotoApp(page, '/u/admin/collectibles');
 
     const result = await page.evaluate(async () => {
@@ -167,14 +164,14 @@ test.describe.serial('AIGC collectibles smoke', () => {
     }
   });
 
-  test('buyer can browse trading pages', async () => {
-    await gotoApp(page, '/');
-    await logout(page, context);
+  test('buyer can browse trading pages @smoke', async () => {
     await login(page, context, 'buyer');
 
     await gotoApp(page, '/u/admin/collectibles');
     await expect(page).toHaveURL(/\/u\/admin\/collectibles$/);
     await expect(page.locator('.UserPage, .CollectiblesPage, .WalletConnector').first()).toBeVisible();
+
+    await expect(page.locator('.WalletConnector, .CollectibleCard, .TradesTab').first()).toBeVisible();
 
     await gotoApp(page, '/u/buyer/collectibles');
     await expect(page).toHaveURL(/\/u\/buyer\/collectibles$/);

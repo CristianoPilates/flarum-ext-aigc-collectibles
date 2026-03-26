@@ -54,9 +54,9 @@ async function createSmokeSession(browser) {
 
 async function gotoApp(page, pathname = '/') {
   const target = new URL(pathname, BASE_URL).toString();
-  await page.goto(target);
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(500);
+  await page.goto(target, { waitUntil: 'load' });
+  await page.locator('body').first().waitFor({ state: 'visible', timeout: 10_000 });
+  await page.waitForTimeout(300);
 }
 
 async function currentUsername(page) {
