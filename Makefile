@@ -1,4 +1,5 @@
-SITE_DIR    := /home/donk/development/flarum-site
+# Runtime/project paths (SITE_DIR follows .env FLARUM_SITE_DIR by default)
+SITE_DIR    ?= $(FLARUM_SITE_DIR)
 EXT_DIR     := $(shell pwd)
 STATE_DIR   := $(EXT_DIR)/.devenv/state
 EXT_NAME    := donk/flarum-ext-aigc-collectibles
@@ -14,6 +15,10 @@ PW_TEST_SITE_LOG_FILE ?= $(STATE_DIR)/pw-test-site.log
 ifneq (,$(wildcard ./.env))
 include .env
 export
+endif
+
+ifeq ($(strip $(SITE_DIR)),)
+$(error SITE_DIR is empty; set FLARUM_SITE_DIR in .env or export SITE_DIR)
 endif
 
 .PHONY: up down status dev pw-test pw-mcp \
@@ -157,15 +162,13 @@ up-akashgen: assert-runtime-clean
 verify:
 	./scripts/verify/run.sh
 
-# === 创建 Flarum 站点（幂等） ===
+# === 创建并安装 Flarum 站点（幂等，官方 non-interactive install） ===
 site:
 	FLARUM_VER="$(FLARUM_VER)" ./scripts/forum/install.sh
-	./scripts/forum/configure.sh
 
 # === 启用扩展（Flarum 必须已安装，且 mysql 已运行） ===
 enable: assert-mysql site
 	@echo ">>> Linking and enabling extension..."
-	./scripts/forum/configure.sh
 	cd $(SITE_DIR) && composer config repositories.donk-aigc-collectibles path $(EXT_DIR)
 	@cd $(SITE_DIR) && if composer show $(EXT_NAME) >/dev/null 2>&1; then \
 		echo ">>> Extension package already linked"; \

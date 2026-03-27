@@ -3,6 +3,13 @@
 
 declare(strict_types=1);
 
+/**
+ * Creates and returns a PDO(PHP Data Objects) connection using database settings from environment variables.
+ *
+ * Falls back to local defaults when variables are not defined.
+ *
+ * @throws PDOException If the connection cannot be established.
+ */
 function connect(): PDO
 {
     return new PDO(
@@ -18,6 +25,16 @@ function connect(): PDO
     );
 }
 
+/**
+ * Creates a user when missing, or refreshes key fields for an existing user.
+ *
+ * The user's blind box count is only increased, never decreased.
+ *
+ *
+ * @return int The user ID.
+ *
+ * @throws PDOException If a database operation fails.
+ */
 function ensureUser(PDO $db, string $username, string $email, int $blindBoxCount, string $passwordHash): int
 {
     $find = $db->prepare('SELECT id FROM users WHERE username = ?');
@@ -31,6 +48,7 @@ function ensureUser(PDO $db, string $username, string $email, int $blindBoxCount
         );
         $insert->execute([$username, $email, $passwordHash, $blindBoxCount]);
         echo "[playwright-prepare] {$username} created\n";
+
         return (int) $db->lastInsertId();
     }
 
@@ -44,9 +62,16 @@ function ensureUser(PDO $db, string $username, string $email, int $blindBoxCount
     );
     $update->execute([$email, $passwordHash, $blindBoxCount, $id]);
     echo "[playwright-prepare] {$username} refreshed\n";
+
     return (int) $id;
 }
 
+/**
+ * Ensures that a user belongs to the member group (group_id = 3).
+ *
+ *
+ * @throws PDOException If the insert operation fails.
+ */
 function ensureMemberGroup(PDO $db, int $userId): void
 {
     $stmt = $db->prepare('INSERT IGNORE INTO group_user (user_id, group_id) VALUES (?, 3)');

@@ -75,8 +75,7 @@ scripts/
 ├── chain/
 │   └── bootstrap.sh
 ├── forum/
-│   ├── install.sh
-│   └── configure.sh
+│   └── install.sh
 ├── health/
 │   └── probe.sh
 ├── playwright/
@@ -93,10 +92,7 @@ scripts/
   纯探针，负责测活，不修改状态
 
 - `scripts/forum/install.sh`
-  从无到有创建 Flarum 站点
-
-- `scripts/forum/configure.sh`
-  把已安装站点收口到开发配置
+  从无到有创建 Flarum 站点，并通过官方 `php flarum install --file` 完成非交互式安装
 
 - `scripts/playwright/prepare-data.php`
   准备 Playwright smoke 所需 demo 用户和数据
@@ -407,8 +403,7 @@ make reset-state
 
 作用：
 
-- 安装论坛站点
-- 同步 `config.php`
+- 安装论坛站点（官方 non-interactive install）
 - 启用扩展
 
 ### 6.3 `make init-chain`
