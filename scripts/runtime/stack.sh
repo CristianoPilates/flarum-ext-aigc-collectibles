@@ -92,7 +92,9 @@ format_entries() {
 remove_pid_files() {
   rm -f \
     "$state_dir/pw-test-external.pid" \
-    "$state_dir/pw-test-site.pid"
+    "$state_dir/pw-test-site.pid" \
+    "$state_dir/pw-smoke-external.pid" \
+    "$state_dir/pw-smoke-site.pid"
 }
 
 command="${1:-check}"

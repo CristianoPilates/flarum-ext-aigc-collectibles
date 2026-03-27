@@ -8,38 +8,42 @@
 它不是架构总览。
 它是你回到这个项目时，可以直接照着执行的工作手册。
 
-当前只有 3 条主闭环：
+当前 Playwright 工作流只有 3 条 lane：
 
-1. 开发闭环
-2. Playwright 测试闭环
-3. Playwright MCP 闭环
+1. Automated smoke
+2. Manual exploratory
+3. MCP automation
 
 ---
 
 ## 1. 先记住这几个入口
 
-你平时主要只需要记住这 4 个命令：
+你平时主要只需要记住这 5 个命令：
 
 ```bash
 make dev
-make pw-test
+make pw-smoke
+make pw-manual
 make pw-mcp
 make down
 ```
 
 含义：
 
-- `make dev`
-  启动完整开发编排
+- `make pw-smoke`
+  启动完整 headless smoke 测试编排，并保留现场
 
-- `make pw-test`
-  启动完整 Playwright smoke 测试编排，并保留现场
+- `make pw-manual`
+  启动 headed Chromium，并复用可加载 unpacked extensions 的手工探索专用持久化 profile
 
 - `make pw-mcp`
-  前台启动 Playwright MCP
+  前台启动 Playwright MCP 自动化服务
 
 - `make down`
   清理当前项目的运行现场
+
+- `make dev`
+  启动支撑这三条 lane 的完整开发编排
 
 除此之外，还有一层低频初始化命令：
 
@@ -61,7 +65,8 @@ make reset-state
 
 也就是说：
 
-- `dev / pw-test / pw-mcp` 是运行层
+- `pw-smoke / pw-manual / pw-mcp` 是日常 Playwright 运行层
+- `dev` 是支撑运行层的整套环境入口
 - `init-* / reset-state` 是持久化初始化层
 
 ---
@@ -116,11 +121,11 @@ scripts/
 
 ---
 
-## 3. 闭环一：开发闭环
+## 3. 支撑环境：开发编排
 
 ### 3.1 目标
 
-开发闭环的目标是：
+开发编排的目标是：
 
 - 论坛可访问
 - 扩展已经启用
@@ -234,22 +239,23 @@ make status
 - `make up-ipfs`
 - `make up-anvil`
 - `make up-akashgen`
-- `make pw-test`
+- `make pw-smoke`
 
 这些命令都会先执行当前项目运行现场检查。
 
 ---
 
-## 4. 闭环二：Playwright 测试闭环
+## 4. Lane 一：Automated Smoke
 
 ### 4.1 目标
 
-测试闭环的目标是：
+这条 lane 的目标是：
 
-- 拉起 smoke 所需依赖
+- Headless、deterministic 地拉起 smoke 所需依赖
+- 不复用持久化 profile，保持结果可重复
 - 完成站点、链和测试数据初始化
 - 跑 `@smoke` 子集
-- 保留失败现场
+- 保留现场用于复现和继续联调
 
 它回答的问题是：
 
@@ -266,7 +272,7 @@ devenv shell
 运行：
 
 ```bash
-make pw-test
+make pw-smoke
 ```
 
 这个命令会做这些事：
@@ -279,9 +285,9 @@ make pw-test
 6. 执行 `playwright test --grep @smoke`
 7. 保留现场，供你继续排查或继续联调
 
-### 4.3 为什么不自动清理
+### 4.3 为什么保留现场
 
-`pw-test` 不自动清理，是刻意设计的。
+`pw-smoke` 不自动清理，是刻意设计的。
 
 而且这里的“保留现场”不只发生在失败时。
 
@@ -292,7 +298,7 @@ make pw-test
 - forum 页面状态
 - frontend watch 是否还活着
 - 链和 API 是否仍然可用
-- `.devenv/state/pw-test-*.log` 的进程输出
+- `.devenv/state/pw-smoke-*.log` 的进程输出
 
 排查完成后，再执行：
 
@@ -302,7 +308,7 @@ make down
 
 `make down` 会尝试：
 
-- 停掉 `pw-test` 保留的后台进程
+- 停掉 `pw-smoke` 保留的后台进程
 - 停掉当前项目目录对应的 `devenv` 进程
 
 它不会清理别的项目目录下的运行现场。
@@ -323,26 +329,73 @@ playwright test --grep @smoke
 
 所以：
 
-- 要完整闭环，用 `make pw-test`
+- 要完整闭环，用 `make pw-smoke`
 - 环境已经准备好了，只想重复执行时，再直接跑 `playwright test --grep @smoke`
 
 ---
 
-## 5. 闭环三：Playwright MCP 闭环
+## 5. Lane 二：Manual Exploratory
 
 ### 5.1 目标
 
-这个闭环的目标是：
+这条 lane 的目标是：
+
+- Headed GUI
+- 持久化 manual profile
+- 保留人工探索状态
+
+使用方式：
+
+先确保 forum 已经起来，再执行：
+
+```bash
+make pw-manual
+```
+
+它会：
+
+1. 创建 `playwright-manual-profile`
+2. 确认 `FORUM_URL` 可访问
+3. 用持久化 profile 打开 headed Chromium
+4. 如果设置了 `PLAYWRIGHT_MANUAL_EXTENSION_DIRS`，额外加载 unpacked extensions
+
+### 5.2 使用方式
+
+### 5.3 适用场景
+
+- 手点真实业务流
+- 安装 MetaMask 之类的浏览器扩展
+- 保留登录态、扩展状态和其他本地 GUI 状态
+
+补充：
+
+- `PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual`
+  加载一个或多个 unpacked extension 目录
+
+- 多个扩展目录用系统 path 分隔符连接
+  Linux/NixOS 下是 `:`
+
+- 当前默认值已经指向仓库内的解包 MetaMask
+  不额外传 env 时会自动加载
+
+---
+
+## 6. Lane 三：MCP Automation
+
+### 6.1 目标
+
+这个 lane 的目标是：
 
 - 启动 Playwright MCP
 - 确认 MCP 已经开始监听
-- 保持进程存活
+- 根据需要选择 headless 或 headed
+- 复用 MCP profile，保证 agent 会话连续性
 
 它回答的问题是：
 
 > 我现在能不能把浏览器作为 MCP 服务来驱动？
 
-### 5.2 使用方式
+### 6.2 使用方式
 
 先确保 forum 已经起来，再执行：
 
@@ -360,11 +413,23 @@ make pw-mcp
 
 这是前台长驻任务，不会自己退出。
 
+如果你要让 agent 驱动一个可见浏览器：
+
+```bash
+make pw-mcp-headed
+```
+
+### 6.3 适用场景
+
+- 需要 agent 连续操作同一个浏览器上下文
+- 需要复用登录态或其他浏览器状态
+- 需要在 headless 和 headed 之间切换
+
 ---
 
-## 6. 初始化层怎么用
+## 7. 初始化层怎么用
 
-### 6.1 `make init`
+### 7.1 `make init`
 
 完整低频初始化入口：
 
@@ -399,14 +464,14 @@ make down
 make reset-state
 ```
 
-### 6.2 `make init-site`
+### 7.2 `make init-site`
 
 作用：
 
 - 安装论坛站点（官方 non-interactive install）
 - 启用扩展
 
-### 6.3 `make init-chain`
+### 7.3 `make init-chain`
 
 作用：
 
@@ -414,7 +479,7 @@ make reset-state
 - 编译并部署或复用合约
 - 把链配置写回论坛 settings
 
-### 6.4 `make init-test-data`
+### 7.4 `make init-test-data`
 
 作用：
 
@@ -426,7 +491,7 @@ make reset-state
 
 ---
 
-## 7. 完整验收
+## 8. 完整验收
 
 如果你要做更高层的完整验收：
 
@@ -442,7 +507,7 @@ make verify
 - API 级验收
 - `playwright test`
 
-这是比 `pw-test` 更重的验收入口。
+这是比 `pw-smoke` 更重的验收入口。
 
 这里的“严格”意思是：
 
@@ -451,13 +516,14 @@ make verify
 
 ---
 
-## 8. 最短记忆版本
+## 9. 最短记忆版本
 
 如果以后忘了，只记这些就够了：
 
 ```bash
 make dev
-make pw-test
+make pw-smoke
+make pw-manual
 make pw-mcp
 make down
 make init
@@ -467,8 +533,9 @@ make reset-state
 对应含义：
 
 - `dev`: 整套开发环境起来没有
-- `pw-test`: smoke 路径还通不通
-- `pw-mcp`: MCP 服务能不能接
+- `pw-smoke`: headless smoke 路径还通不通
+- `pw-manual`: headed 手工探索环境能不能直接进入
+- `pw-mcp`: MCP 浏览器自动化能不能接
 - `down`: 当前项目现场看完后怎么清理
 - `init`: 持久化初始化要不要重做
 - `reset-state`: 持久化状态要不要整份清空

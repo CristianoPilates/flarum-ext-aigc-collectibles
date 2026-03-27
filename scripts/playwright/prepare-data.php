@@ -68,6 +68,8 @@ function ensureUser(PDO $db, string $username, string $email, int $blindBoxCount
 
 /**
  * Ensures that a user belongs to the member group (group_id = 3).
+ * “Member” group (ID = 3) is a built-in default group representing normal registered users.
+
  *
  *
  * @throws PDOException If the insert operation fails.

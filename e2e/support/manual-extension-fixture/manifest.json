@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Playwright Manual Fixture",
+  "version": "0.0.1",
+  "description": "Minimal unpacked extension fixture for validating pw-manual extension loading.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "PW Manual Fixture"
+  }
+}

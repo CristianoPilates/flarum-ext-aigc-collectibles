@@ -32,7 +32,8 @@
 | `make init-site` | Install and configure the forum site |
 | `make init-chain` | Bootstrap contract state and sync settings |
 | `make init-test-data` | Create/reset Playwright demo users and data |
-| `make pw-test` | Full smoke test loop with retained scene |
+| `make pw-smoke` | Full smoke test loop with retained scene |
+| `make pw-manual` | Open headed Chromium with a persistent manual profile and optional unpacked extensions |
 | `make pw-mcp` | Start Playwright MCP |
 | `make verify` | Full verification run |
 
@@ -89,5 +90,6 @@
 
 - Playwright Test stores traces, screenshots, and videos under `$DEVENV_STATE/playwright/test-results`.
 - The HTML report is written to `$DEVENV_STATE/playwright/html-report`.
+- The persistent manual browser profile lives under `$DEVENV_STATE/playwright-manual-profile`.
 - Playwright MCP session output is written to `$DEVENV_STATE/playwright-mcp-output`.
 - The persistent MCP browser profile lives under `$DEVENV_STATE/playwright-mcp-profile`.

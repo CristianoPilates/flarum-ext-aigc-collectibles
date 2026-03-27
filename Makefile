@@ -7,10 +7,14 @@ FLARUM_VER  := ^2.0.0
 PLAYWRIGHT_MCP_PORT := $(shell printf '%s\n' "$(PLAYWRIGHT_MCP_URL)" | sed -n 's#.*:\([0-9][0-9]*\)/.*#\1#p')
 PLAYWRIGHT_MCP_OUTPUT_DIR ?= $(STATE_DIR)/playwright-mcp-output
 PLAYWRIGHT_MCP_USER_DATA_DIR ?= $(STATE_DIR)/playwright-mcp-profile
-PW_TEST_EXTERNAL_PID_FILE ?= $(STATE_DIR)/pw-test-external.pid
-PW_TEST_SITE_PID_FILE ?= $(STATE_DIR)/pw-test-site.pid
-PW_TEST_EXTERNAL_LOG_FILE ?= $(STATE_DIR)/pw-test-external.log
-PW_TEST_SITE_LOG_FILE ?= $(STATE_DIR)/pw-test-site.log
+PLAYWRIGHT_MANUAL_USER_DATA_DIR ?= $(STATE_DIR)/playwright-manual-profile
+PLAYWRIGHT_MANUAL_CHANNEL ?= chromium
+PLAYWRIGHT_MANUAL_EXTENSION_DIRS ?= $(EXT_DIR)/e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn
+PW_MCP_HEADLESS ?= 1
+PW_SMOKE_EXTERNAL_PID_FILE ?= $(STATE_DIR)/pw-smoke-external.pid
+PW_SMOKE_SITE_PID_FILE ?= $(STATE_DIR)/pw-smoke-site.pid
+PW_SMOKE_EXTERNAL_LOG_FILE ?= $(STATE_DIR)/pw-smoke-external.log
+PW_SMOKE_SITE_LOG_FILE ?= $(STATE_DIR)/pw-smoke-site.log
 
 ifneq (,$(wildcard ./.env))
 include .env
@@ -21,9 +25,9 @@ ifeq ($(strip $(SITE_DIR)),)
 $(error SITE_DIR is empty; set FLARUM_SITE_DIR in .env or export SITE_DIR)
 endif
 
-.PHONY: up down status dev pw-test pw-mcp \
+.PHONY: up down status dev pw-smoke pw-manual pw-mcp pw-mcp-headed \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
-        init init-site init-chain init-test-data assert-mysql assert-no-pw-test-scene assert-runtime-clean verify reset-state \
+        init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         site enable disable migrate migrate-reset test help
 
 # === 开发环境编排 ===
@@ -67,28 +71,28 @@ assert-mysql:
 assert-runtime-clean:
 	@./scripts/runtime/stack.sh check
 
-assert-no-pw-test-scene:
+assert-no-pw-smoke-scene:
 	@set -eu; \
-	for file in "$(PW_TEST_EXTERNAL_PID_FILE)" "$(PW_TEST_SITE_PID_FILE)"; do \
+	for file in "$(PW_SMOKE_EXTERNAL_PID_FILE)" "$(PW_SMOKE_SITE_PID_FILE)"; do \
 		if [ -f "$$file" ]; then \
 			pid="$$(cat "$$file" 2>/dev/null || true)"; \
 			if [ -n "$$pid" ] && kill -0 "$$pid" >/dev/null 2>&1; then \
-				echo "retained pw-test scene is still running; inspect it or run make down" >&2; \
+				echo "retained pw-smoke scene is still running; inspect it or run make down" >&2; \
 				exit 1; \
 			fi; \
 			rm -f "$$file"; \
 		fi; \
 	done
 
-pw-test: assert-runtime-clean assert-no-pw-test-scene
+pw-smoke: assert-runtime-clean assert-no-pw-smoke-scene
 	@set -eu; \
 	mkdir -p "$(STATE_DIR)"; \
 	trap 'status="$$?"; \
-		echo "pw-test scene retained; use make down to clean up"; \
+		echo "pw-smoke scene retained; use make down to clean up"; \
 		exit "$$status"' INT TERM EXIT; \
-	setsid devenv up ipfs anvil akashgen mysql >"$(PW_TEST_EXTERNAL_LOG_FILE)" 2>&1 < /dev/null & \
+	setsid devenv up ipfs anvil akashgen mysql >"$(PW_SMOKE_EXTERNAL_LOG_FILE)" 2>&1 < /dev/null & \
 	ext_pid="$$!"; \
-	printf '%s\n' "$$ext_pid" > "$(PW_TEST_EXTERNAL_PID_FILE)"; \
+	printf '%s\n' "$$ext_pid" > "$(PW_SMOKE_EXTERNAL_PID_FILE)"; \
 	for _ in $$(seq 1 60); do \
 		if ./scripts/health/probe.sh | rg -q "^\[up\]\s+mysql$$" \
 		&& ./scripts/health/probe.sh | rg -q "^\[up\]\s+ipfs$$" \
@@ -99,9 +103,9 @@ pw-test: assert-runtime-clean assert-no-pw-test-scene
 		sleep 1; \
 	done; \
 	make init-site; \
-	setsid devenv up forum frontend >"$(PW_TEST_SITE_LOG_FILE)" 2>&1 < /dev/null & \
+	setsid devenv up forum frontend >"$(PW_SMOKE_SITE_LOG_FILE)" 2>&1 < /dev/null & \
 	site_pid="$$!"; \
-	printf '%s\n' "$$site_pid" > "$(PW_TEST_SITE_PID_FILE)"; \
+	printf '%s\n' "$$site_pid" > "$(PW_SMOKE_SITE_PID_FILE)"; \
 	for _ in $$(seq 1 60); do \
 		if ./scripts/health/probe.sh | rg -q "^\[up\]\s+forum$$" \
 		&& ./scripts/health/probe.sh | rg -q "^\[up\]\s+frontend$$"; then \
@@ -113,6 +117,18 @@ pw-test: assert-runtime-clean assert-no-pw-test-scene
 	make init-test-data; \
 	playwright test --grep @smoke
 
+pw-manual:
+	@mkdir -p "$(PLAYWRIGHT_MANUAL_USER_DATA_DIR)"
+	@set -eu; \
+	curl -fsS "$(FORUM_URL)" >/dev/null; \
+	PLAYWRIGHT_MANUAL_USER_DATA_DIR="$(PLAYWRIGHT_MANUAL_USER_DATA_DIR)" \
+	PLAYWRIGHT_MANUAL_CHANNEL="$(PLAYWRIGHT_MANUAL_CHANNEL)" \
+	PLAYWRIGHT_MANUAL_EXTENSION_DIRS="$(PLAYWRIGHT_MANUAL_EXTENSION_DIRS)" \
+	node ./scripts/playwright/launch-manual.cjs
+
+pw-mcp-headed:
+	@$(MAKE) pw-mcp PW_MCP_HEADLESS=0
+
 pw-mcp:
 	@mkdir -p "$(PLAYWRIGHT_MCP_OUTPUT_DIR)" "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
 	@set -eu; \
@@ -121,7 +137,7 @@ pw-mcp:
 	if [ -n "$$pid" ]; then kill "$$pid" >/dev/null 2>&1 || true; fi; \
 	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; exit "$$status"' INT TERM EXIT; \
 	mcp-server-playwright \
-	  --headless \
+	  $$( [ "$(PW_MCP_HEADLESS)" = "1" ] && printf '%s' '--headless' ) \
 	  --no-sandbox \
 	  --browser chromium \
 	  --port "$(PLAYWRIGHT_MCP_PORT)" \
@@ -205,20 +221,27 @@ reset-state: assert-runtime-clean
 	rm -rf .devenv/state/anvil
 	rm -rf .devenv/state/ipfs
 	rm -rf .devenv/state/playwright
+	rm -rf .devenv/state/playwright-manual-profile
 	rm -rf .devenv/state/playwright-mcp-output
 	rm -rf .devenv/state/playwright-mcp-profile
 	rm -f .devenv/state/pw-test-external.pid
 	rm -f .devenv/state/pw-test-site.pid
 	rm -f .devenv/state/pw-test-external.log
 	rm -f .devenv/state/pw-test-site.log
+	rm -f .devenv/state/pw-smoke-external.pid
+	rm -f .devenv/state/pw-smoke-site.pid
+	rm -f .devenv/state/pw-smoke-external.log
+	rm -f .devenv/state/pw-smoke-site.log
 	rm -f .devenv/state/contract.env
 
 help:
 	@echo ""
 	@echo "  === 三个闭环 ==="
 	@echo "  make dev            - 完整开发编排：启动站点本体 + 外部服务 + frontend watch"
-	@echo "  make pw-test        - Playwright 测试闭环：拉起测试依赖、初始化并跑 @smoke E2E 子集"
-	@echo "  make pw-mcp         - Playwright MCP 闭环：前台启动 MCP，探针通过后保持运行"
+	@echo "  make pw-smoke       - Headless 冒烟测试闭环：拉起测试依赖、初始化并跑 @smoke E2E 子集"
+	@echo "  make pw-manual      - Headed 手工测试：打开可加载 unpacked extensions 的持久化 Chromium"
+	@echo "  make pw-mcp         - MCP 自动化闭环（默认 headless，可复用 MCP profile）"
+	@echo "  make pw-mcp-headed  - MCP 自动化闭环（headed，可复用 MCP profile）"
 	@echo ""
 	@echo "  === 支撑命令 ==="
 	@echo "  make up             - 前台启动整套开发环境"
@@ -236,6 +259,8 @@ help:
 	@echo "  make init-test-data - 低频初始化：准备 Playwright 测试数据"
 	@echo "  make verify         - 跑完整验收流程"
 	@echo "  make reset-state    - 清理 .devenv/state 持久化状态（需先 make down）"
+	@echo "  make pw-smoke       - 运行 @smoke 自动冒烟测试"
+	@echo "  PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual - 加载 unpacked 扩展"
 	@echo "  playwright test     - 直接运行 Playwright"
 	@echo "  playwright test --headed - 直接运行 headed Playwright"
 	@echo "  playwright codegen  - 直接运行 Playwright codegen"
