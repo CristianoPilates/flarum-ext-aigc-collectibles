@@ -1,42 +1,4 @@
-const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
-
-const execFileAsync = promisify(execFile);
-
-const TEST_MNEMONIC = 'test test test test test test test test test test test junk';
-const ACCOUNT_INDEX_BY_ADDRESS = {
-  '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266': 0,
-  '0x70997970c51812dc3a010c7d01b50e0d17dc79c8': 1,
-  '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc': 2,
-};
-
-const INIT_SCRIPT_PATH = path.join(__dirname, 'playwright-mcp-init-script.js');
 const BASE_URL = process.env.FORUM_URL || 'http://127.0.0.1:8080';
-
-function normalizeAddress(value) {
-  return typeof value === 'string' ? value.trim().toLowerCase() : '';
-}
-
-async function signWithCast(message, address) {
-  const mnemonicIndex = ACCOUNT_INDEX_BY_ADDRESS[normalizeAddress(address)];
-
-  if (mnemonicIndex === undefined) {
-    throw new Error(`Unsupported mock wallet address: ${address}`);
-  }
-
-  const { stdout } = await execFileAsync('cast', [
-    'wallet',
-    'sign',
-    '--mnemonic',
-    TEST_MNEMONIC,
-    '--mnemonic-index',
-    String(mnemonicIndex),
-    message,
-  ]);
-
-  return stdout.trim();
-}
 
 async function createSmokeSession(browser) {
   const context = await browser.newContext({
@@ -44,11 +6,7 @@ async function createSmokeSession(browser) {
     ignoreHTTPSErrors: true,
   });
 
-  await context.addInitScript({ path: INIT_SCRIPT_PATH });
-
   const page = await context.newPage();
-  await page.exposeFunction('__pwMockPersonalSign', signWithCast);
-
   return { context, page };
 }
 

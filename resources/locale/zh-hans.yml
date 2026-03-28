@@ -101,6 +101,9 @@ donk-aigc-collectibles:
       open_another: 再开一个
       close: 关闭
       try_again: 重试
+      appraising: 正在进行 10 秒盲盒鉴定（PoW）...
+      appraising_progress: "剩余 {seconds} 秒 · 已尝试 {attempts} 次 · 当前最佳前导零 {zeros} 个"
+      appraising_quality: "当前鉴定品质：{rarity}"
       generating: 正在生成你的藏品...
       generation_failed: 藏品生成失败，请重试。
       generation_timeout: 生成超时，请稍后重试。

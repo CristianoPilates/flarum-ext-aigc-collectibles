@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// Manual Chromium launcher for preparing and reusing the shared persistent browser profile.
+
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');

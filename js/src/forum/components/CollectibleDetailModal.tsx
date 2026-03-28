@@ -55,7 +55,8 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     const tokenId = collectible.tokenId();
     const imageUrl = collectible.ipfsCid() ? gatewayUrl(collectible.ipfsCid()) : null;
     const owner = collectible.owner?.() || collectible.user?.();
-    const canMint = Boolean(collectible.canMint?.());
+    const canMintAttribute = collectible.canMint?.();
+    const canMint = canMintAttribute ?? (status === 'completed' && !tokenId);
     const isShowcase = Boolean(collectible.isShowcase?.());
     const canOfferTrade = Boolean(currentUser && !isOwnProfile && status === 'completed');
     const statusKey = STATUS_KEYS[status];
@@ -231,6 +232,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
       const attributes = response?.data?.attributes || {};
       collectible.pushAttributes({
         tokenId: attributes.tokenId ?? collectible.tokenId?.(),
+        canMint: false,
       });
 
       app.alerts.show(

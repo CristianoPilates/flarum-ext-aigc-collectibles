@@ -24,7 +24,8 @@ in
     PLAYWRIGHT_TEST_OUTPUT_DIR = "${stateDir}/playwright/test-results";
     PLAYWRIGHT_HTML_REPORT_DIR = "${stateDir}/playwright/html-report";
     PLAYWRIGHT_MCP_OUTPUT_DIR = "${stateDir}/playwright-mcp-output";
-    PLAYWRIGHT_MCP_USER_DATA_DIR = "${stateDir}/playwright-mcp-profile";
+    PLAYWRIGHT_SHARED_USER_DATA_DIR = "${stateDir}/playwright-profile";
+    PLAYWRIGHT_MCP_USER_DATA_DIR = "${stateDir}/playwright-profile";
   };
 
   packages =
@@ -103,8 +104,11 @@ in
       "$ANVIL_STATE_DIR" \
       "$PLAYWRIGHT_TEST_OUTPUT_DIR" \
       "$PLAYWRIGHT_HTML_REPORT_DIR" \
-      "$PLAYWRIGHT_MCP_OUTPUT_DIR" \
-      "$PLAYWRIGHT_MCP_USER_DATA_DIR"
+      "$PLAYWRIGHT_MCP_OUTPUT_DIR"
+
+    if [ ! -e "$PLAYWRIGHT_SHARED_USER_DATA_DIR" ]; then
+      mkdir -p "$PLAYWRIGHT_SHARED_USER_DATA_DIR"
+    fi
 
     if [ ! -f "$IPFS_PATH/config" ]; then
       parse_http_url "$IPFS_API_URL"
@@ -180,13 +184,10 @@ in
     port="''${after_host%%/*}"
 
     exec mcp-server-playwright \
+      --config "${projectRoot}/scripts/playwright/mcp.config.json" \
+      --user-data-dir "$PLAYWRIGHT_MCP_USER_DATA_DIR" \
       --headless \
       --no-sandbox \
-      --browser chromium \
-      --port "$port" \
-      --user-data-dir "$PLAYWRIGHT_MCP_USER_DATA_DIR" \
-      --init-page "${projectRoot}/e2e/support/playwright-mcp-init-page.ts" \
-      --init-script "${projectRoot}/e2e/support/playwright-mcp-init-script.js" \
-      --output-dir "$PLAYWRIGHT_MCP_OUTPUT_DIR"
+      --port "$port"
   '';
 }

@@ -81,6 +81,9 @@ donk-aigc-collectibles:
       open_another: Open Another
       close: Close
       try_again: Try Again
+      appraising: "Appraising your blind box with a 10-second proof-of-work..."
+      appraising_progress: "{seconds}s left · {attempts} attempts · best {zeros} leading zero(es)"
+      appraising_quality: "Current appraisal: {rarity}"
       generating: "Generating your collectible..."
       generation_failed: Failed to generate collectible. Please try again.
       generation_timeout: Generation timed out. Please try again later.

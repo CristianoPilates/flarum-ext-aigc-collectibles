@@ -14,19 +14,27 @@ const RARITY_LABELS: Record<string, string> = {
 };
 
 export default class BlindBoxOpener extends Modal {
+  appraising: boolean = false;
   generating: boolean = false;
   generatedCollectible: any = null;
   error: string | null = null;
   pendingCollectibleId: string | null = null;
   pendingRarity: string | null = null;
+  pendingPowZeros: number = 0;
+  pendingPowAttempts: number = 0;
+  pendingPowSecondsLeft: number = 10;
 
   oninit(vnode: any) {
     super.oninit(vnode);
+    this.appraising = false;
     this.generating = false;
     this.generatedCollectible = null;
     this.error = null;
     this.pendingCollectibleId = null;
     this.pendingRarity = null;
+    this.pendingPowZeros = 0;
+    this.pendingPowAttempts = 0;
+    this.pendingPowSecondsLeft = 10;
   }
 
   className() {
@@ -64,6 +72,10 @@ export default class BlindBoxOpener extends Modal {
       return this.viewReveal();
     }
 
+    if (this.appraising) {
+      return this.viewAppraising();
+    }
+
     // State: generating in progress
     if (this.generating) {
       return this.viewGenerating();
@@ -97,6 +109,36 @@ export default class BlindBoxOpener extends Modal {
               : app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')}
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  viewAppraising() {
+    const rarity = this.pendingRarity || 'common';
+
+    return (
+      <div className={'Modal-body BlindBoxOpener-body BlindBoxOpener-generating BlindBoxOpener-generating--' + rarity}>
+        <div className="BlindBoxOpener-generatingAnimation">
+          <LoadingIndicator size="large" />
+          <div className="BlindBoxOpener-generatingIcon">
+            <i className="fas fa-hammer" />
+          </div>
+        </div>
+        <p className="BlindBoxOpener-generatingText">
+          {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraising')}
+        </p>
+        <p className="BlindBoxOpener-generatingText">
+          {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraising_progress', {
+            seconds: this.pendingPowSecondsLeft,
+            attempts: this.pendingPowAttempts,
+            zeros: this.pendingPowZeros,
+          })}
+        </p>
+        <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
+          {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraising_quality', {
+            rarity: RARITY_LABELS[rarity] || rarity,
+          })}
+        </span>
       </div>
     );
   }
@@ -169,11 +211,17 @@ export default class BlindBoxOpener extends Modal {
   }
 
   openBox() {
-    if (this.generating) return;
+    if (this.appraising || this.generating) return;
 
+    this.appraising = false;
     this.generating = true;
     this.error = null;
     this.generatedCollectible = null;
+    this.pendingCollectibleId = null;
+    this.pendingPowZeros = 0;
+    this.pendingPowAttempts = 0;
+    this.pendingPowSecondsLeft = 10;
+    this.pendingRarity = 'common';
 
     void this.openBlindBoxFlow();
   }
@@ -189,7 +237,14 @@ export default class BlindBoxOpener extends Modal {
       let readyBox = box;
 
       if (readyBox.attributes?.status === 'unappraised') {
+        this.appraising = true;
+        this.generating = false;
+        m.redraw();
         readyBox = await this.appraiseBlindBox(readyBox);
+        this.appraising = false;
+        this.generating = true;
+      } else if (readyBox.attributes?.status === 'appraised') {
+        this.pendingRarity = this.rarityFromBudget(readyBox.attributes?.budget || 0);
       }
 
       const response: any = await app.request({
@@ -213,6 +268,7 @@ export default class BlindBoxOpener extends Modal {
       m.redraw();
       this.startPolling();
     } catch (error: any) {
+      this.appraising = false;
       this.generating = false;
       this.error =
         error?.response?.errors?.[0]?.detail ||
@@ -247,7 +303,8 @@ export default class BlindBoxOpener extends Modal {
       throw new Error('Blind box seed is missing.');
     }
 
-    const pow = await this.computePow(seed);
+    const pow = await this.computePow(seed, 10_000);
+    this.pendingRarity = this.rarityFromZeros(pow.zeros);
 
     const response: any = await app.request({
       method: 'POST',
@@ -258,31 +315,72 @@ export default class BlindBoxOpener extends Modal {
       },
     });
 
-    return response?.data ?? response;
+    const readyBox = response?.data ?? response;
+    const budget = readyBox?.attributes?.budget;
+
+    if (typeof budget === 'number') {
+      this.pendingRarity = this.rarityFromBudget(budget);
+    }
+
+    return readyBox;
   }
 
-  async computePow(seed: string, maxIterations: number = 100000): Promise<{ nonce: string; hash: string; zeros: number }> {
+  async computePow(
+    seed: string,
+    durationMs: number = 10_000
+  ): Promise<{ nonce: string; hash: string; zeros: number; attempts: number }> {
+    const deadline = performance.now() + durationMs;
+    const uiUpdateIntervalMs = 200;
+    const yieldEvery = 100;
+
     let nonce = '0';
     let hash = await this.sha256(seed + nonce);
     let bestZeros = this.leadingZeros(hash);
+    let attempts = 1;
+    let lastUiUpdate = performance.now();
 
-    for (let i = 1; i < maxIterations; i++) {
-      const candidateNonce = i.toString(16);
+    this.updatePowProgress(deadline, bestZeros, attempts);
+
+    while (performance.now() < deadline) {
+      const candidateNonce = attempts.toString(16);
       const candidateHash = await this.sha256(seed + candidateNonce);
+      attempts++;
       const zeros = this.leadingZeros(candidateHash);
 
       if (zeros > bestZeros) {
         nonce = candidateNonce;
         hash = candidateHash;
         bestZeros = zeros;
+      }
 
-        if (zeros >= 2) {
-          break;
-        }
+      const now = performance.now();
+      if (now - lastUiUpdate >= uiUpdateIntervalMs) {
+        this.updatePowProgress(deadline, bestZeros, attempts);
+        lastUiUpdate = now;
+      }
+
+      if (attempts % yieldEvery === 0) {
+        await this.yieldToBrowser();
       }
     }
 
-    return { nonce, hash, zeros: bestZeros };
+    this.updatePowProgress(deadline, bestZeros, attempts);
+
+    return { nonce, hash, zeros: bestZeros, attempts };
+  }
+
+  updatePowProgress(deadline: number, zeros: number, attempts: number) {
+    const secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+
+    this.pendingPowZeros = zeros;
+    this.pendingPowAttempts = attempts;
+    this.pendingPowSecondsLeft = secondsLeft;
+    this.pendingRarity = this.rarityFromZeros(zeros);
+    m.redraw();
+  }
+
+  async yieldToBrowser(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   async sha256(value: string): Promise<string> {
@@ -302,6 +400,20 @@ export default class BlindBoxOpener extends Modal {
     }
 
     return count;
+  }
+
+  rarityFromZeros(zeros: number): string {
+    if (zeros >= 7) return 'legendary';
+    if (zeros >= 6) return 'epic';
+    if (zeros >= 5) return 'rare';
+    return 'common';
+  }
+
+  rarityFromBudget(budget: number): string {
+    if (budget >= 160) return 'legendary';
+    if (budget >= 80) return 'epic';
+    if (budget >= 40) return 'rare';
+    return 'common';
   }
 
   onCollectibleReady(data: any) {
@@ -381,11 +493,15 @@ export default class BlindBoxOpener extends Modal {
   }
 
   reset() {
+    this.appraising = false;
     this.generating = false;
     this.generatedCollectible = null;
     this.error = null;
     this.pendingCollectibleId = null;
     this.pendingRarity = null;
+    this.pendingPowZeros = 0;
+    this.pendingPowAttempts = 0;
+    this.pendingPowSecondsLeft = 10;
     this.stopPolling();
   }
 }

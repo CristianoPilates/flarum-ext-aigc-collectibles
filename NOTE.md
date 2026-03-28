@@ -34,7 +34,9 @@
 | `make init-test-data` | Create/reset Playwright demo users and data |
 | `make pw-smoke` | Full smoke test loop with retained scene |
 | `make pw-manual` | Open headed Chromium with a persistent manual profile and optional unpacked extensions |
-| `make pw-mcp` | Start Playwright MCP |
+| `make mcp` | Start Playwright MCP |
+| `make mcp-state` | Run the optional MCP CLI wrapper that inspects shared profile + MetaMask state |
+| `make mcp-minimal-nft` | Run the optional MCP CLI wrapper for the minimal NFT flow |
 | `make verify` | Full verification run |
 
 ## Key Pitfalls & Solutions
@@ -55,9 +57,9 @@
 - **Problem**: Built-in Playwright MCP tool tries to mkdir inside read-only Nix store.
 - **Fix**: Use nixpkgs-provided `playwright` / `mcp-server-playwright`, which already wrap `@playwright/test`, set `NODE_PATH`, export `PLAYWRIGHT_BROWSERS_PATH`, and keep MCP pinned to the same Playwright runtime version.
 
-### 5. Mock MetaMask Wallet
-- **Problem**: No real MetaMask extension in headless Chromium.
-- **Fix**: Inject `window.ethereum` mock via `context.addInitScript()` before page loads. Mock handles `eth_requestAccounts`, `personal_sign` (delegates to `cast wallet sign`). See `tests/e2e/support/playwright-mcp-init-script.js`.
+### 5. Real MetaMask in Persistent Profiles
+- **Problem**: Wallet verification against a temporary mock diverges from the real browser-extension path.
+- **Fix**: Use the persistent Chromium profile with the real MetaMask extension for headed manual and MCP verification. Headless smoke no longer injects a fake `window.ethereum`.
 
 ### 6. Sync Queue + AIGC Timing
 - **Problem**: With `queue.driver = sync`, the blind box open endpoint blocks until AIGC + IPFS + NFT minting all complete (~5-20s).
@@ -90,6 +92,7 @@
 
 - Playwright Test stores traces, screenshots, and videos under `$DEVENV_STATE/playwright/test-results`.
 - The HTML report is written to `$DEVENV_STATE/playwright/html-report`.
-- The persistent manual browser profile lives under `$DEVENV_STATE/playwright-manual-profile`.
+- The persistent shared browser profile lives under `$DEVENV_STATE/playwright-profile`.
 - Playwright MCP session output is written to `$DEVENV_STATE/playwright-mcp-output`.
-- The persistent MCP browser profile lives under `$DEVENV_STATE/playwright-mcp-profile`.
+- Playwright MCP reuses the shared browser profile under `$DEVENV_STATE/playwright-profile` so headed automation sees the same MetaMask extension state.
+- Repository `scripts/playwright/mcp-cli/*.cjs` files are optional CLI wrappers around the running MCP server, not a separate browser automation stack.

@@ -1,51 +1,122 @@
 # Manual
 
-这份手册只做一件事：
+这份文档是使用说明，不是架构文档。
 
-把这个项目压成少量稳定入口，并且把“运行层”和“初始化层”彻底分开。
+目标很简单：
 
-它不是命令百科。
-它不是架构总览。
-它是你回到这个项目时，可以直接照着执行的工作手册。
-
-当前 Playwright 工作流只有 3 条 lane：
-
-1. Automated smoke
-2. Manual exploratory
-3. MCP automation
+- 回到仓库时，能快速判断该走哪条 lane
+- 知道哪些状态是持久化、会被复用的
+- 知道真实 MetaMask / NFT 最小路径怎么跑
+- 知道遇到问题先查哪里，不要越查越乱
 
 ---
 
-## 1. 先记住这几个入口
+## 0. 核心规则
 
-你平时主要只需要记住这 5 个命令：
+和 Playwright / MetaMask / NFT 相关的现场，现在只遵守这几条硬规则：
+
+1. `pw-manual` 和 `mcp-headed` 复用同一份 profile：
+   `.devenv/state/playwright-profile`
+2. 真实 NFT 路径已经切到真实 MetaMask，不再依赖历史遗留的 mock `window.ethereum`
+3. 不接管日常 Chrome，只用 headed Chromium
+4. 钱包导入优先手动做一次，然后长期复用这份 shared profile
+5. 真正要验证“像样的 NFT 路径”，优先走 `make mcp-headed`，不要只看 headless smoke
+
+额外记住一个固定目录：
+
+- MetaMask unpacked extension：
+  `e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn`
+
+---
+
+## 1. 先判断该走哪条 lane
+
+如果你的问题是这个，就走对应命令：
+
+- 我要看基础回归还通不通：
+  `make pw-smoke`
+- 我要亲手打开浏览器、导入钱包、看扩展有没有真进来：
+  `make pw-manual`
+- 我要让 agent 驱动真实 GUI Chromium + 真实 MetaMask：
+  `make mcp-headed`
+- 我要检查当前 shared profile 到底是不是“真 MetaMask + 真钱包账户”：
+  `make mcp-state`
+- 我要跑登录 -> 生成藏品 -> 绑定钱包 -> mint 的最小闭环：
+  `METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft`
+
+一句话判断：
+
+- `pw-smoke` 偏回归
+- `pw-manual` 偏人工
+- `mcp-headed` 偏真实 GUI 自动化
+
+---
+
+## 2. 当前唯一可信的状态布局
+
+现在最重要的是别再把 profile 搞分叉。
+
+当前和这件事相关的状态目录：
+
+- shared Chromium profile：
+  `.devenv/state/playwright-profile`
+- MCP 输出目录：
+  `.devenv/state/playwright-mcp-output`
+- unpacked MetaMask 扩展目录：
+  `e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn`
+- MCP 配置文件：
+  `scripts/playwright/mcp.config.json`
+
+约束：
+
+- `pw-manual` 用 shared profile
+- `mcp-headed` 也用同一个 shared profile
+- 不再保留或使用独立的 `playwright-mcp-profile`
+- 不再注入 fake `window.ethereum`
+
+如果你看到“手工浏览器里钱包正常，但 MCP 浏览器里还在 onboarding”，第一怀疑对象就是：
+
+- profile 用错了
+- MCP 没复用 shared profile
+- 启动参数又被改回去了
+
+---
+
+## 3. 最常用命令
+
+高频命令只需要记住这些：
 
 ```bash
 make dev
+make status
 make pw-smoke
 make pw-manual
-make pw-mcp
+make mcp-headed
+make mcp-state
+METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 make down
 ```
 
 含义：
 
-- `make pw-smoke`
-  启动完整 headless smoke 测试编排，并保留现场
-
-- `make pw-manual`
-  启动 headed Chromium，并复用可加载 unpacked extensions 的手工探索专用持久化 profile
-
-- `make pw-mcp`
-  前台启动 Playwright MCP 自动化服务
-
-- `make down`
-  清理当前项目的运行现场
-
 - `make dev`
-  启动支撑这三条 lane 的完整开发编排
+  启动完整开发编排
+- `make status`
+  看 mysql / ipfs / anvil / akashgen / forum / frontend / playwright-mcp 是否正常
+- `make pw-smoke`
+  跑 headless smoke 回归
+- `make pw-manual`
+  打开可见 Chromium，手工处理 shared profile
+- `make mcp-headed`
+  启动 headed Playwright MCP，驱动同一份 shared profile
+- `mcp-state`
+  检查 MetaMask provider、扩展页、地址和应用绑定状态
+- `mcp-minimal-nft`
+  跑最小 NFT 闭环
+- `make down`
+  结束当前运行现场
 
-除此之外，还有一层低频初始化命令：
+低频初始化命令：
 
 ```bash
 make init
@@ -55,298 +126,117 @@ make init-test-data
 make reset-state
 ```
 
-这层不属于“日常启动”。
-
-它只在这些情况使用：
+它们只在下面几种情况用：
 
 - 第一次建环境
-- 完全重建之后
-- MySQL / 链 / 站点状态被清空之后
-
-也就是说：
-
-- `pw-smoke / pw-manual / pw-mcp` 是日常 Playwright 运行层
-- `dev` 是支撑运行层的整套环境入口
-- `init-* / reset-state` 是持久化初始化层
+- 你明确要重建 `.devenv/state`
+- 站点、链或测试数据被清空了
 
 ---
 
-## 2. 当前脚本分层
+## 4. 标准启动顺序
 
-当前 `scripts/` 目录按职责拆成 5 层：
+如果你只是想在一台正常机器上验证真实最小 NFT 路径，推荐顺序固定如下：
 
-```text
-scripts/
-├── chain/
-│   └── bootstrap.sh
-├── forum/
-│   └── install.sh
-├── health/
-│   └── probe.sh
-├── playwright/
-│   └── prepare-data.php
-├── runtime/
-│   └── stack.sh
-└── verify/
-    └── run.sh
-```
-
-含义：
-
-- `scripts/health/probe.sh`
-  纯探针，负责测活，不修改状态
-
-- `scripts/forum/install.sh`
-  从无到有创建 Flarum 站点，并通过官方 `php flarum install --file` 完成非交互式安装
-
-- `scripts/playwright/prepare-data.php`
-  准备 Playwright smoke 所需 demo 用户和数据
-
-- `scripts/runtime/stack.sh`
-  管理当前项目的运行现场：列出、阻止重复启动、显式清理
-
-- `scripts/chain/bootstrap.sh`
-  部署或复用链上合约，并把配置回写到论坛 settings
-
-- `scripts/verify/run.sh`
-  做更高层的完整验收
-
-这是当前最重要的结构边界：
-
-- `status` 不做初始化
-- `verify` 不承担底层探针职责
-- `runtime` 只处理当前项目进程，不处理持久化状态
-- `forum` 只负责站点
-- `playwright` 只负责测试数据
-
----
-
-## 3. 支撑环境：开发编排
-
-### 3.1 目标
-
-开发编排的目标是：
-
-- 论坛可访问
-- 扩展已经启用
-- 前端 watch 正在运行
-- 你改代码后可以立即看到结果
-
-它回答的问题是：
-
-> 我现在能不能开始开发？
-
-### 3.2 使用方式
-
-进入项目目录：
+1. 进入项目目录
 
 ```bash
 cd /home/donk/development/flarum-ext-aigc-collectibles
 ```
 
-进入 devenv shell：
+2. 进入 devenv shell
 
 ```bash
 devenv shell
 ```
 
-启动完整开发编排：
+3. 启动开发编排
 
 ```bash
 make dev
 ```
 
-这个命令会前台拉起：
-
-- `mysql`
-- `ipfs`
-- `anvil`
-- `akashgen`
-- `forum`
-- `frontend`
-
-它不会自动做初始化。
-
-所以第一次建环境或完全重建之后，你应该先执行：
-
-```bash
-make init
-```
-
-### 3.3 常见变体
-
-如果你只想拉起站点本体：
-
-```bash
-make up-site
-```
-
-它会启动：
-
-- `mysql`
-- `forum`
-- `frontend`
-
-如果你只想拉起外部服务：
-
-```bash
-make up-external
-```
-
-它会启动：
-
-- `ipfs`
-- `anvil`
-- `akashgen`
-
-### 3.4 如何确认环境正常
-
-执行：
+4. 看一次健康状态
 
 ```bash
 make status
 ```
 
-它会探测：
-
-- `mysql`
-- `ipfs`
-- `anvil`
-- `forum`
-- `akashgen`
-- `frontend`
-- `playwright-mcp`
-
-这是纯测活命令，不会修改状态。
-
-补充两点：
-
-- 如果你没有单独执行 `make pw-mcp`，那么 `playwright-mcp` 显示 `[down]` 是正常现象
-- `make status` 只负责探测，不会因为某项是 `[down]` 自动失败
-
-还有一条关键规则：
-
-- 如果当前项目已经有旧的运行现场，新的启动命令会直接拒绝继续
-- 这不是报错设计过度，而是为了避免同一份 `.devenv/state` 被重复占用
-
-这里的“新的启动命令”包括：
-
-- `make dev`
-- `make up`
-- `make up-site`
-- `make up-external`
-- `make up-mysql`
-- `make up-ipfs`
-- `make up-anvil`
-- `make up-akashgen`
-- `make pw-smoke`
-
-这些命令都会先执行当前项目运行现场检查。
-
----
-
-## 4. Lane 一：Automated Smoke
-
-### 4.1 目标
-
-这条 lane 的目标是：
-
-- Headless、deterministic 地拉起 smoke 所需依赖
-- 不复用持久化 profile，保持结果可重复
-- 完成站点、链和测试数据初始化
-- 跑 `@smoke` 子集
-- 保留现场用于复现和继续联调
-
-它回答的问题是：
-
-> 核心路径现在还通不通？
-
-### 4.2 使用方式
-
-进入 shell：
+5. 如果这是第一次用这份 shared profile，先手工打开浏览器导入钱包
 
 ```bash
-devenv shell
+make pw-manual
 ```
 
-运行：
+6. 启动 headed MCP
 
 ```bash
-make pw-smoke
+make mcp-headed
 ```
 
-这个命令会做这些事：
+7. 检查 shared profile 是否真有钱包状态
 
-1. 拉起 `mysql/ipfs/anvil/akashgen`
-2. 执行 `make init-site`
-3. 拉起 `forum/frontend`
-4. 执行 `make init-chain`
-5. 执行 `make init-test-data`
-6. 执行 `playwright test --grep @smoke`
-7. 保留现场，供你继续排查或继续联调
+```bash
+make mcp-state
+```
 
-### 4.3 为什么保留现场
+8. 运行最小 NFT 路径
 
-`pw-smoke` 不自动清理，是刻意设计的。
+```bash
+METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
+```
 
-而且这里的“保留现场”不只发生在失败时。
-
-即使 smoke 全部通过，它也会保留现场。
-
-因为通过之后你通常仍然会继续看：
-
-- forum 页面状态
-- frontend watch 是否还活着
-- 链和 API 是否仍然可用
-- `.devenv/state/pw-smoke-*.log` 的进程输出
-
-排查完成后，再执行：
+9. 收尾
 
 ```bash
 make down
 ```
 
-`make down` 会尝试：
-
-- 停掉 `pw-smoke` 保留的后台进程
-- 停掉当前项目目录对应的 `devenv` 进程
-
-它不会清理别的项目目录下的运行现场。
-
-如果你只是想看当前项目到底还残留了哪些运行现场，可以直接执行：
-
-```bash
-./scripts/runtime/stack.sh list
-```
-
-### 4.4 如果你只想重复跑 smoke
-
-```bash
-playwright test --grep @smoke
-```
-
-这条命令只负责执行测试，不负责准备依赖。
-
-所以：
-
-- 要完整闭环，用 `make pw-smoke`
-- 环境已经准备好了，只想重复执行时，再直接跑 `playwright test --grep @smoke`
+如果只是第一次手动导入钱包，步骤 6 和 8 可以先不做。
 
 ---
 
-## 5. Lane 二：Manual Exploratory
+## 5. Lane 一：Automated Smoke
 
 ### 5.1 目标
 
-这条 lane 的目标是：
+这条 lane 回答的问题是：
 
-- Headed GUI
-- 持久化 manual profile
-- 保留人工探索状态
+> 基础回归还通不通？
 
-使用方式：
+特点：
 
-先确保 forum 已经起来，再执行：
+- headless
+- 偏 deterministic
+- 不做真实 MetaMask GUI 验证
+- 不应该承担“真实钱包交互”验收职责
+
+### 5.2 使用方式
+
+```bash
+make pw-smoke
+```
+
+### 5.3 什么时候它不够
+
+如果你关心的是这些问题，那只跑 `pw-smoke` 不够：
+
+- 扩展是否真的进了 Chromium
+- MetaMask 页面是否真的出现了
+- 真签名 / 真确认有没有发生
+- mint 之前用户可见路径是否自然
+
+---
+
+## 6. Lane 二：Manual Exploratory
+
+### 6.1 目标
+
+这条 lane 回答的问题是：
+
+> 我能不能用一份可见、持久化、真实的 Chromium profile 手工操作？
+
+### 6.2 使用方式
 
 ```bash
 make pw-manual
@@ -354,82 +244,377 @@ make pw-manual
 
 它会：
 
-1. 创建 `playwright-manual-profile`
-2. 确认 `FORUM_URL` 可访问
-3. 用持久化 profile 打开 headed Chromium
-4. 如果设置了 `PLAYWRIGHT_MANUAL_EXTENSION_DIRS`，额外加载 unpacked extensions
-
-### 5.2 使用方式
-
-### 5.3 适用场景
-
-- 手点真实业务流
-- 安装 MetaMask 之类的浏览器扩展
-- 保留登录态、扩展状态和其他本地 GUI 状态
-
-补充：
-
-- `PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual`
-  加载一个或多个 unpacked extension 目录
-
-- 多个扩展目录用系统 path 分隔符连接
-  Linux/NixOS 下是 `:`
-
-- 当前默认值已经指向仓库内的解包 MetaMask
-  不额外传 env 时会自动加载
-
----
-
-## 6. Lane 三：MCP Automation
-
-### 6.1 目标
-
-这个 lane 的目标是：
-
-- 启动 Playwright MCP
-- 确认 MCP 已经开始监听
-- 根据需要选择 headless 或 headed
-- 复用 MCP profile，保证 agent 会话连续性
-
-它回答的问题是：
-
-> 我现在能不能把浏览器作为 MCP 服务来驱动？
-
-### 6.2 使用方式
-
-先确保 forum 已经起来，再执行：
-
-```bash
-make pw-mcp
-```
-
-它会：
-
-1. 创建输出目录和 profile 目录
-2. 清掉占用 MCP 端口的旧进程
-3. 前台启动 `mcp-server-playwright`
-4. 等待 `PLAYWRIGHT_MCP_URL` 可访问
-5. 保持 MCP 进程继续运行
-
-这是前台长驻任务，不会自己退出。
-
-如果你要让 agent 驱动一个可见浏览器：
-
-```bash
-make pw-mcp-headed
-```
+1. 复用 `.devenv/state/playwright-profile`
+2. 打开 headed Chromium
+3. 加载 unpacked MetaMask extension
+4. 保留浏览器本地状态，供下次复用
 
 ### 6.3 适用场景
 
-- 需要 agent 连续操作同一个浏览器上下文
-- 需要复用登录态或其他浏览器状态
-- 需要在 headless 和 headed 之间切换
+- 第一次导入 MetaMask 钱包
+- 手工确认扩展是否真的加载
+- 手点真实业务流
+- 手工解锁钱包
+- 保留登录态和扩展状态
+
+### 6.4 它和 MCP 的关系
+
+这不是另一条独立链路。
+
+它实际上是 `mcp-headed` 的上游状态来源。
+
+也就是说，在 `pw-manual` 里做的这些事，MCP 会复用：
+
+- 钱包导入
+- 钱包解锁
+- MetaMask 扩展状态
+- 浏览器 local storage / cookies / session
+
+所以不要再做这些事：
+
+- 给 MCP 指向另一套 profile
+- 导入钱包到一个 profile，却用另一套 profile 跑自动化
+- 把日常 Chrome profile 接进来
 
 ---
 
-## 7. 初始化层怎么用
+## 7. Lane 三：MCP Automation
 
-### 7.1 `make init`
+### 7.1 目标
+
+这条 lane 回答的问题是：
+
+> agent 现在能不能驱动真实 GUI Chromium，并且让 MetaMask 真有反应？
+
+### 7.2 使用方式
+
+```bash
+make mcp-headed
+```
+
+如果只是工具链检查，不需要真实 GUI，可用：
+
+```bash
+make mcp
+```
+
+这里要明确区分两层：
+
+- 第一层是 `AI / Codex -> Playwright MCP server`
+- 第二层是仓库内提供的 CLI 包装器，它们也是 MCP client，但只是为了复现、排障、回归和把常见操作固化成命令
+
+所以这些 `mcp-cli/*.cjs` 不是另一套浏览器自动化体系。
+
+它们本质上只是：
+
+- 连接已经运行的 `http://localhost:8931/mcp`
+- 调 MCP tools
+- 把一段固定动作做成可重复执行的命令
+
+如果你更习惯直接让 AI 驱动 MCP server，完全可以继续这样做。
+
+这些 CLI 包装器存在的意义只有三个：
+
+1. 便于复现
+2. 便于排障
+3. 便于把已经验证过的最小路径沉淀成仓库命令
+
+对应关系应该这样理解：
+
+- `make mcp-headed` 是 MCP 服务端入口
+- `make mcp-state` / `make mcp-minimal-nft` 等是可选客户端入口
+
+### 7.3 当前关键配置
+
+配置文件：
+
+- `scripts/playwright/mcp.config.json`
+
+必须满足这些条件：
+
+- `userDataDir` 指向 `.devenv/state/playwright-profile`
+- `channel` 是 `chromium`
+- 加载 unpacked MetaMask extension
+- `sharedBrowserContext` 必须为 `true`
+
+### 7.4 为什么 `sharedBrowserContext: true` 是硬要求
+
+这是这次最关键的问题之一。
+
+如果它是 `false`，会出现这种现象：
+
+- MCP 小脚本跑完
+- HTTP session 断开
+- 对应 browser context 被回收
+- headed Chromium 窗口也一起被关掉
+
+用户体感就是：
+
+- 浏览器刚打开就关
+- 还没来得及在 MetaMask 输入内容，窗口就没了
+
+现在已经收敛成：
+
+- 一份 shared profile
+- 一份 shared browser context
+- 小脚本结束时不顺手把整个可见浏览器带死
+
+---
+
+## 8. 第一次接入真实 MetaMask 的正确做法
+
+如果 shared profile 里还没有导入钱包，按这个顺序做：
+
+1. 启动基础环境
+
+```bash
+make dev
+```
+
+2. 打开手工浏览器
+
+```bash
+make pw-manual
+```
+
+3. 在这个 Chromium 里手工完成 MetaMask onboarding
+
+4. 导入你要测试的钱包
+
+5. 设定钱包密码
+
+6. 进入钱包主页，确认至少能看到账户页，而不是 onboarding 页
+
+7. 关闭浏览器也没关系，profile 会保留
+
+8. 后续所有 headed MCP 自动化都复用这份 shared profile
+
+判断是否已经准备好：
+
+- 浏览器里能看到 MetaMask 扩展页
+- 扩展页不是 “Get started / Import wallet / Secret Recovery Phrase”
+- provider `eth_accounts` 返回至少一个地址
+
+如果你不确定，直接跑：
+
+```bash
+make mcp-state
+```
+
+理想结果至少应包含：
+
+- `hasEthereum: true`
+- `isMetaMask: true`
+- `selectedAddress` 非空
+- `walletAccounts` 非空
+
+---
+
+## 9. 最小 NFT 路径怎么跑
+
+最小 NFT 路径只关注下面这几个业务节点：
+
+1. 登录
+2. 生成藏品
+3. 绑定钱包
+4. mint
+5. 验证应用层结果已经“像样”
+
+推荐命令：
+
+```bash
+METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
+```
+
+它实际会做：
+
+- 登录 admin
+- 确保有可开的 blind box
+- 打开 blind box 并等待 collectible 进入 `completed`
+- 如果应用层钱包已绑定，先解绑，再走一遍真实绑定流程
+- 等待 MetaMask connect / sign / confirm
+- 执行 mint
+- 在应用层验证 `tokenId / metadataCid / ipfsCid / web3Address / canMint`
+
+成功标准不是“脚本没报错”，而是至少满足：
+
+- MetaMask 发生了用户可感知的动作
+- collectible 最终拿到 `tokenId`
+- 应用层 toast / API / 模型状态都能证明 mint 成功
+
+本次已验证过一条真实成功样例，最终结果包括：
+
+- `collectibleId: 33`
+- `tokenId: 6`
+- `metadataCid: QmanfEkV95HhK3VvZgG3KcY8ubfkj1TPP4KTk49Ng7tBBr`
+- `ipfsCid: QmeJPGBdyC8aJpsjZ84vqHAud6F6J9Xs2tSPCKUT9At1SL`
+- `web3Address: 0xabb6bc9ec4c33cf50b4013ff8bb3b4855e35168f`
+- MetaMask 动作为 `button:has-text("Confirm")`
+
+---
+
+## 10. 当前和这件事最相关的脚本
+
+```text
+scripts/playwright/
+├── mcp-cli/
+│   ├── mcp-client.cjs
+│   ├── mcp-debug-mint-state.cjs
+│   ├── mcp-focus-metamask.cjs
+│   ├── mcp-inspect-metamask-storage.cjs
+│   ├── mcp-inspect-state.cjs
+│   └── mcp-minimal-nft.cjs
+├── mcp.config.json
+└── prepare-data.php
+```
+
+职责：
+
+- `mcp-cli/mcp-client.cjs`
+  对 Playwright MCP HTTP transport 做连接、重连和顺序化调用封装
+- `mcp-inspect-state.cjs`
+  MCP CLI 包装器，检查当前 app + MetaMask + provider + 页面状态
+- `mcp-minimal-nft.cjs`
+  MCP CLI 包装器，跑真实最小 NFT 闭环
+- `mcp-focus-metamask.cjs`
+  MCP CLI 包装器，把 MetaMask 页带到前台，便于继续操作
+- `mcp-inspect-metamask-storage.cjs`
+  MCP CLI 包装器，看扩展存储状态，判断 profile 里有没有钱包痕迹
+- `mcp-debug-mint-state.cjs`
+  MCP CLI 包装器，排查某个 collectible 为什么没有 mint 按钮或状态不对
+- `prepare-data.php`
+  测试数据准备脚本，属于环境初始化，不属于 MCP 自动化层
+
+建议按这个心智模型理解：
+
+- `scripts/playwright/mcp.config.json`
+  MCP 服务端配置
+- `scripts/playwright/mcp-cli/*.cjs`
+  MCP 客户端包装器
+- `scripts/playwright/launch-manual.cjs`
+  手工 Chromium 启动器
+- `scripts/playwright/prepare-data.php`
+  测试数据准备器
+
+---
+
+## 11. 典型问题与处理顺序
+
+### 11.1 浏览器窗口自己关闭
+
+先查：
+
+- `scripts/playwright/mcp.config.json` 里 `sharedBrowserContext` 是否还是 `true`
+- `make mcp-headed` 那个服务是否还活着
+
+这类问题通常不是“浏览器抽风”，而是 MCP context 生命周期把窗口带死了。
+
+### 11.2 MetaMask 还在 onboarding
+
+如果看到：
+
+- `Get started`
+- `Import wallet`
+- `Secret Recovery Phrase`
+
+优先检查：
+
+1. 是不是用了错误 profile
+2. 钱包是不是只导入在别的浏览器里
+3. shared profile 是否被重置过
+
+### 11.3 provider 存在，但没有账户
+
+这类状态比“完全没扩展”更容易误判。
+
+重点看：
+
+- `window.ethereum` 在不在
+- `eth_accounts` 是不是空数组
+- MetaMask 页面是不是还停在 `Your wallet is ready! / Open wallet`
+
+这次真实踩到过这个坑，最后的处理是：
+
+- 先点一次 `Open wallet`
+- 再进入真正的钱包主页继续流程
+
+### 11.4 collectible 长时间停在 `generating`
+
+先别急着查 mint。
+
+优先查：
+
+```bash
+make status
+./scripts/health/probe.sh
+```
+
+如果 `akashgen` 是 `[down]`，生成链路就不会完成，后面的 mint UI 也自然不会正确出现。
+
+### 11.5 详情弹窗没有 `Mint as NFT`
+
+先分清是 UI 问题还是后端状态问题。
+
+排查顺序：
+
+1. 用 `mcp-debug-mint-state.cjs` 看 API / store / modal 三层状态
+2. 看 collectible 是否已经 `completed`
+3. 看是否已经有 `tokenId`
+4. 看 `canMint` 是否只是前端字段没刷新
+
+这次已经做过一个前端兜底：
+
+- 优先使用 `canMint`
+- 如果字段缺失，则回退到 `status === 'completed' && !tokenId`
+
+### 11.6 MCP 小脚本偶发 `fetch failed` / `Session not found`
+
+先别把锅甩给 profile。
+
+这更像是 Playwright MCP HTTP session 本身不够稳，尤其是在短连接、小脚本频繁起停时。
+
+现在的处理是：
+
+- 用 `mcp-cli/mcp-client.cjs` 做自动重连
+- 对 `Session not found` / `fetch failed` / `ECONNRESET` / `socket hang up` 做有限重试
+
+如果偶发失败，先重跑一次小脚本；如果主链路一直失败，再查 MCP 服务端日志。
+
+---
+
+## 12. 这次修掉的历史遗留
+
+这次最重要的清理，不只是“加脚本”，还包括把旧的脆弱逻辑删掉：
+
+- 删除了历史 mock `window.ethereum` 注入逻辑
+- 删除了依赖假钱包签名的 init script
+- 删除了自动导入 MetaMask 钱包脚本
+- 删除了不再需要的 `manual-extension-fixture`
+- 把 MCP 默认 profile 改成 shared profile
+- 修正了测试数据准备脚本，不再只改 `users.blind_box_count`
+
+核心原则是：
+
+- 能复用真实 profile 的，别再造第二份状态
+- 能用真实扩展验证的，别再用 mock 掩盖问题
+- 能手动完成一次的 onboarding，不要用脆弱脚本反复模拟
+
+---
+
+## 13. 不要做这些事
+
+- 不要重新引入 fake `window.ethereum`
+- 不要让 `mcp-headed` 指向另一套 profile
+- 不要把日常 Chrome profile 接进来
+- 不要只看 `users.blind_box_count` 就以为 blind box 真能开
+- 不要在 collectible 还在 `generating` 时就判断 mint 逻辑坏了
+- 不要把 `pw-smoke` 当成真实 MetaMask 验收
+
+---
+
+## 14. 初始化层说明
+
+### 14.1 `make init`
 
 完整低频初始化入口：
 
@@ -437,7 +622,7 @@ make pw-mcp-headed
 make init
 ```
 
-它等价于：
+等价于：
 
 ```bash
 make init-site
@@ -445,97 +630,69 @@ make init-chain
 make init-test-data
 ```
 
-如果你要清理持久化状态，而不是清理运行现场，用：
-
-```bash
-make reset-state
-```
-
-这条命令只清理 `.devenv/state` 里的持久化数据。
-
-它不会自动帮你停进程。
-
-而且如果当前项目运行现场还活着，它会直接拒绝执行。
-
-所以正确顺序是：
-
-```bash
-make down
-make reset-state
-```
-
-### 7.2 `make init-site`
+### 14.2 `make init-site`
 
 作用：
 
-- 安装论坛站点（官方 non-interactive install）
+- 安装论坛站点
 - 启用扩展
 
-### 7.3 `make init-chain`
+### 14.3 `make init-chain`
 
 作用：
 
 - 等待 anvil 可用
-- 编译并部署或复用合约
+- 部署或复用合约
 - 把链配置写回论坛 settings
 
-### 7.4 `make init-test-data`
+### 14.4 `make init-test-data`
 
 作用：
 
-- 确保 `admin`、`buyer`、`seller` 存在
-- 确保密码统一为 `password`
-- 确保测试所需盲盒数量和群组关系存在
+- 确保 `admin` / `buyer` / `seller` 存在
+- 密码统一为 `password`
+- 确保盲盒计数和真实可开盲盒行一致
 
-这一步不属于“论坛安装”，它属于“测试数据准备”。
+### 14.5 `make reset-state`
 
----
+它清理的是 `.devenv/state` 的持久化状态，不是单纯停服务。
 
-## 8. 完整验收
-
-如果你要做更高层的完整验收：
+正确顺序：
 
 ```bash
-make verify
+make down
+make reset-state
 ```
-
-它会执行：
-
-- 严格进程探针
-- `make init-chain`
-- `make init-test-data`
-- API 级验收
-- `playwright test`
-
-这是比 `pw-smoke` 更重的验收入口。
-
-这里的“严格”意思是：
-
-- `mysql / ipfs / anvil / forum / akashgen / frontend` 任一项没起来，`verify` 会直接失败
-- `playwright-mcp` 仍然只是可选探针，不会阻塞 `verify`
 
 ---
 
-## 9. 最短记忆版本
+## 15. 一条可复用的最短流程
 
-如果以后忘了，只记这些就够了：
+如果以后忘了，只记这一条：
 
 ```bash
 make dev
-make pw-smoke
+make status
 make pw-manual
-make pw-mcp
+make mcp-headed
+make mcp-state
+METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 make down
-make init
-make reset-state
 ```
 
 对应含义：
 
-- `dev`: 整套开发环境起来没有
-- `pw-smoke`: headless smoke 路径还通不通
-- `pw-manual`: headed 手工探索环境能不能直接进入
-- `pw-mcp`: MCP 浏览器自动化能不能接
-- `down`: 当前项目现场看完后怎么清理
-- `init`: 持久化初始化要不要重做
-- `reset-state`: 持久化状态要不要整份清空
+- `dev`
+  基础服务先起来
+- `status`
+  先确认不是服务挂了
+- `pw-manual`
+  手工准备 shared profile
+- `mcp-headed`
+  让 agent 驱动真实 GUI 浏览器
+- `mcp-state`
+  看当前到底是不是“真 MetaMask + 真账户”
+- `mcp-minimal-nft`
+  跑最小 NFT 闭环
+- `down`
+  收尾

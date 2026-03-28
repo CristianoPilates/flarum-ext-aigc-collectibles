@@ -268,20 +268,18 @@ class BlindBoxService implements BlindBoxServiceInterface
     private function zerosToBudget(int $leadingZeros): int
     {
         return match (true) {
-            $leadingZeros >= 5 => 200,
-            $leadingZeros >= 4 => 120,
-            $leadingZeros >= 3 => 70,
-            $leadingZeros >= 2 => 40,
-            $leadingZeros >= 1 => 20,
-            default            => 10,
+            $leadingZeros >= 7 => 160,
+            $leadingZeros >= 6 => 80,
+            $leadingZeros >= 5 => 40,
+            default            => 20,
         };
     }
 
     private function budgetToRarity(int $budget): string
     {
         return match (true) {
-            $budget >= 200 => 'legendary',
-            $budget >= 120 => 'epic',
+            $budget >= 160 => 'legendary',
+            $budget >= 80  => 'epic',
             $budget >= 40  => 'rare',
             default        => 'common',
         };

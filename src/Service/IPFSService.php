@@ -24,6 +24,7 @@ class IPFSService implements IPFSServiceInterface
     public function upload(string $data): string
     {
         $apiUrl = $this->getApiUrl();
+        $filename = $this->inferFilename($data);
 
         try {
             $response = $this->client->post($apiUrl.'/api/v0/add', [
@@ -31,7 +32,7 @@ class IPFSService implements IPFSServiceInterface
                     [
                         'name' => 'file',
                         'contents' => $data,
-                        'filename' => 'collectible.png',
+                        'filename' => $filename,
                     ],
                 ],
                 'query' => [
@@ -99,5 +100,16 @@ class IPFSService implements IPFSServiceInterface
         }
 
         return rtrim($apiUrl, '/');
+    }
+
+    protected function inferFilename(string $data): string
+    {
+        $trimmed = ltrim($data);
+
+        if (str_starts_with($trimmed, '<svg')) {
+            return 'collectible.svg';
+        }
+
+        return 'collectible.png';
     }
 }

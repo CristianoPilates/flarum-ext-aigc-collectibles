@@ -5,10 +5,8 @@ namespace Donk\AigcCollectibles\Tests\integration\job;
 use Donk\AigcCollectibles\Job\GenerateCollectibleJob;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Donk\AigcCollectibles\Tests\Fake\FakeAIGCService;
 use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
-use Donk\AigcCollectibles\Tests\Fake\FakeNftMintingService;
 use Flarum\Extend;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
@@ -69,6 +67,29 @@ class GenerateCollectibleJobTest extends TestCase
     }
 
     /** @test */
+    public function successful_generation_completes_collectible_without_auto_minting(): void
+    {
+        $container = $this->app()->getContainer();
+
+        $job = new GenerateCollectibleJob(1);
+
+        $job->handle(
+            $container->make(AIGCServiceInterface::class),
+            $container->make(IPFSServiceInterface::class),
+            $container->make(SettingsRepositoryInterface::class),
+            $container->make(ConnectionInterface::class),
+            $container->make(Dispatcher::class),
+            $container->make(FactoryInterface::class),
+        );
+
+        $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
+        $this->assertSame('completed', $collectible->status);
+        $this->assertSame('QmFakeImageCid1', $collectible->ipfs_cid);
+        $this->assertSame('QmFakeMetadataCid1', $collectible->metadata_cid);
+        $this->assertNull($collectible->token_id);
+    }
+
+    /** @test */
     public function failed_generation_marks_collectible_failed_and_restores_a_real_blind_box(): void
     {
         $container = $this->app()->getContainer();
@@ -83,7 +104,6 @@ class GenerateCollectibleJobTest extends TestCase
         $job->handle(
             $aigc,
             $container->make(IPFSServiceInterface::class),
-            $container->make(NftMintingServiceInterface::class),
             $container->make(SettingsRepositoryInterface::class),
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
@@ -125,7 +145,6 @@ class GenerateCollectibleJobTest extends TestCase
         $job->handle(
             $aigc,
             $container->make(IPFSServiceInterface::class),
-            $container->make(NftMintingServiceInterface::class),
             $container->make(SettingsRepositoryInterface::class),
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
@@ -154,6 +173,5 @@ class GenerateCollectibleJobTestServiceOverrides extends \Flarum\Foundation\Abst
     {
         $this->container->singleton(AIGCServiceInterface::class, FakeAIGCService::class);
         $this->container->singleton(IPFSServiceInterface::class, FakeIPFSService::class);
-        $this->container->singleton(NftMintingServiceInterface::class, FakeNftMintingService::class);
     }
 }

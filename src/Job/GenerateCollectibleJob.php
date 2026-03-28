@@ -5,9 +5,7 @@ namespace Donk\AigcCollectibles\Job;
 use Donk\AigcCollectibles\Event\CollectibleGenerated;
 use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
@@ -36,7 +34,6 @@ class GenerateCollectibleJob implements ShouldQueue
     public function handle(
         AIGCServiceInterface $aigcService,
         IPFSServiceInterface $ipfsService,
-        NftMintingServiceInterface $nftMintingService,
         SettingsRepositoryInterface $settings,
         ConnectionInterface $db,
         Dispatcher $events,
@@ -84,27 +81,10 @@ class GenerateCollectibleJob implements ShouldQueue
 
             $metadataCid = $ipfsService->uploadJson($metadata);
 
-            $tokenId = null;
-
-            if ($nftMintingService->isMintingConfigured()) {
-                $walletAccount = Web3Account::query()
-                    ->where('user_id', $user->id)
-                    ->first();
-
-                if ($walletAccount) {
-                    try {
-                        $tokenURI = 'ipfs://' . $metadataCid;
-                        $tokenId = $nftMintingService->mintNFT($walletAccount->address, $tokenURI);
-                    } catch (\Throwable $e) {
-                        // Minting failure is non-critical; user can mint later
-                    }
-                }
-            }
-
             $collectible->ipfs_cid = $imageCid;
             $collectible->metadata_cid = $metadataCid;
             $collectible->aigc_prompt = $prompt;
-            $collectible->token_id = $tokenId;
+            $collectible->token_id = null;
             $stateMachine->apply('complete');
             $collectible->save();
 

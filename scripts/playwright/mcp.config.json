@@ -1,0 +1,34 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "userDataDir": "/home/donk/development/flarum-ext-aigc-collectibles/.devenv/state/playwright-profile",
+    "launchOptions": {
+      "channel": "chromium",
+      "headless": false,
+      "args": [
+        "--disable-extensions-except=/home/donk/development/flarum-ext-aigc-collectibles/e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn",
+        "--load-extension=/home/donk/development/flarum-ext-aigc-collectibles/e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn"
+      ],
+      "ignoreDefaultArgs": [
+        "--disable-extensions"
+      ]
+    },
+    "contextOptions": {
+      "ignoreHTTPSErrors": true,
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      }
+    }
+  },
+  "server": {
+    "port": 8931,
+    "host": "localhost"
+  },
+  "outputDir": "/home/donk/development/flarum-ext-aigc-collectibles/.devenv/state/playwright-mcp-output",
+  "sharedBrowserContext": true,
+  "timeouts": {
+    "action": 5000,
+    "navigation": 60000
+  }
+}
