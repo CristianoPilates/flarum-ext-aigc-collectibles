@@ -69,6 +69,9 @@ class UserResourceFields
             Schema\Str::make('showcaseCollectibleCid')
                 ->get(fn (User $user) => $getShowcase($user)?->ipfs_cid)
                 ->nullable(),
+            Schema\Integer::make('showcaseCollectibleTokenId')
+                ->get(fn (User $user) => $getShowcase($user)?->token_id)
+                ->nullable(),
             Schema\Str::make('web3Address')
                 ->visible(fn (User $user, $context) => $context->getActor()->id === $user->id)
                 ->get(fn (User $user) => $getWallet($user)?->address)

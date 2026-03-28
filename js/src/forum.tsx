@@ -5,6 +5,7 @@ import User from "flarum/common/models/User";
 import HeaderSecondary from "flarum/forum/components/HeaderSecondary";
 import UserPage from "flarum/forum/components/UserPage";
 import PostUser from "flarum/forum/components/PostUser";
+import CommentPost from "flarum/forum/components/CommentPost";
 import LinkButton from "flarum/common/components/LinkButton";
 
 import Collectible from "./forum/models/Collectible";
@@ -13,6 +14,7 @@ import CheckinRecord from "./forum/models/CheckinRecord";
 
 import CheckinButton from "./forum/components/CheckinButton";
 import PostCollectibleBadge from "./forum/components/PostCollectibleBadge";
+import PostCollectibleShowcase from "./forum/components/PostCollectibleShowcase";
 import BlindBoxOpener from "./forum/components/BlindBoxOpener";
 import UserCollectiblesPage from "./forum/components/UserCollectiblesPage";
 
@@ -39,6 +41,7 @@ export const extend = [
     .attribute<string>("showcaseCollectibleName")
     .attribute<string>("showcaseCollectibleCid")
     .attribute<string>("showcaseCollectibleRarity")
+    .attribute<number>("showcaseCollectibleTokenId")
     .attribute<string>("web3Address")
     .attribute<string>("web3AccountId"),
 ];
@@ -84,6 +87,33 @@ app.initializers.add("donk-aigc-collectibles", () => {
     if (Array.isArray(vnode.children)) {
       vnode.children.push(<PostCollectibleBadge user={user} />);
     }
+  });
+
+  flarumExtend(CommentPost.prototype, "content", function (content: any[]) {
+    const post = this?.attrs?.post;
+    const user = post?.user?.();
+
+    if (
+      !user ||
+      !user.attribute?.("showcaseCollectibleId") ||
+      !user.attribute?.("showcaseCollectibleCid")
+    ) {
+      return;
+    }
+
+    const originalContent = content.slice();
+    if (originalContent.length === 0) {
+      return;
+    }
+
+    content.splice(0, content.length, (
+      <div className="CollectibleShowcasePost">
+        <div className="CollectibleShowcasePost-content">{originalContent}</div>
+        <aside className="CollectibleShowcasePost-panel">
+          <PostCollectibleShowcase user={user} />
+        </aside>
+      </div>
+    ));
   });
 
   // Add collectibles tab to user profile

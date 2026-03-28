@@ -15,6 +15,7 @@ export default class PostCollectibleBadge extends Component<PostCollectibleBadge
     const showcaseName = user.attribute<string>('showcaseCollectibleName');
     const showcaseCid = user.attribute<string>('showcaseCollectibleCid');
     const showcaseRarity = user.attribute<string>('showcaseCollectibleRarity');
+    const showcaseTokenId = user.attribute<number>('showcaseCollectibleTokenId');
 
     if (!showcaseId || !showcaseCid) return null;
 
@@ -23,7 +24,7 @@ export default class PostCollectibleBadge extends Component<PostCollectibleBadge
     return (
       <span
         className={'PostCollectibleBadge PostCollectibleBadge--' + (showcaseRarity || 'common')}
-        title={showcaseName || ''}
+        title={(showcaseName || '') + (showcaseTokenId ? ' · NFT #' + showcaseTokenId : '')}
       >
         {imageUrl ? (
           <img className="PostCollectibleBadge-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />

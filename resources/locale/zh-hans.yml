@@ -224,6 +224,9 @@ donk-aigc-collectibles:
       showcase_alt: "{username} 的展示藏品"
       showcase_tooltip: "{name}（{rarity}）"
 
+    post_showcase:
+      kicker: 展柜
+
     nav:
       collectibles: 藏品
       trades: 交易

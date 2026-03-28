@@ -804,6 +804,119 @@
   }
 }
 
+.CollectibleShowcasePost {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 18px;
+  align-items: start;
+}
+
+.CollectibleShowcasePost-content {
+  min-width: 0;
+
+  .Post-body {
+    overflow: visible;
+  }
+}
+
+.CollectibleShowcasePost-panel {
+  min-width: 0;
+}
+
+.PostCollectibleShowcase {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid fade(#94A3B8, 30%);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, fade(#FFFFFF, 88%), fade(#F8FAFC, 94%)),
+    linear-gradient(135deg, fade(#E2E8F0, 35%), fade(#CBD5E1, 20%));
+  box-shadow: 0 12px 24px fade(#0F172A, 8%);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+
+  &:hover,
+  &:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 30px fade(#0F172A, 12%);
+    border-color: fade(#64748B, 45%);
+  }
+
+  &--rare {
+    border-color: fade(@rarity-rare-border, 50%);
+  }
+
+  &--epic {
+    border-color: fade(@rarity-epic-border, 55%);
+  }
+
+  &--legendary {
+    border-color: fade(@rarity-legendary-border, 65%);
+    box-shadow: 0 18px 34px fade(@rarity-legendary-border, 18%);
+  }
+
+  &-frame {
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #E2E8F0;
+    margin-bottom: 10px;
+  }
+
+  &-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 28px;
+  }
+
+  &-copy {
+    display: grid;
+    gap: 8px;
+  }
+
+  &-kicker {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+
+  &-name {
+    font-size: 14px;
+    line-height: 1.35;
+    color: #0F172A;
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  &-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &-token {
+    font-size: 11px;
+    line-height: 1.2;
+    color: #475569;
+    font-weight: 700;
+  }
+}
+
 // ============================================
 // Blind Box trigger in header
 // ============================================
@@ -821,6 +934,15 @@
 // ============================================
 
 @media (max-width: 768px) {
+  .CollectibleShowcasePost {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .CollectibleShowcasePost-panel {
+    max-width: 240px;
+  }
+
   .CollectibleDetailModal-layout {
     grid-template-columns: 1fr;
   }

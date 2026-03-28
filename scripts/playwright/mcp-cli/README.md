@@ -32,4 +32,5 @@ METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 make mcp-debug-mint
 make mcp-focus-metamask
 make mcp-storage
+make mcp-showcase
 ```

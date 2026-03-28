@@ -204,6 +204,9 @@ donk-aigc-collectibles:
       showcase_alt: "{username}'s showcase collectible"
       showcase_tooltip: "{name} ({rarity})"
 
+    post_showcase:
+      kicker: Showcase
+
     nav:
       collectibles: Collectibles
       trades: Trades

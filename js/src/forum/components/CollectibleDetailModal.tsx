@@ -196,6 +196,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
           showcaseCollectibleName: nextShowcase ? collectible.name() : null,
           showcaseCollectibleCid: nextShowcase ? collectible.ipfsCid() : null,
           showcaseCollectibleRarity: nextShowcase ? collectible.rarity() : null,
+          showcaseCollectibleTokenId: nextShowcase ? collectible.tokenId() : null,
         });
       }
 
