@@ -6,9 +6,11 @@ use Donk\AigcCollectibles\Api\UserResourceFields;
 use Donk\AigcCollectibles\Service\AIGCService;
 use Donk\AigcCollectibles\Service\BlindBoxService;
 use Donk\AigcCollectibles\Service\CheckinService;
+use Donk\AigcCollectibles\Service\CollectibleProofService;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\CollectibleProofServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\TradeServiceInterface;
@@ -37,6 +39,7 @@ class CollectibleServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(BlindBoxServiceInterface::class, BlindBoxService::class);
         $this->container->singleton(CheckinServiceInterface::class, CheckinService::class);
+        $this->container->singleton(CollectibleProofServiceInterface::class, CollectibleProofService::class);
         $this->container->singleton(AIGCServiceInterface::class, AIGCService::class);
         $this->container->singleton(IPFSServiceInterface::class, IPFSService::class);
         $this->container->singleton(WalletVerificationServiceInterface::class, WalletVerificationService::class);

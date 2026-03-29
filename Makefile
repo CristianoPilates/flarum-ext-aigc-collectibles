@@ -31,7 +31,7 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase \
+        mcp-showcase mcp-proof \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         site enable disable migrate migrate-reset test help
@@ -187,6 +187,9 @@ mcp-storage:
 
 mcp-showcase:
 	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-showcase.cjs"
+
+mcp-proof:
+	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
 
 up-mysql: assert-runtime-clean
 	devenv up mysql

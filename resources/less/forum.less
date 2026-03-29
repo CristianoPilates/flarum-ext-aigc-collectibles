@@ -516,6 +516,88 @@
   }
 }
 
+.CollectibleProofModal {
+  &-body {
+    padding: 20px;
+  }
+
+  &-loading {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  &-section {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+
+  &-sectionTitle {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border-bottom: 1px solid #E5E7EB;
+    background: #F8FAFC;
+  }
+
+  &-sectionBody {
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  &-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  &-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+
+  &-value {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #0F172A;
+    word-break: break-word;
+  }
+
+  &-json {
+    margin: 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+  }
+
+  &-state,
+  &-error {
+    padding: 12px;
+    border-radius: 10px;
+    background: #FEF2F2;
+    color: #B91C1C;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
 // ============================================
 // User Collectibles Page
 // ============================================
@@ -944,6 +1026,10 @@
   }
 
   .CollectibleDetailModal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .CollectibleProofModal-grid {
     grid-template-columns: 1fr;
   }
 

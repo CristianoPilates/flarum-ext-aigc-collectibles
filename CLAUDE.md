@@ -1,461 +1,287 @@
-# AIGC Blind Box Digital Collectible Generation & Circulation System
-
-> A Flarum forum extension (`donk/flarum-ext-aigc-collectibles`) that integrates daily check-in, AIGC-powered blind box collectible generation, IPFS storage, P2P trading, and optional ERC-721 NFT minting.
+# AIGC Collectibles Architecture Guide
 
-## Project Identity
+这份文档只定义三类内容：
 
-- **Extension ID**: `donk-aigc-collectibles`
-- **Namespace**: `Donk\AigcCollectibles`
-- **Frontend entry**: `js/src/forum.ts`, `js/src/admin.ts`
-- **Backend entry**: `extend.php`
-- **Flarum version**: 2.0+
-- **PHP**: ^8.2
-- **License**: MIT
+- 当前产品模型
+- 必须遵守的代码结构
+- 必须遵守的测试与演进规则
 
-## Core Concepts
+运行方式看 `Manul.md`，当前现场看 `AGENT_HANDOFF.md`，执行计划看 `ROADMAP.md`。
 
-| Concept                  | Description                                                                                                                                                              |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Blind Box (盲盒)**     | Virtual currency earned via daily check-in. Spent to generate collectibles. Also used as trading currency in P2P exchanges.                                              |
-| **Collectible (藏品)**   | AIGC-generated digital artwork. Stored on IPFS. Displayed next to user posts. Has rarity level. Optionally minted as ERC-721 NFT.                                        |
-| **Rarity (稀有度)**      | Common (60%), Rare (25%), Epic (12%), Legendary (3%). Determined by weighted random roll on generation.                                                                  |
-| **Trade (交易)**         | P2P exchange: Buyer offers N blind boxes for Seller's specific collectible. No marketplace, no fiat currency.                                                            |
-| **Showcase (展示)**      | Each user can select one collectible to display beside their posts (like an enhanced badge/avatar frame).                                                                |
-| **IPFS without Pinning** | Images uploaded to IPFS but intentionally NOT pinned. Unpopular collectibles may naturally "disappear" over time via IPFS garbage collection, creating organic scarcity. |
-
-## Tech Stack
-
-| Layer         | Technology                                                            |
-| ------------- | --------------------------------------------------------------------- |
-| Forum Engine  | Flarum 2.0+ (PHP, Laravel 12 components)                              |
-| Backend ORM   | Eloquent (Active Record pattern via `Flarum\Database\AbstractModel`)  |
-| API Protocol  | JSON:API (via Flarum Resources + Endpoints, based on tobyz/json-api-server) |
-| Frontend      | Mithril.js (Flarum's built-in frontend framework)                     |
-| Database      | MySQL                                                                 |
-| AIGC          | External API (DALL-E / Stable Diffusion / compatible service)         |
-| Image Storage | IPFS (Pinata API or self-hosted node, HTTP Gateway)                   |
-| Blockchain    | Local EVM chain (Hardhat/Ganache for dev), ERC-721 smart contract     |
-| Real-time     | WebSocket (for trade notifications, generation completion)            |
-| Queue         | Laravel Queue (for async AIGC generation + IPFS upload + NFT minting) |
-| Wallet        | MetaMask (EVM only, no Dotsama/Substrate support)                     |
-
----
-
-## Flarum Extension Conventions & Patterns
-
-### Backend Architecture Patterns
-
-**Extender System**: All backend registration goes through `extend.php`. Key extenders:
-
-- `Extend\Frontend('forum')` — register JS/CSS assets
-- `Extend\ApiResource(CollectibleResource::class)` — register a new Resource (auto-registers routes)
-- `Extend\ApiResource(UserResource::class)->fields(...)` — add fields to an existing Resource
-- `Extend\Model(User::class)` — add casts, defaults, relationships to existing models
-- `Extend\Routes('api')` — register custom non-Resource routes (rarely needed)
-- `Extend\ServiceProvider` — register services into IoC container
-- `Extend\Event` — subscribe to domain events
-
-**Resource Layer** (Flarum 2.x JSON:API):
-
-- Each API entity is a Resource class extending `Flarum\Api\Resource\AbstractDatabaseResource`
-- A single Resource replaces the old Controller + Serializer pair
-- Resources define: `type()`, `model()`, `endpoints()`, `fields()`, `sorts()`, `scope()`
-- Endpoints: `Endpoint\Index`, `Endpoint\Show`, `Endpoint\Create`, `Endpoint\Update`, `Endpoint\Delete`, `Endpoint\Endpoint` (custom)
-- Fields: `Schema\Str`, `Schema\Integer`, `Schema\Boolean`, `Schema\DateTime`, `Schema\Arr`
-- Relationships: `Schema\Relationship\ToOne`, `Schema\Relationship\ToMany`
-- Routes are auto-registered based on `type()` — e.g. type `'collectibles'` → `/api/collectibles`
-- Lifecycle hooks: `creating()`, `updating()`, `deleting()`, `saving()`, `saved()`, etc.
-
-**Model Layer** (Eloquent Active Record):
-
-- All models extend `Flarum\Database\AbstractModel` (which extends `Illuminate\Database\Eloquent\Model`)
-- One class = one table, one instance = one row, properties = columns
-- Relationships: `hasOne`, `belongsTo`, `hasMany`, `belongsToMany`
-- Use `Migration::createTable()` helper (returns `['up' => fn, 'down' => fn]` array)
-- Migration naming: `YYYY_MM_DD_HHMMSS_snake_case_description.php`
-
-**CQRS Command Pattern**: Resource endpoint actions dispatch Command objects, Handler classes process them. This decouples API handling from business logic.
-
-**JSON:API Protocol**: All API responses follow strict JSON:API spec via `tobyz/json-api-server`. Resources define field schemas that automatically serialize models. Frontend uses `app.store` to cache and access model instances.
-
-### Frontend Architecture Patterns
-
-**Mithril.js Components**: Extend existing Flarum components via `extend()` utility:
-
-```js
-import { extend } from "flarum/common/extend";
-import PostUser from "flarum/forum/components/PostUser";
-```
-
-**Frontend Models**: Extend `flarum/common/Model`, register with `Extend.Store().add('collectibles', Collectible)` in `extend.js`.
-
-**Path Aliases**: `'flarum/common/...'` paths are Webpack aliases to Flarum core globals, NOT physical node_modules paths.
-
-### Key Technical Decisions
-
-1. **EVM only** — No Dotsama/Substrate support. MetaMask + GMP for signature verification (no Rust FFI needed).
-2. **IPFS without pinning** — Intentional design: creates natural scarcity via IPFS garbage collection.
-3. **Async generation** — AIGC + IPFS + minting all happen in queue jobs, not in the HTTP request cycle.
-4. **Blind box as currency** — No fiat currency, no marketplace. Pure P2P barter with blind boxes as the medium of exchange.
-5. **Optional NFT minting** — Collectibles exist in MySQL first. On-chain minting only happens if user has bound wallet. Can be done retroactively.
-6. **DB transaction safety** — All balance transfers and ownership changes wrapped in DB transactions with row-level locking (`FOR UPDATE`).
-7. **WebSocket notifications** — Real-time push for trade requests, generation completion, trade outcomes.
-
-### NFT Data Architecture (Three-Layer Model)
-
-| Layer                | Stores                                                       | Purpose                                                |
-| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
-| **Blockchain (EVM)** | token_id, owner address, tokenURI                            | Decentralized ownership proof. Survives if MySQL dies. |
-| **IPFS**             | Image file (CID), Metadata JSON (CID)                        | Decentralized storage. tokenURI points here.           |
-| **MySQL**            | user_id, ipfs_cid, metadata_cid, rarity, aigc_prompt, status | Fast queries, business logic, caching, relationships.  |
-
-Metadata JSON format (ERC-721 standard):
-
-```json
-{
-  "name": "Collectible #1024",
-  "image": "ipfs://QmImageCID...",
-  "attributes": [
-    { "trait_type": "rarity", "value": "Epic" },
-    { "trait_type": "generation", "value": "aigc" }
-  ]
-}
-```
-
----
-
-## Extension Directory Structure
-
-```
-donk/flarum-ext-aigc-collectibles/
-├── extend.php                          # Backend extender registration
-├── composer.json
-├── js/
-│   ├── src/
-│   │   ├── forum.ts                    # Forum frontend entry
-│   │   ├── admin.ts                    # Admin frontend entry
-│   │   ├── forum/
-│   │   │   ├── components/
-│   │   │   │   ├── CheckinButton.tsx
-│   │   │   │   ├── BlindBoxOpener.tsx
-│   │   │   │   ├── CollectibleCard.tsx
-│   │   │   │   ├── CollectibleGallery.tsx
-│   │   │   │   ├── TradePanel.tsx
-│   │   │   │   ├── TradeRequestModal.tsx
-│   │   │   │   ├── WalletConnector.tsx
-│   │   │   │   └── PostCollectibleBadge.tsx
-│   │   │   ├── models/
-│   │   │   │   ├── Collectible.ts
-│   │   │   │   ├── Trade.ts
-│   │   │   │   └── CheckinRecord.ts
-│   │   │   └── utils/
-│   │   │       ├── web3.ts
-│   │   │       ├── ipfs.ts
-│   │   │       └── notifications.ts
-│   │   └── admin/
-│   │       └── components/
-│   │           └── AigcCollectiblesSettings.tsx
-│   ├── dist/                           # Compiled output
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── webpack.config.js
-├── src/
-│   ├── Access/
-│   │   ├── CollectiblePolicy.php
-│   │   ├── TradePolicy.php
-│   │   └── CheckinPolicy.php
-│   ├── Api/
-│   │   └── Resource/
-│   │       ├── CollectibleResource.php
-│   │       ├── TradeResource.php
-│   │       ├── CheckinRecordResource.php
-│   │       ├── Web3AccountResource.php
-│   │       └── CollectibleEventResource.php
-│   ├── Command/
-│   │   ├── Checkin.php
-│   │   ├── CheckinHandler.php
-│   │   ├── OpenBlindBox.php
-│   │   ├── OpenBlindBoxHandler.php
-│   │   ├── CreateTrade.php
-│   │   ├── CreateTradeHandler.php
-│   │   ├── AcceptTrade.php
-│   │   ├── AcceptTradeHandler.php
-│   │   ├── CancelTrade.php
-│   │   ├── CancelTradeHandler.php
-│   │   ├── BindWallet.php
-│   │   ├── BindWalletHandler.php
-│   │   ├── MintCollectible.php
-│   │   └── MintCollectibleHandler.php
-│   ├── Event/
-│   │   ├── CheckedIn.php
-│   │   ├── BlindBoxOpened.php
-│   │   ├── CollectibleGenerated.php
-│   │   ├── TradeCreated.php
-│   │   ├── TradeCompleted.php
-│   │   ├── WalletBound.php
-│   │   └── CollectibleMinted.php
-│   ├── Job/
-│   │   └── GenerateCollectibleJob.php
-│   ├── Model/
-│   │   ├── Collectible.php
-│   │   ├── Trade.php
-│   │   ├── CheckinRecord.php
-│   │   ├── Web3Account.php
-│   │   └── CollectibleEvent.php
-│   ├── Repository/
-│   │   ├── CollectibleRepository.php
-│   │   ├── TradeRepository.php
-│   │   └── CheckinRepository.php
-│   ├── Service/
-│   │   ├── AIGCService.php
-│   │   ├── IPFSService.php
-│   │   ├── BlockchainService.php
-│   │   ├── CheckinService.php
-│   │   ├── BlindBoxService.php
-│   │   └── TradeService.php
-│   ├── Validator/
-│   │   ├── TradeValidator.php
-│   │   ├── Web3LoginValidator.php
-│   │   └── CheckinValidator.php
-│   └── Provider/
-│       └── CollectibleServiceProvider.php
-├── migrations/
-│   ├── 2026_01_01_000001_create_collectibles_table.php
-│   ├── 2026_01_01_000002_create_trades_table.php
-│   ├── 2026_01_01_000003_create_checkin_records_table.php
-│   ├── 2026_01_01_000004_create_web3_accounts_table.php
-│   ├── 2026_01_01_000005_create_collectible_events_table.php
-│   └── 2026_01_01_000006_add_blindbox_fields_to_users.php
-├── resources/
-│   ├── locale/
-│   │   ├── en.yml
-│   │   └── zh-hans.yml
-│   └── less/
-│       └── forum.less
-└── contracts/
-    └── CollectibleNFT.sol              # ERC-721 Solidity contract
-```
-
----
-
-## MVP Development Roadmap
-
-### Phase 1 — Check-in & Blind Box (签到与盲盒)
-
-- Migration: add `blind_box_count` to users, create `checkin_records` table
-- Backend: CheckinController, CheckinService, BlindBoxService
-- Frontend: CheckinButton component, balance display in header
-- Goal: User clicks check-in → blind_box_count increases
-
-### Phase 2 — Collectible Display (藏品展示)
-
-- Migration: create `collectibles` table
-- Backend: CollectibleController, CollectibleSerializer
-- Frontend: CollectibleCard, CollectibleGallery, PostCollectibleBadge
-- Goal: Manually insert test collectibles → display on posts and profile
-
-### Phase 3 — AIGC Generation + IPFS (盲盒开启)
-
-- Backend: AIGCService, IPFSService, GenerateCollectibleJob (queue)
-- Frontend: BlindBoxOpener with animation, WebSocket listener
-- Goal: Open blind box → AIGC generates image → upload to IPFS → display result
-
-### Phase 4 — P2P Trading (P2P交易)
-
-- Migration: create `trades` table, `collectible_events` table
-- Backend: TradeService, TradeController, all Trade commands
-- Frontend: TradePanel, TradeRequestModal, WebSocket notifications
-- Goal: Full P2P trade flow with balance transfer and ownership change
-
-### Phase 5 — Web3 & NFT (钱包与NFT)
-
-- Migration: create `web3_accounts` table
-- Backend: BlockchainService, Web3AccountController, MintCollectible command
-- Frontend: WalletConnector, MetaMask integration
-- Smart contract: ERC-721 CollectibleNFT.sol (Hardhat)
-- Goal: Bind wallet → mint collectibles as on-chain NFTs
-
-### Phase 6 — Admin Panel & Polish
-
-- Admin settings page (AIGC config, IPFS config, rarity weights)
-- System statistics dashboard
-- i18n (Chinese + English)
-- Error handling, edge cases, security hardening
-
----
-
-## Reference Plugins for Learning
-
-| Plugin                              | What to Study                                                            |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `v17development/flarum-user-badges` | Model+relationship design, PostUser extension, badge display on posts    |
-| `ziiven/flarum-daily-check-in`      | Check-in record table, daily state tracking, frontend button             |
-| `antoinefr/flarum-ext-money`        | User balance field, safe increment/decrement, concurrency protection     |
-| `sycho/flarum-profile-cover`        | Image display on user profile, file handling                             |
-| `fof/byobu`                         | Private messaging between two users (reference for trade negotiation UX) |
-| `blomstra/web3`                     | Web3Account model, wallet binding flow, EVM signature verification       |
-
----
-
-## Coding Guidelines — Patterns & Anti-Patterns
-
-> This section codifies conventions already established in the codebase. Follow these rules to prevent drift as the project grows.
-
-### MUST Follow (Good Patterns to Preserve)
-
-#### 1. Interface-Oriented DI for All Services
-Every service class MUST have a corresponding interface in `src/Service/Contracts/` and MUST be bound via `CollectibleServiceProvider`. Handlers and jobs type-hint the interface, never the concrete class.
-```php
-// GOOD — in Handler constructor
-public function __construct(private BlindBoxServiceInterface $blindBox) {}
-
-// BAD — concrete class coupling
-public function __construct(private BlindBoxService $blindBox) {}
-```
-
-#### 2. CQRS Command/Handler Separation
-All mutating API actions MUST flow through Command → Handler → Service. Resource endpoints dispatch commands; they do NOT contain business logic.
-```php
-// GOOD — resource endpoint dispatches command
-$this->bus->dispatch(new Checkin($actor));
-
-// BAD — business logic in endpoint closure
-$user->blind_box_count += 1; $user->save();
-```
-
-#### 3. Transaction Safety for Balance & Ownership Operations
-Any operation that modifies `blind_box_count`, `collectible.user_id`, or `trade.status` MUST be wrapped in `$this->db->transaction()` with `lockForUpdate()` on the rows being modified.
-```php
-// GOOD — atomic balance operations in BlindBoxService
-$affected = $this->db->table('users')
-    ->where('id', $user->id)
-    ->where('blind_box_count', '>=', $amount)
-    ->decrement('blind_box_count', $amount);
-if ($affected !== 1) { throw new ValidationException(...); }
-```
-
-#### 4. Event Dispatching After State Changes
-All significant state transitions MUST dispatch a domain event. Events live in `src/Event/` and carry the actor, the affected model, and relevant context.
-```
-State change → dispatch event → listeners react
-Checkin → CheckedIn → (award blind boxes)
-Trade accepted → TradeCompleted → (log event, notify users)
-```
-
-#### 5. Eloquent Model Conventions
-- Models extend `Flarum\Database\AbstractModel`
-- Define `$table`, typed relationship methods, and `@property` PHPDoc
-- Use factory methods for creation: `Collectible::createForUser(...)`, `Trade::createOffer(...)`
-- Use `ScopeVisibilityTrait` for models that need access control scoping
-
-#### 6. Resource-Based API (Flarum 2.x)
-Each API entity is a single Resource class extending `AbstractDatabaseResource` that defines `type()`, `model()`, `endpoints()`, `fields()`. This replaces the old Controller+Serializer pair.
-
-#### 7. Frontend Component Structure
-- Components use Mithril.js class-based components extending Flarum base classes
-- State is managed via class properties + `m.redraw()`
-- Models extend `flarum/common/Model` and are registered via `app.store`
-- Flarum imports use path aliases (`'flarum/common/...'`), NOT node_modules paths
-
-#### 8. Unit Test Conventions
-- Tests live in `tests/unit/` and `tests/integration/`
-- Unit tests mock dependencies via Mockery; use `Flarum\Testing\unit\TestCase`
-- External services (AIGC, IPFS, Blockchain) use injected HTTP clients that can be replaced with Guzzle `MockHandler` or Mockery mocks
-- Test methods use `@test` annotation + descriptive `it_*` naming
-
----
-
-### MUST NOT Do (Anti-Patterns to Avoid)
-
-#### 1. No Magic Strings for Status Values or Setting Keys
-Status values (`'pending'`, `'accepted'`, `'generating'`, `'completed'`) and rarity levels (`'common'`, `'rare'`, `'epic'`, `'legendary'`) appear as bare strings throughout the codebase. When adding new code, use the same string values consistently. (TODO: Extract to class constants in a future refactor.)
-```php
-// Current pattern (acceptable for now, keep consistent):
-$trade->status = 'accepted';
-$collectible->rarity = 'legendary';
-
-// DO NOT invent new values or misspell existing ones.
-```
-
-#### 2. No Business Logic in Resource Endpoint Closures
-Resource `creating()`, `updating()`, and custom endpoint closures should only: extract parameters, dispatch commands, and return results. All validation and state mutation belongs in Handlers or Services.
-
-#### 3. No Silent Exception Swallowing
-Never catch exceptions without at least logging them. The job layer had a case of `catch (\Throwable) { /* silent */ }` — this makes debugging impossible.
-```php
-// BAD
-catch (\Throwable $e) { /* non-critical, skip */ }
-
-// GOOD
-catch (\Throwable $e) {
-    resolve('log')->warning('NFT minting failed', ['error' => $e->getMessage()]);
-}
-```
-
-#### 4. No Direct DB Queries in Handlers
-Handlers orchestrate Commands → Services. They should NOT write raw DB queries. Balance operations go through `BlindBoxService`; model persistence goes through Eloquent models or repositories.
-
-#### 5. No Hardcoded Timeouts or URLs
-Service constructors accept injected HTTP clients. Timeouts and base URLs come from `SettingsRepositoryInterface`. When adding new external service calls, follow the same pattern as `AIGCService` (settings + injectable client).
-
-#### 6. No Inconsistent Constructor Patterns in Handlers
-All Handlers MUST use PHP 8.1+ constructor promotion and use `$this->` to access injected dependencies. Do not assign constructor parameters to properties and then re-read from `$command->actor` instead.
-```php
-// GOOD
-public function __construct(
-    private CheckinServiceInterface $checkinService,
-    private Dispatcher $bus,
-) {}
-
-// BAD — assigns to $this but reads from $command
-protected $checkinService;
-public function __construct($service) { $this->checkinService = $service; }
-// then later: $command->actor instead of using injected deps
-```
-
-#### 7. No Empty Validators
-If a Validator class has no rules, delete it. An empty validator adds confusion without value.
-
----
-
-### Frontend-Specific Rules
-
-#### 1. Error Handling Consistency
-All API calls MUST show user-facing error messages on failure. Use `app.alerts.show()` for errors. Do NOT silently swallow fetch failures.
-
-#### 2. State Reset on View Changes
-When switching tabs, filters, or modals: reset pagination offset, loading state, and error state. The `CollectibleGallery` filter change must reset `offset = 0`.
-
-#### 3. WebSocket + Polling Fallback
-Long-running async operations (AIGC generation) MUST implement both WebSocket listening AND polling fallback with `MAX_POLL_ATTEMPTS` to prevent infinite loops.
-
-#### 4. Correct HTTP Methods
-Match the HTTP method to the backend endpoint. `GET` for nonce retrieval, `POST` for state mutations. The `WalletConnector` nonce request should use the method matching the backend Resource endpoint definition.
-
----
-
-### Testing Strategy
-
-#### Test Pyramid
-```
-Integration Tests (API → Handler → Service → DB)
-         ▲ covers full call chains
-Unit Tests (Service logic with mocked deps)
-         ▲ covers business rules
-```
-
-#### What to Mock
-| Dependency | Mock Strategy |
-|-----------|--------------|
-| AIGC API | Guzzle `MockHandler` or fake implementation of `AIGCServiceInterface` |
-| IPFS API | Guzzle `MockHandler` or fake implementation of `IPFSServiceInterface` |
-| Blockchain | Fake `BlockchainServiceInterface` (returns predetermined token_ids) |
-| Database | Real SQLite (integration) or Mockery `ConnectionInterface` (unit) |
-| Events | Mockery `Dispatcher` (unit) or assert via DB state (integration) |
-
-#### Five Call Chains to Test
-1. **Checkin**: POST /api/checkin-records → CheckinHandler → CheckinService → blind_box_count++
-2. **OpenBlindBox**: POST /api/collectibles → OpenBlindBoxHandler → BlindBoxService → GenerateCollectibleJob
-3. **BindWallet**: POST /api/web3-accounts → BindWalletHandler → BlockchainService.verify → Web3Account created
-4. **MintCollectible**: POST /api/collectibles/{id}/mint → MintCollectibleHandler → BlockchainService.mint → token_id set
-5. **Trade**: POST /api/trades → CreateTradeHandler; POST /api/trades/{id}/accept → AcceptTradeHandler → ownership transfer
+## 1. 当前产品模型
+
+项目不是“单纯 NFT 展示站”。
+
+当前更准确的定位是：
+
+> 一个 Flarum 扩展：用户通过签到获得盲盒，开盒生成 AIGC 藏品，藏品可展示、可选择性 mint 为 ERC-721，并最终朝着私信里的 P2P 社交交易演进。
+
+当前已经成立的实体：
+
+- `BlindBox`
+  一等资产，不应只作为数字余额被理解
+- `Collectible`
+  开盒后生成的藏品，应用层主实体
+- `Showcase`
+  用户在帖子 / 回复中的展示能力
+- `Proof`
+  应用、链上、metadata、image 四层证据链
+- `NFT`
+  可选链上投射，不等于整个产品本体
+
+当前尚未完成但方向已定的部分：
+
+- `flarum/messages` 私信场景
+- 多资产 barter 领域模型
+- blind box 的视觉化与交易化
+
+## 2. 当前技术现实
+
+- Forum engine:
+  Flarum 2.x
+- Frontend:
+  Mithril.js + Flarum frontend extension pattern
+- Backend:
+  PHP 8.2 + Flarum resource / command / service pattern
+- DB:
+  MySQL
+- Chain:
+  Anvil, chain id `31337`
+- Wallet:
+  真实 MetaMask unpacked extension
+- Storage:
+  本地 Kubo IPFS
+
+当前真实 NFT 路径的事实：
+
+- MetaMask 已真实接入
+- mint 仍由后端 minter wallet 发交易
+- NFT 归属到用户绑定地址
+- MetaMask 是否展示 NFT，不是唯一验收标准
+
+## 3. 仓库结构心智模型
+
+关键入口：
+
+- `extend.php`
+  扩展注册入口
+- `js/src/forum.ts`
+  forum 前端入口
+- `src/Api/Resource/*`
+  JSON:API resource 定义与 endpoint 入口
+- `src/Command/*`
+  命令与 handler
+- `src/Service/*`
+  业务逻辑
+- `src/Model/*`
+  持久化模型
+- `tests/unit/*`
+  纯服务级测试
+- `tests/integration/*`
+  资源到数据库的链路测试
+
+推荐的阅读顺序：
+
+1. Resource
+2. Command / Handler
+3. Service interface
+4. Service implementation
+5. Model
+6. Integration test
+
+## 4. 必须遵守的后端规则
+
+### 4.1 变更入口必须清晰
+
+所有有状态变更的 API，都应遵守：
+
+`Resource -> Command -> Handler -> Service`
+
+不要把业务逻辑直接塞进 Resource endpoint closure。
+
+### 4.2 依赖注入必须面向接口
+
+新增 service 时：
+
+- 在 `src/Service/Contracts/` 定义接口
+- 在 `CollectibleServiceProvider` 里绑定
+- Handler / Job 只依赖接口
+
+不要直接把 concrete service type-hint 到所有调用点。
+
+### 4.3 交易、余额、所有权变更必须走事务
+
+凡是改这些状态：
+
+- blind box 数量或状态
+- collectible 所有权
+- trade / barter 状态
+
+都必须用数据库事务保护。涉及并发争用时，加行级锁。
+
+### 4.4 状态名必须保持一致
+
+当前代码里已有的状态字符串与 rarity 字符串是隐式协议。
+
+新增逻辑时不要：
+
+- 自创相近但不同的字符串
+- 在前后端各写一套不一致的命名
+
+### 4.5 不要吞异常
+
+允许降级，不能静默。
+
+如果 catch 了异常，至少要：
+
+- 写日志
+- 或显式转成用户可理解的错误
+
+### 4.6 不要把 Web3 mock 再混回产品代码
+
+当前真实 MetaMask 路线已经打通。
+
+不要再为图省事：
+
+- 注入 fake `window.ethereum`
+- 写只服务于假 provider 的前端逻辑
+- 让 smoke 路径和真实路径长期分叉
+
+## 5. 必须遵守的前端规则
+
+### 5.1 继续使用 Flarum / Mithril 习惯用法
+
+- 扩展现有组件优先于整块重写
+- 模型经 `app.store` 注册与读取
+- 状态变化后显式 `m.redraw()`
+
+### 5.2 展示类 UI 不要退化成“小徽章思维”
+
+关于 collectible / blind box 展示，当前产品共识已经变了：
+
+- 不是把 badge 做得更大
+- 而是把资产做成独立、可辨认、可点击的展示单元
+
+### 5.3 mint 必须是用户主动动作
+
+前端流程不能再次把：
+
+- 开盒
+- 生成
+- mint
+
+揉成一个“一路自动到底”的动作。
+
+### 5.4 proof UI 比钱包 UI 更权威
+
+本地链 + 自定义网络 + IPFS metadata 的 NFT，在 MetaMask 中的显示并不稳定。
+
+因此前端应该优先维护：
+
+- 应用层 proof
+- 链上 proof
+- metadata proof
+- image proof
+
+而不是把 MetaMask NFT gallery 当主展示位。
+
+## 6. 当前测试策略
+
+只保留三种清晰测试层：
+
+### 6.1 Unit
+
+目标：
+
+- 验证纯服务逻辑
+- 用 fake / mock 隔离外部依赖
+
+### 6.2 Integration
+
+目标：
+
+- 验证 API -> Handler -> Service -> DB 整条调用链
+
+优先给这些垂直链路补 integration test：
+
+- check-in
+- blind box appraise / open
+- wallet bind
+- mint
+- proof
+- future barter settlement
+
+### 6.3 Headed Playwright MCP
+
+目标：
+
+- 验证真实 GUI
+- 验证真实 MetaMask
+- 验证用户可见行为
+
+不要用 headless smoke 冒充这类验收。
+
+## 7. 演进规则
+
+### 7.1 新行为先补测试
+
+不要求形式主义 TDD，但要求最小纪律：
+
+1. 先写失败测试，或先明确补哪条 guardrail
+2. 写最小实现
+3. 跑通后再收敛命名和结构
+
+### 7.2 小修可以直接做，大改先写计划
+
+以下情况直接改即可：
+
+- 单点 bug fix
+- 文案 / 结构小调整
+- 已有模式内的小扩展
+
+以下情况先写到 `ROADMAP.md` 再动：
+
+- 新领域模型
+- 新的资产流转规则
+- 改 API 资源边界
+- 改用户心智或核心交互
+
+### 7.3 先删旧语义，再加新语义
+
+如果旧模型已经偏题，不要靠“再补一层兼容抽象”拖着走。
+
+用户当前更偏好：
+
+- 干净收敛
+- 少历史包袱
+- 少认知噪音
+
+## 8. 当前明确的产品边界
+
+### 8.1 已做成的
+
+- blind box 与 collectible 的主流程
+- 真实 MetaMask 绑定
+- 用户主动 mint
+- reply 右侧 showcase 第一版
+- proof modal 第一版
+
+### 8.2 还没做成的
+
+- 基于私信的完整社交交易
+- 多盲盒 / 多藏品 / 双向交换的 barter 模型
+- blind box 的可视化资产卡片
+
+### 8.3 不要误判的
+
+- MetaMask 不显示 NFT，不等于 mint 失败
+- IPFS WebUI `Files` 为空，不等于内容没进 IPFS
+
+## 9. 一句话总结
+
+写这个项目时，优先级永远是：
+
+1. 保持领域边界清晰
+2. 保持真实 GUI 路径可信
+3. 保持文档与当前事实一致
+4. 不为历史遗留噪音继续加新噪音

@@ -140,6 +140,31 @@ donk-aigc-collectibles:
       minted: 已上链
       token_id_label: "Token ID: #{id}"
       ipfs_label: 在 IPFS 上查看
+      proof_button: 查看证明
+      proof_title: NFT 证明
+      proof_section_app: 应用记录
+      proof_section_chain: 链上证明
+      proof_section_metadata: Metadata JSON
+      proof_section_image: 图片资源
+      proof_open_metadata: 打开 metadata
+      proof_open_image: 打开图片
+      proof_open_token_uri: 打开 tokenURI 目标
+      proof_field_collectible: 藏品
+      proof_field_token_id: Token ID
+      proof_field_metadata_cid: Metadata CID
+      proof_field_image_cid: 图片 CID
+      proof_field_expected_token_uri: 预期 tokenURI
+      proof_field_chain_id: 链 ID
+      proof_field_contract: 合约
+      proof_field_owner_of: ownerOf
+      proof_field_token_uri: tokenURI
+      proof_field_cid: CID
+      proof_field_image_field: image
+      proof_field_source: 来源
+      proof_match_metadata: tokenURI 与 metadata CID 一致
+      proof_match_metadata_image: image 与 metadata JSON 一致
+      proof_yes: "是"
+      proof_no: "否"
       image_unavailable: 图片在 IPFS 上已不可用。
       view_history: 查看所有权历史
       history_title: 所有权历史

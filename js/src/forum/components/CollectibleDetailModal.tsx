@@ -3,6 +3,7 @@ import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import TradeRequestModal from './TradeRequestModal';
+import CollectibleProofModal from './CollectibleProofModal';
 import { gatewayUrl } from '../utils/ipfs';
 
 interface CollectibleDetailModalAttrs {
@@ -142,6 +143,12 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
                 </Button>
               )}
 
+              {(collectible.metadataCid?.() || collectible.tokenId?.()) && (
+                <Button className="Button" onclick={() => this.openProof()} disabled={this.loadingAction}>
+                  {app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_button')}
+                </Button>
+              )}
+
               {canOfferTrade && (
                 <Button
                   className="Button Button--primary"
@@ -258,6 +265,15 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
     this.hide();
     app.modal.show(TradeRequestModal, {
+      collectible,
+    });
+  }
+
+  openProof() {
+    const collectible = this.attrs.collectible;
+    if (!collectible) return;
+
+    app.modal.show(CollectibleProofModal, {
       collectible,
     });
   }

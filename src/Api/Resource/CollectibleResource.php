@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Api\Resource;
 use Donk\AigcCollectibles\Command\MintCollectible;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
+use Donk\AigcCollectibles\Service\Contracts\CollectibleProofServiceInterface;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
@@ -12,6 +13,8 @@ use Flarum\Api\Schema;
 use Flarum\Api\Sort\SortColumn;
 use Flarum\Bus\Dispatcher;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Laminas\Diactoros\Response\JsonResponse;
 
 /**
  * @extends AbstractDatabaseResource<Collectible>
@@ -21,6 +24,7 @@ class CollectibleResource extends AbstractDatabaseResource
     public function __construct(
         protected Dispatcher $bus,
         protected CollectibleRepository $collectibles,
+        protected CollectibleProofServiceInterface $proofs,
     ) {
     }
 
@@ -65,6 +69,28 @@ class CollectibleResource extends AbstractDatabaseResource
                     return $this->bus->dispatch(
                         new MintCollectible((int) $context->modelId, $context->getActor())
                     );
+                }),
+
+            Endpoint\Endpoint::make('proof')
+                ->route('GET', '/{id}/proof')
+                ->action(function (Context $context) {
+                    $collectible = $this->collectibles->query()->findOrFail((int) $context->modelId);
+                    $actor = $context->getActor();
+
+                    if ($collectible->status !== Collectible::STATUS_COMPLETED && $actor->id !== $collectible->owner_id) {
+                        throw new ModelNotFoundException();
+                    }
+
+                    return $this->proofs->buildProof($collectible);
+                })
+                ->response(function (Context $context, array $proof) {
+                    return new JsonResponse([
+                        'data' => [
+                            'type' => 'collectible-proof',
+                            'id' => (string) $context->modelId,
+                            'attributes' => $proof,
+                        ],
+                    ]);
                 }),
 
             Endpoint\Update::make()

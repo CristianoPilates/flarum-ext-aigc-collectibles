@@ -1,36 +1,86 @@
-# MCP CLI Wrappers
+# Playwright MCP CLI Wrappers
 
 这个目录只放一类东西：
 
-- 针对“已经运行中的 Playwright MCP server”的可选 CLI 包装器
+- 针对“已经运行中的 Playwright MCP server”的薄客户端包装器
 
-它们不是第二套 Playwright 测试框架，也不是用来替代 AI 直接驱动 MCP。
+它们不是第二套 Playwright 测试框架，也不是为了替代 AI 直接驱动 MCP。
 
-它们的用途只有这些：
+## 1. 职责边界
 
-- 复现已经验证过的固定动作
-- 排障
-- 把常见 MCP 调用沉淀成可执行命令
+主链路仍然是：
 
-分层：
+`AI / Codex -> Playwright MCP server -> headed Chromium`
 
-- `scripts/playwright/mcp.config.json`
-  MCP 服务端配置
-- `scripts/playwright/launch-manual.cjs`
-  手工 Chromium 启动器
-- `scripts/playwright/prepare-data.php`
-  初始化测试数据
-- `scripts/playwright/mcp-cli/*.cjs`
-  MCP 客户端包装器
+这里的 `*.cjs` 只是把一段已经验证过的 MCP 调用，固化成可重复执行的命令。
 
-推荐优先使用 `make` 入口，而不是直接记文件路径：
+它们适合做三件事：
+
+1. 复现固定动作
+2. 排障
+3. 回归验收
+
+不适合做的事：
+
+- 取代 AI 实时驱动
+- 再造一套独立浏览器自动化体系
+- 绕开 `make mcp-headed` 直接自己拉浏览器
+
+## 2. 依赖关系
+
+先启动服务端：
 
 ```bash
 make mcp-headed
-make mcp-state
-METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
-make mcp-debug-mint
-make mcp-focus-metamask
-make mcp-storage
-make mcp-showcase
 ```
+
+再运行这些包装器：
+
+```bash
+make mcp-state
+make mcp-showcase
+make mcp-proof
+METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
+```
+
+也可以直接用 `node` 执行：
+
+```bash
+node scripts/playwright/mcp-cli/mcp-inspect-state.cjs
+node scripts/playwright/mcp-cli/mcp-validate-showcase.cjs
+node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
+```
+
+前提不变：
+
+- `http://localhost:8931/mcp` 已经在监听
+- 共享 profile 已准备好
+
+## 3. 当前脚本清单
+
+- `mcp-inspect-state.cjs`
+  检查 MetaMask/provider/profile 状态
+- `mcp-minimal-nft.cjs`
+  跑最小 NFT 闭环
+- `mcp-debug-mint-state.cjs`
+  排查 mint 前后状态
+- `mcp-focus-metamask.cjs`
+  聚焦 MetaMask 页面
+- `mcp-inspect-metamask-storage.cjs`
+  检查 MetaMask 存储
+- `mcp-validate-showcase.cjs`
+  验收 reply 右侧展柜
+- `mcp-validate-proof.cjs`
+  验收四层 proof modal
+- `mcp-client.cjs`
+  公共 MCP HTTP client
+
+## 4. 为什么保留这些脚本
+
+它们的价值不是“多写了一层代码”，而是把已经跑通过的调查与验收动作沉淀下来：
+
+- 新会话里可以直接复现
+- 排障时不用每次从零手敲 MCP 请求
+- 可以挂在 `make` 入口下形成稳定习惯
+
+如果只是临时探索页面，直接让 AI 驱动 MCP 更合适。
