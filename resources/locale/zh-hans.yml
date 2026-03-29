@@ -101,6 +101,9 @@ donk-aigc-collectibles:
       open_another: 再开一个
       close: 关闭
       try_again: 重试
+      appraising: 正在进行 10 秒盲盒鉴定（PoW）...
+      appraising_progress: "剩余 {seconds} 秒 · 已尝试 {attempts} 次 · 当前最佳前导零 {zeros} 个"
+      appraising_quality: "当前鉴定品质：{rarity}"
       generating: 正在生成你的藏品...
       generation_failed: 藏品生成失败，请重试。
       generation_timeout: 生成超时，请稍后重试。
@@ -137,6 +140,31 @@ donk-aigc-collectibles:
       minted: 已上链
       token_id_label: "Token ID: #{id}"
       ipfs_label: 在 IPFS 上查看
+      proof_button: 查看证明
+      proof_title: NFT 证明
+      proof_section_app: 应用记录
+      proof_section_chain: 链上证明
+      proof_section_metadata: Metadata JSON
+      proof_section_image: 图片资源
+      proof_open_metadata: 打开 metadata
+      proof_open_image: 打开图片
+      proof_open_token_uri: 打开 tokenURI 目标
+      proof_field_collectible: 藏品
+      proof_field_token_id: Token ID
+      proof_field_metadata_cid: Metadata CID
+      proof_field_image_cid: 图片 CID
+      proof_field_expected_token_uri: 预期 tokenURI
+      proof_field_chain_id: 链 ID
+      proof_field_contract: 合约
+      proof_field_owner_of: ownerOf
+      proof_field_token_uri: tokenURI
+      proof_field_cid: CID
+      proof_field_image_field: image
+      proof_field_source: 来源
+      proof_match_metadata: tokenURI 与 metadata CID 一致
+      proof_match_metadata_image: image 与 metadata JSON 一致
+      proof_yes: "是"
+      proof_no: "否"
       image_unavailable: 图片在 IPFS 上已不可用。
       view_history: 查看所有权历史
       history_title: 所有权历史
@@ -185,7 +213,7 @@ donk-aigc-collectibles:
       available: 可用
       from_user: 来自：{username}
       to_user: 发送至：{username}
-      owned_by: 由 {user} 持有
+      owned_by: 由 {username} 持有
       unknown_user: 未知用户
       offers_you: 向你出价
       you_offered: 你出价了
@@ -220,6 +248,9 @@ donk-aigc-collectibles:
     post_badge:
       showcase_alt: "{username} 的展示藏品"
       showcase_tooltip: "{name}（{rarity}）"
+
+    post_showcase:
+      kicker: 展柜
 
     nav:
       collectibles: 藏品

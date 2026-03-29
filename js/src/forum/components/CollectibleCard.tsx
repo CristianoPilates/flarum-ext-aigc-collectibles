@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import { gatewayUrl } from '../utils/ipfs';
+import { displayUserName } from '../utils/users';
 
 const RARITY_LABELS: Record<string, string> = {
   common: 'Common',
@@ -82,7 +83,7 @@ export default class CollectibleCard extends Component<CollectibleCardAttrs> {
         <div className="CollectibleCard-info">
           <span className="CollectibleCard-name">{name}</span>
           <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{RARITY_LABELS[rarity] || rarity}</span>
-          {showOwner && owner && <span className="CollectibleCard-owner">{owner.displayName()}</span>}
+          {showOwner && owner && <span className="CollectibleCard-owner">{displayUserName(owner)}</span>}
           {collectible.tokenId() && (
             <span className="CollectibleCard-nft" title="NFT">
               <i className="fas fa-link" /> #{collectible.tokenId()}

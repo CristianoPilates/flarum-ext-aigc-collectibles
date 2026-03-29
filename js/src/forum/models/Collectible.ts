@@ -20,6 +20,15 @@ export default class Collectible extends Model {
   tokenId() {
     return Model.attribute<number | null>('tokenId').call(this);
   }
+  canMint() {
+    return Model.attribute<boolean>('canMint').call(this);
+  }
+  canTrade() {
+    return Model.attribute<boolean>('canTrade').call(this);
+  }
+  isShowcase() {
+    return Model.attribute<boolean>('isShowcase').call(this);
+  }
   timesTraded() {
     return Model.attribute<number>('timesTraded').call(this);
   }
@@ -33,10 +42,13 @@ export default class Collectible extends Model {
     return Model.attribute('updatedAt', Model.transformDate).call(this);
   }
 
+  owner() {
+    return Model.hasOne<User>('owner').call(this);
+  }
   user() {
-    return Model.hasOne<User>('user').call(this);
+    return this.owner();
   }
   originalUser() {
-    return Model.hasOne<User>('originalUser').call(this);
+    return this.owner();
   }
 }

@@ -10,7 +10,7 @@ class CollectiblePolicy extends AbstractPolicy
 {
     public function view(User $actor, Collectible $collectible)
     {
-        if ($collectible->status === 'completed') {
+        if ($collectible->status === Collectible::STATUS_COMPLETED) {
             return $this->allow();
         }
 
@@ -28,7 +28,7 @@ class CollectiblePolicy extends AbstractPolicy
 
     public function trade(User $actor, Collectible $collectible)
     {
-        if ($actor->id === $collectible->owner_id && $collectible->status === 'completed') {
+        if ($actor->id === $collectible->owner_id && $collectible->status === Collectible::STATUS_COMPLETED) {
             return $this->allow();
         }
 
@@ -38,8 +38,18 @@ class CollectiblePolicy extends AbstractPolicy
     public function mint(User $actor, Collectible $collectible)
     {
         if ($actor->id === $collectible->owner_id
-            && $collectible->status === 'completed'
+            && $collectible->status === Collectible::STATUS_COMPLETED
             && $collectible->token_id === null) {
+            return $this->allow();
+        }
+
+        return $this->deny();
+    }
+
+    public function showcase(User $actor, Collectible $collectible)
+    {
+        if ($actor->id === $collectible->owner_id
+            && $collectible->status === Collectible::STATUS_COMPLETED) {
             return $this->allow();
         }
 

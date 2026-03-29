@@ -74,8 +74,13 @@ class CheckinRecordResource extends AbstractDatabaseResource
         return [
             Schema\Integer::make('rewardAmount')
                 ->property('reward_amount'),
+            Schema\Integer::make('blindBoxCount')
+                ->get(fn (CheckinRecord $model) => $model->user?->blind_box_count),
             Schema\DateTime::make('checkedInAt')
                 ->property('checked_in_at'),
+            Schema\DateTime::make('lastCheckinAt')
+                ->get(fn (CheckinRecord $model) => $model->user?->last_checkin_at)
+                ->nullable(),
 
             Schema\Relationship\ToOne::make('user')
                 ->type('users')

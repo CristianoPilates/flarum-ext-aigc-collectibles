@@ -2,24 +2,33 @@
 
 namespace Donk\AigcCollectibles\Service;
 
-use Flarum\Foundation\ValidationException;
-use Flarum\User\User;
-use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Support\Collection;
 use Donk\AigcCollectibles\Event\BlindBoxAppraised;
 use Donk\AigcCollectibles\Event\BlindBoxOpened;
+use Donk\AigcCollectibles\Job\GenerateCollectibleJob;
 use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\BlindBoxDrawRule;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\PhrasePool;
 use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Flarum\Foundation\ValidationException;
+use Flarum\User\User;
+use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Collection;
+use SM\Factory\FactoryInterface;
 
 class BlindBoxService implements BlindBoxServiceInterface
 {
+    private const DRAW_RULE_FALLBACKS = [
+        'trade_reward' => 'checkin_reward',
+    ];
+
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly Dispatcher $events,
+        private readonly FactoryInterface $stateMachines,
+        private readonly BusDispatcher $bus,
     ) {}
 
     /* ───────────────────── Appraise ───────────────────── */
@@ -47,8 +56,8 @@ class BlindBoxService implements BlindBoxServiceInterface
             $leadingZeros = strspn($hash, '0');
             $budget = $this->zerosToBudget($leadingZeros);
 
-            $box->status = BlindBox::STATUS_APPRAISED;
             $box->budget = $budget;
+            $this->stateMachines->get($box, 'blindBox')->apply('appraise');
             $box->save();
 
             $this->events->dispatch(new BlindBoxAppraised($actor, $box));
@@ -61,7 +70,7 @@ class BlindBoxService implements BlindBoxServiceInterface
 
     public function open(User $actor, int $boxId): BlindBox
     {
-        return $this->db->transaction(function () use ($actor, $boxId) {
+        [$box, $collectible] = $this->db->transaction(function () use ($actor, $boxId) {
             /** @var BlindBox $box */
             $box = BlindBox::query()->lockForUpdate()->findOrFail($boxId);
 
@@ -73,14 +82,17 @@ class BlindBoxService implements BlindBoxServiceInterface
                 throw new ValidationException(['status' => 'Blind box must be appraised before opening.']);
             }
 
-            // 1. Load draw rules for this box type
-            $rules = BlindBoxDrawRule::query()
-                ->where('blindbox_type', $box->type)
-                ->get();
+            $affected = $this->db->table('users')
+                ->where('id', $actor->id)
+                ->where('blind_box_count', '>=', 1)
+                ->decrement('blind_box_count', 1);
 
-            if ($rules->isEmpty()) {
-                throw new ValidationException(['type' => 'No draw rules configured for box type: ' . $box->type]);
+            if ($affected !== 1) {
+                throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
             }
+
+            // 1. Load draw rules for this box type
+            $rules = $this->loadDrawRules($box->type);
 
             // 2. Purchase phrases with budget
             $phrases = $this->purchasePhrases($rules, $box->budget);
@@ -89,7 +101,7 @@ class BlindBoxService implements BlindBoxServiceInterface
             // 3. Determine rarity from budget
             $rarity = $this->budgetToRarity($box->budget);
 
-            // 4. Create collectible (draft — no image until Phase 4)
+            // 4. Create collectible
             $collectible = Collectible::createDraft(
                 ownerId: $actor->id,
                 aigcPrompt: $aigcPrompt,
@@ -97,14 +109,22 @@ class BlindBoxService implements BlindBoxServiceInterface
             );
 
             // 5. Transition blind box
-            $box->status = BlindBox::STATUS_OPENED;
+            $this->stateMachines->get($box, 'blindBox')->apply('open');
             $box->collectible_id = $collectible->id;
             $box->save();
 
-            $this->events->dispatch(new BlindBoxOpened($actor, $box, $collectible));
-
-            return $box;
+            return [$box, $collectible];
         });
+
+        $this->events->dispatch(new BlindBoxOpened($actor, $box, $collectible));
+
+        // `dispatchAfterResponse()` leaves collectible generation stuck in this
+        // demo environment because the HTTP server never flushes the after-response
+        // callbacks. Dispatching through the bus still queues asynchronously on
+        // real queue drivers, and runs immediately on the configured `sync` driver.
+        $this->bus->dispatch(new GenerateCollectibleJob($collectible->id));
+
+        return $box;
     }
 
     /* ───────────────────── Phrase purchasing ───────────────────── */
@@ -171,6 +191,32 @@ class BlindBoxService implements BlindBoxServiceInterface
         return $selected;
     }
 
+    /**
+     * @return Collection<BlindBoxDrawRule>
+     */
+    private function loadDrawRules(string $boxType): Collection
+    {
+        $candidateTypes = array_values(array_filter([
+            $boxType,
+            self::DRAW_RULE_FALLBACKS[$boxType] ?? null,
+        ]));
+
+        $groupedRules = BlindBoxDrawRule::query()
+            ->whereIn('blindbox_type', $candidateTypes)
+            ->get()
+            ->groupBy('blindbox_type');
+
+        foreach ($candidateTypes as $candidateType) {
+            $rules = $groupedRules->get($candidateType);
+
+            if ($rules instanceof Collection && $rules->isNotEmpty()) {
+                return $rules->values();
+            }
+        }
+
+        throw new ValidationException(['type' => 'No draw rules configured for box type: ' . $boxType]);
+    }
+
     /* ───────────────────── Balance operations ───────────────────── */
 
     public function balanceOf(User $user): int
@@ -182,18 +228,39 @@ class BlindBoxService implements BlindBoxServiceInterface
 
     public function transfer(User $from, User $to, int $amount): void
     {
-        $affected = $this->db->table('users')
-            ->where('id', $from->id)
-            ->where('blind_box_count', '>=', $amount)
-            ->decrement('blind_box_count', $amount);
-
-        if ($affected !== 1) {
-            throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
+        if ($amount < 1) {
+            throw new ValidationException(['blind_box' => 'Transfer amount must be at least 1.']);
         }
 
-        $this->db->table('users')
-            ->where('id', $to->id)
-            ->increment('blind_box_count', $amount);
+        $this->db->transaction(function () use ($from, $to, $amount) {
+            $transferableStatuses = [
+                BlindBox::STATUS_UNAPPRAISED,
+                BlindBox::STATUS_APPRAISED,
+            ];
+
+            $boxIds = $this->db->table('blindboxes')
+                ->where('user_id', $from->id)
+                ->whereIn('status', $transferableStatuses)
+                ->orderBy('id')
+                ->limit($amount)
+                ->lockForUpdate()
+                ->pluck('id')
+                ->all();
+
+            if (count($boxIds) < $amount) {
+                throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
+            }
+
+            $this->db->table('blindboxes')
+                ->whereIn('id', $boxIds)
+                ->update([
+                    'user_id' => $to->id,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+
+            $this->syncBlindBoxCount($from->id, $transferableStatuses);
+            $this->syncBlindBoxCount($to->id, $transferableStatuses);
+        });
     }
 
     /* ───────────────────── Mapping helpers ───────────────────── */
@@ -201,23 +268,35 @@ class BlindBoxService implements BlindBoxServiceInterface
     private function zerosToBudget(int $leadingZeros): int
     {
         return match (true) {
-            $leadingZeros >= 5 => 200,
-            $leadingZeros >= 4 => 120,
-            $leadingZeros >= 3 => 70,
-            $leadingZeros >= 2 => 40,
-            $leadingZeros >= 1 => 20,
-            default            => 10,
+            $leadingZeros >= 7 => 160,
+            $leadingZeros >= 6 => 80,
+            $leadingZeros >= 5 => 40,
+            default            => 20,
         };
     }
 
     private function budgetToRarity(int $budget): string
     {
         return match (true) {
-            $budget >= 200 => 'legendary',
-            $budget >= 120 => 'epic',
-            $budget >= 70  => 'rare',
-            $budget >= 40  => 'uncommon',
+            $budget >= 160 => 'legendary',
+            $budget >= 80  => 'epic',
+            $budget >= 40  => 'rare',
             default        => 'common',
         };
+    }
+
+    /**
+     * @param string[] $transferableStatuses
+     */
+    private function syncBlindBoxCount(int $userId, array $transferableStatuses): void
+    {
+        $count = (int) $this->db->table('blindboxes')
+            ->where('user_id', $userId)
+            ->whereIn('status', $transferableStatuses)
+            ->count();
+
+        $this->db->table('users')
+            ->where('id', $userId)
+            ->update(['blind_box_count' => $count]);
     }
 }

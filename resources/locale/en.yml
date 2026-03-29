@@ -81,6 +81,9 @@ donk-aigc-collectibles:
       open_another: Open Another
       close: Close
       try_again: Try Again
+      appraising: "Appraising your blind box with a 10-second proof-of-work..."
+      appraising_progress: "{seconds}s left · {attempts} attempts · best {zeros} leading zero(es)"
+      appraising_quality: "Current appraisal: {rarity}"
       generating: "Generating your collectible..."
       generation_failed: Failed to generate collectible. Please try again.
       generation_timeout: Generation timed out. Please try again later.
@@ -117,6 +120,31 @@ donk-aigc-collectibles:
       minted: Minted on-chain
       token_id_label: "Token ID: #{id}"
       ipfs_label: View on IPFS
+      proof_button: View Proof
+      proof_title: NFT Proof
+      proof_section_app: App Record
+      proof_section_chain: Chain Proof
+      proof_section_metadata: Metadata JSON
+      proof_section_image: Image Asset
+      proof_open_metadata: Open metadata
+      proof_open_image: Open image
+      proof_open_token_uri: Open tokenURI target
+      proof_field_collectible: Collectible
+      proof_field_token_id: Token ID
+      proof_field_metadata_cid: Metadata CID
+      proof_field_image_cid: Image CID
+      proof_field_expected_token_uri: Expected tokenURI
+      proof_field_chain_id: Chain ID
+      proof_field_contract: Contract
+      proof_field_owner_of: ownerOf
+      proof_field_token_uri: tokenURI
+      proof_field_cid: CID
+      proof_field_image_field: image
+      proof_field_source: Source
+      proof_match_metadata: tokenURI matches metadata CID
+      proof_match_metadata_image: image matches metadata JSON
+      proof_yes: "Yes"
+      proof_no: "No"
       image_unavailable: Image no longer available on IPFS.
       view_history: View Ownership History
       history_title: Ownership History
@@ -165,7 +193,7 @@ donk-aigc-collectibles:
       available: available
       from_user: "From: {username}"
       to_user: "To: {username}"
-      owned_by: "Owned by {user}"
+      owned_by: "Owned by {username}"
       unknown_user: Unknown User
       offers_you: offers you
       you_offered: you offered
@@ -200,6 +228,9 @@ donk-aigc-collectibles:
     post_badge:
       showcase_alt: "{username}'s showcase collectible"
       showcase_tooltip: "{name} ({rarity})"
+
+    post_showcase:
+      kicker: Showcase
 
     nav:
       collectibles: Collectibles

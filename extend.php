@@ -2,8 +2,8 @@
 
 namespace Donk\AigcCollectibles;
 
-use Flarum\Api\Resource\UserResource;
 use Flarum\Extend;
+use Flarum\Search\Database\DatabaseSearchDriver;
 use Flarum\User\User;
 
 return [
@@ -24,13 +24,13 @@ return [
     new Extend\ApiResource(Api\Resource\Web3AccountResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleEventResource::class),
 
-    // Extend UserResource with collectible-related fields
-    (new Extend\ApiResource(UserResource::class))
-        ->fields(Api\UserResourceFields::class),
+    (new Extend\SearchDriver(DatabaseSearchDriver::class))
+        ->addSearcher(Model\Collectible::class, Search\CollectibleSearcher::class)
+        ->addFilter(Search\CollectibleSearcher::class, Search\Filter\CollectibleUserFilter::class)
+        ->addFilter(Search\CollectibleSearcher::class, Search\Filter\CollectibleOwnerFilter::class),
 
     (new Extend\Model(User::class))
-        ->hasMany('collectibles', Model\Collectible::class, 'user_id')
-        ->hasMany('originatedCollectibles', Model\Collectible::class, 'original_user_id')
+        ->hasMany('collectibles', Model\Collectible::class, 'owner_id')
         ->hasMany('tradesInitiated', Model\Trade::class, 'from_user_id')
         ->hasMany('tradesReceived', Model\Trade::class, 'to_user_id')
         ->hasMany('checkinRecords', Model\CheckinRecord::class, 'user_id')
@@ -53,11 +53,11 @@ return [
         ->default('donk-aigc-collectibles.rarity-epic', 12)
         ->default('donk-aigc-collectibles.rarity-legendary', 3)
         ->default('donk-aigc-collectibles.aigc-enabled', true)
-        ->default('donk-aigc-collectibles.aigc-api-url', '')
+        ->default('donk-aigc-collectibles.aigc-api-url', getenv('AIGC_API_URL') ?: '')
         ->default('donk-aigc-collectibles.aigc-api-key', '')
-        ->default('donk-aigc-collectibles.ipfs-api-url', 'http://127.0.0.1:5001')
-        ->default('donk-aigc-collectibles.ipfs-gateway-url', 'https://ipfs.io/ipfs/')
-        ->default('donk-aigc-collectibles.blockchain-rpc-url', 'http://127.0.0.1:8545')
+        ->default('donk-aigc-collectibles.ipfs-api-url', getenv('IPFS_API_URL') ?: '')
+        ->default('donk-aigc-collectibles.ipfs-gateway-url', getenv('IPFS_GATEWAY_URL') ?: 'https://ipfs.io/ipfs/')
+        ->default('donk-aigc-collectibles.blockchain-rpc-url', getenv('ANVIL_RPC_URL') ?: '')
         ->default('donk-aigc-collectibles.nft-contract-address', '')
         ->default('donk-aigc-collectibles.minter-private-key', '')
         ->serializeToForum('donk-aigc-collectibles.checkin-reward', 'donk-aigc-collectibles.checkin-reward', 'intval')

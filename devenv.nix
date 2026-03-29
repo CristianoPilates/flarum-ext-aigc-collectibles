@@ -1,19 +1,44 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
+
+let
+  playwrightBrowsers = pkgs.playwright-driver.browsers;
+  projectRoot = "/home/donk/development/flarum-ext-aigc-collectibles";
+  forumDir = "/home/donk/development/flarum-site";
+  aigcApiDir = "/home/donk/development/akashgen-api-go";
+  stateDir = config.devenv.state;
+  anvilMnemonic = "test test test test test test test test test test test junk";
+in
 
 {
   dotenv.enable = true;
   env = {
     GO111MODULE = "on";
     CGO_ENABLED = "0";
+    PLAYWRIGHT_BROWSERS_PATH = "${playwrightBrowsers}";
+    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+    PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = "ubuntu-24.04";
+    IPFS_PATH = "${stateDir}/ipfs";
+    ANVIL_STATE_DIR = "${stateDir}/anvil";
+    CONTRACT_ENV_FILE = "${stateDir}/contract.env";
+    PLAYWRIGHT_TEST_OUTPUT_DIR = "${stateDir}/playwright/test-results";
+    PLAYWRIGHT_HTML_REPORT_DIR = "${stateDir}/playwright/html-report";
+    PLAYWRIGHT_MCP_OUTPUT_DIR = "${stateDir}/playwright-mcp-output";
+    PLAYWRIGHT_SHARED_USER_DATA_DIR = "${stateDir}/playwright-profile";
+    PLAYWRIGHT_MCP_USER_DATA_DIR = "${stateDir}/playwright-profile";
   };
 
-  packages = with pkgs; [
-    foundry # anvil / forge / cast
-    kubo # ipfs
-    jq
-    curl
-    gnumake
-  ];
+  packages =
+    (with pkgs; [
+      foundry # anvil / forge / cast
+      kubo # ipfs
+      jq
+      curl
+      findutils
+      gnumake
+      playwright-test
+      playwright-mcp
+    ]);
 
   languages = {
     javascript = {
@@ -65,51 +90,104 @@
   };
 
   enterShell = ''
-    export IPFS_PATH="$DEVENV_STATE/ipfs"
-    export ANVIL_STATE_DIR="$DEVENV_STATE/anvil"
-    export CONTRACT_ENV_FILE="$DEVENV_STATE/contract.env"
+    parse_http_url() {
+      local url="$1"
+      local rest="''${url#http://}"
+      URL_HOST="''${rest%%[:/]*}"
+      local after_host="''${rest#"$URL_HOST"}"
+      after_host="''${after_host#:}"
+      URL_PORT="''${after_host%%/*}"
+    }
 
-    mkdir -p "$IPFS_PATH" "$ANVIL_STATE_DIR"
+    mkdir -p \
+      "$IPFS_PATH" \
+      "$ANVIL_STATE_DIR" \
+      "$PLAYWRIGHT_TEST_OUTPUT_DIR" \
+      "$PLAYWRIGHT_HTML_REPORT_DIR" \
+      "$PLAYWRIGHT_MCP_OUTPUT_DIR"
+
+    if [ ! -e "$PLAYWRIGHT_SHARED_USER_DATA_DIR" ]; then
+      mkdir -p "$PLAYWRIGHT_SHARED_USER_DATA_DIR"
+    fi
 
     if [ ! -f "$IPFS_PATH/config" ]; then
+      parse_http_url "$IPFS_API_URL"
+      ipfs_api_host="$URL_HOST"
+      ipfs_api_port="$URL_PORT"
+      parse_http_url "$IPFS_GATEWAY_URL"
+      ipfs_gateway_host="$URL_HOST"
+      ipfs_gateway_port="$URL_PORT"
+
       ipfs init --profile=server
-      ipfs config Addresses.API "/ip4/127.0.0.1/tcp/5001"
-      ipfs config Addresses.Gateway "/ip4/127.0.0.1/tcp/8888"
+      ipfs config Addresses.API "/ip4/$ipfs_api_host/tcp/$ipfs_api_port"
+      ipfs config Addresses.Gateway "/ip4/$ipfs_gateway_host/tcp/$ipfs_gateway_port"
       ipfs config Datastore.StorageMax "10GB"
     fi
 
-    if [ -f "$CONTRACT_ENV_FILE" ]; then
-      set -a
-      . "$CONTRACT_ENV_FILE" || true
-      set +a
-    fi
-
     echo "AkashGen API dev shell ready"
-    echo "- Start once: run"
-    echo "- Keep running with process manager: devenv up"
-    echo "- Health check: curl http://127.0.0.1:6571/health"
+    echo "- Start services: make dev"
+    echo "- Init stack: make init"
+    echo "- Playwright: playwright test"
+    echo "- Playwright browsers: $PLAYWRIGHT_BROWSERS_PATH"
   '';
 
-  # processes.ipfs.exec = "ipfs daemon --migrate=true --enable-gc";
-  #
-  # processes.anvil.exec = ''
-  #   anvil \
-  #     --host 127.0.0.1 \
-  #     --port 8545 \
-  #     --chain-id 31337 \
-  #     --mnemonic "test test test test test test test test test test test junk" \
-  #     --state "$DEVENV_STATE/anvil/state.json"
-  # '';
-  #
-  # processes.contract-ensure.exec = "bash scripts/ensure-contract.sh";
-  #
+  processes.ipfs.exec = ''
+    exec ipfs daemon --migrate=true --enable-gc
+  '';
+
+  processes.anvil.exec = ''
+    rpc_url="''${ANVIL_RPC_URL:?ANVIL_RPC_URL is required}"
+    rest="''${rpc_url#http://}"
+    host="''${rest%%[:/]*}"
+    after_host="''${rest#"$host"}"
+    after_host="''${after_host#:}"
+    port="''${after_host%%/*}"
+
+    exec anvil \
+      --host "$host" \
+      --port "$port" \
+      --chain-id 31337 \
+      --mnemonic "${anvilMnemonic}" \
+      --state "$ANVIL_STATE_DIR/state.json"
+  '';
+
   processes.forum = {
-    exec = "php -S 127.0.0.1:8080 -t public";
-    cwd = "/home/donk/development/flarum-site/";
+    exec = ''
+      forum_url="''${FORUM_URL:?FORUM_URL is required}"
+      rest="''${forum_url#http://}"
+      host="''${rest%%[:/]*}"
+      after_host="''${rest#"$host"}"
+      after_host="''${after_host#:}"
+      port="''${after_host%%/*}"
+
+      exec php -S "$host:$port" -t public
+    '';
+    cwd = forumDir;
   };
-  #
-  # processes.akashgen-api-go = {
-  #   exec = "go run ./main.go";
-  #   cwd = "/home/donk/development/akashgen-api-go/";
-  # };
+
+  processes.frontend = {
+    exec = "npm run dev";
+    cwd = "${projectRoot}/js";
+  };
+
+  processes.akashgen = {
+    exec = "go run ./main.go";
+    cwd = aigcApiDir;
+  };
+
+  processes."playwright-mcp".exec = ''
+    mcp_url="''${PLAYWRIGHT_MCP_URL:?PLAYWRIGHT_MCP_URL is required}"
+    rest="''${mcp_url#http://}"
+    host="''${rest%%[:/]*}"
+    after_host="''${rest#"$host"}"
+    after_host="''${after_host#:}"
+    port="''${after_host%%/*}"
+
+    exec mcp-server-playwright \
+      --config "${projectRoot}/scripts/playwright/mcp.config.json" \
+      --user-data-dir "$PLAYWRIGHT_MCP_USER_DATA_DIR" \
+      --headless \
+      --no-sandbox \
+      --port "$port"
+  '';
 }

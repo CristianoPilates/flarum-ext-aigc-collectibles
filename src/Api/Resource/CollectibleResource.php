@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Api\Resource;
 use Donk\AigcCollectibles\Command\MintCollectible;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Repository\CollectibleRepository;
+use Donk\AigcCollectibles\Service\Contracts\CollectibleProofServiceInterface;
 use Flarum\Api\Context;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
@@ -12,6 +13,8 @@ use Flarum\Api\Schema;
 use Flarum\Api\Sort\SortColumn;
 use Flarum\Bus\Dispatcher;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Laminas\Diactoros\Response\JsonResponse;
 
 /**
  * @extends AbstractDatabaseResource<Collectible>
@@ -21,6 +24,7 @@ class CollectibleResource extends AbstractDatabaseResource
     public function __construct(
         protected Dispatcher $bus,
         protected CollectibleRepository $collectibles,
+        protected CollectibleProofServiceInterface $proofs,
     ) {
     }
 
@@ -37,6 +41,14 @@ class CollectibleResource extends AbstractDatabaseResource
     public function scope(Builder $query, \Tobyz\JsonApiServer\Context $context): void
     {
         $query->whereVisibleTo($context->getActor());
+
+        $queryParams = $context->request->getQueryParams();
+        $filters = $queryParams['filter'] ?? [];
+        $ownerId = $queryParams['owner'] ?? $queryParams['user'] ?? $filters['owner'] ?? $filters['user'] ?? null;
+
+        if ($ownerId !== null && is_numeric($ownerId)) {
+            $query->where('owner_id', (int) $ownerId);
+        }
     }
 
     public function endpoints(): array
@@ -59,6 +71,28 @@ class CollectibleResource extends AbstractDatabaseResource
                     );
                 }),
 
+            Endpoint\Endpoint::make('proof')
+                ->route('GET', '/{id}/proof')
+                ->action(function (Context $context) {
+                    $collectible = $this->collectibles->query()->findOrFail((int) $context->modelId);
+                    $actor = $context->getActor();
+
+                    if ($collectible->status !== Collectible::STATUS_COMPLETED && $actor->id !== $collectible->owner_id) {
+                        throw new ModelNotFoundException();
+                    }
+
+                    return $this->proofs->buildProof($collectible);
+                })
+                ->response(function (Context $context, array $proof) {
+                    return new JsonResponse([
+                        'data' => [
+                            'type' => 'collectible-proof',
+                            'id' => (string) $context->modelId,
+                            'attributes' => $proof,
+                        ],
+                    ]);
+                }),
+
             Endpoint\Update::make()
                 ->authenticated(),
         ];
@@ -67,6 +101,7 @@ class CollectibleResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
+            Schema\Str::make('name'),
             Schema\Str::make('rarity'),
             Schema\Str::make('status'),
             Schema\Str::make('ipfsCid')

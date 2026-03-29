@@ -3,6 +3,14 @@ import User from 'flarum/common/models/User';
 import Collectible from './Collectible';
 
 export default class Trade extends Model {
+  static readonly STATUS_PENDING = 'pending';
+  static readonly STATUS_ACCEPTED = 'accepted';
+  static readonly STATUS_SETTLING = 'settling';
+  static readonly STATUS_COMPLETED = 'completed';
+  static readonly STATUS_REJECTED = 'rejected';
+  static readonly STATUS_CANCELLED = 'cancelled';
+  static readonly STATUS_FAILED = 'failed';
+
   offeredBoxes() {
     return Model.attribute<number>('offeredBoxes').call(this);
   }

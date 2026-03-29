@@ -1,9 +1,14 @@
+node_modules
 vendor
 .devenv
 CLAUDE.md
 .env
 chain
 tests/.phpunit.cache
+tests/integration/tmp
 js/node_modules
 js/dist
 js/assets
+js/playwright-report
+js/test-results
+e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn

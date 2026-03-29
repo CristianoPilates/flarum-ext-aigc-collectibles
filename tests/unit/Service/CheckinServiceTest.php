@@ -3,8 +3,8 @@
 namespace Donk\AigcCollectibles\Tests\unit\Service;
 
 use Donk\AigcCollectibles\Model\CheckinRecord;
-use Donk\AigcCollectibles\Service\BlindBoxService;
 use Donk\AigcCollectibles\Service\CheckinService;
+use Illuminate\Support\Carbon;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\Testing\unit\TestCase;
@@ -19,9 +19,6 @@ class CheckinServiceTest extends TestCase
     /** @var SettingsRepositoryInterface|MockInterface */
     protected $settings;
 
-    /** @var BlindBoxService|MockInterface */
-    protected $blindBoxService;
-
     /** @var ConnectionInterface|MockInterface */
     protected $db;
 
@@ -35,15 +32,13 @@ class CheckinServiceTest extends TestCase
         parent::setUp();
 
         $this->settings = Mockery::mock(SettingsRepositoryInterface::class);
-        $this->blindBoxService = Mockery::mock(BlindBoxService::class);
         $this->db = Mockery::mock(ConnectionInterface::class);
         $this->events = Mockery::mock(Dispatcher::class);
 
         $this->service = new CheckinService(
-            $this->settings,
-            $this->blindBoxService,
             $this->db,
-            $this->events
+            $this->events,
+            $this->settings
         );
     }
 
@@ -54,10 +49,9 @@ class CheckinServiceTest extends TestCase
 
         /** @var CheckinService&MockInterface $service */
         $service = Mockery::mock(CheckinService::class, [
-            $this->settings,
-            $this->blindBoxService,
             $this->db,
             $this->events,
+            $this->settings,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')
@@ -67,7 +61,6 @@ class CheckinServiceTest extends TestCase
 
         $this->settings->shouldNotReceive('get');
         $this->db->shouldNotReceive('transaction');
-        $this->blindBoxService->shouldNotReceive('award');
         $this->events->shouldNotReceive('dispatch');
 
         $this->expectException(ValidationException::class);
@@ -84,10 +77,9 @@ class CheckinServiceTest extends TestCase
 
         /** @var CheckinService&MockInterface $service */
         $service = Mockery::mock(CheckinService::class, [
-            $this->settings,
-            $this->blindBoxService,
             $this->db,
             $this->events,
+            $this->settings,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')
@@ -106,7 +98,6 @@ class CheckinServiceTest extends TestCase
             ->with(Mockery::type('callable'))
             ->andReturn($expectedRecord);
 
-        $this->blindBoxService->shouldNotReceive('award');
         $this->events->shouldNotReceive('dispatch');
 
         $actualRecord = $service->performCheckin($user);
@@ -117,21 +108,20 @@ class CheckinServiceTest extends TestCase
     /**
      * @test
      *
-     * @runInSeparateProcess
      */
-    public function it_checks_today_status_via_the_checkin_record_query_chain(): void
+    public function it_checks_today_status_via_the_users_last_checkin_timestamp(): void
     {
-        // 链式 mock 调用：query()->where()->whereDate()->exists()
-        $recordAlias = Mockery::mock('alias:Donk\\AigcCollectibles\\Model\\CheckinRecord');
-        $recordAlias->shouldReceive('query->where->whereDate->exists')
-            ->twice()
-            ->andReturn(true, false);
-
         $userA = $this->makeUser(id: 1);
         $userB = $this->makeUser(id: 2);
+        $userC = $this->makeUser(id: 3);
+
+        $userA->last_checkin_at = Carbon::now()->subHour();
+        $userB->last_checkin_at = Carbon::now()->subDay();
+        $userC->last_checkin_at = null;
 
         $this->assertTrue($this->service->hasCheckedInToday($userA));
         $this->assertFalse($this->service->hasCheckedInToday($userB));
+        $this->assertFalse($this->service->hasCheckedInToday($userC));
     }
 
     protected function makeUser(int $id): User

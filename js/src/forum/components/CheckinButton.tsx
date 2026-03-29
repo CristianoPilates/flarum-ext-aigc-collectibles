@@ -46,17 +46,7 @@ export default class CheckinButton extends Component {
     const user = app.session?.user;
     if (!user) return false;
 
-    const lastCheckin = user.attribute<string>('lastCheckinAt');
-    if (!lastCheckin) return false;
-
-    const lastDate = new Date(lastCheckin);
-    const today = new Date();
-
-    return (
-      lastDate.getFullYear() === today.getFullYear() &&
-      lastDate.getMonth() === today.getMonth() &&
-      lastDate.getDate() === today.getDate()
-    );
+    return Boolean(user.attribute<boolean>('hasCheckedInToday'));
   }
 
   checkin() {
@@ -76,9 +66,15 @@ export default class CheckinButton extends Component {
         // Update user attributes in store
         const user = app.session?.user;
         if (user && response?.data?.attributes) {
+          const attributes = response.data.attributes;
+          const currentCount = user.attribute<number>('blindBoxCount') || 0;
+          const rewardAmount = attributes.rewardAmount || 0;
+
           user.pushAttributes({
-            blindBoxCount: response.data.attributes.blindBoxCount,
-            lastCheckinAt: response.data.attributes.lastCheckinAt,
+            canCheckin: false,
+            hasCheckedInToday: true,
+            blindBoxCount: attributes.blindBoxCount ?? currentCount + rewardAmount,
+            lastCheckinAt: attributes.lastCheckinAt ?? attributes.checkedInAt ?? new Date().toISOString(),
           });
         }
 
@@ -90,6 +86,13 @@ export default class CheckinButton extends Component {
 
         if (error.status === 409) {
           this.justCheckedIn = true;
+          const user = app.session?.user;
+          if (user) {
+            user.pushAttributes({
+              canCheckin: false,
+              hasCheckedInToday: true,
+            });
+          }
           m.redraw();
         } else {
           throw error;

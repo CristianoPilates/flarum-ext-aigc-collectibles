@@ -426,6 +426,195 @@
 }
 
 // ============================================
+// Collectible Detail Modal
+// ============================================
+
+.CollectibleDetailModal {
+  &-body {
+    padding: 20px;
+  }
+
+  &-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  &-media {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+  }
+
+  &-image {
+    width: 100%;
+    display: block;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  &-placeholder {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+
+    i {
+      font-size: 40px;
+    }
+  }
+
+  &-name {
+    margin: 0 0 12px;
+    font-size: 22px;
+  }
+
+  &-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  &-status,
+  &-token {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #F3F4F6;
+    color: #4B5563;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &-line,
+  &-linkRow {
+    margin: 0 0 10px;
+    color: #4B5563;
+    font-size: 14px;
+  }
+
+  &-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  &-error {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #DC2626;
+    font-size: 13px;
+  }
+}
+
+.CollectibleProofModal {
+  &-body {
+    padding: 20px;
+  }
+
+  &-loading {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  &-section {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+
+  &-sectionTitle {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border-bottom: 1px solid #E5E7EB;
+    background: #F8FAFC;
+  }
+
+  &-sectionBody {
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  &-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  &-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+
+  &-value {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #0F172A;
+    word-break: break-word;
+  }
+
+  &-json {
+    margin: 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+  }
+
+  &-state,
+  &-error {
+    padding: 12px;
+    border-radius: 10px;
+    background: #FEF2F2;
+    color: #B91C1C;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+// ============================================
+// User Collectibles Page
+// ============================================
+
+.UserCollectiblesPage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+
+  &-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+// ============================================
 // Trade Panel
 // ============================================
 
@@ -697,6 +886,119 @@
   }
 }
 
+.CollectibleShowcasePost {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 18px;
+  align-items: start;
+}
+
+.CollectibleShowcasePost-content {
+  min-width: 0;
+
+  .Post-body {
+    overflow: visible;
+  }
+}
+
+.CollectibleShowcasePost-panel {
+  min-width: 0;
+}
+
+.PostCollectibleShowcase {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid fade(#94A3B8, 30%);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, fade(#FFFFFF, 88%), fade(#F8FAFC, 94%)),
+    linear-gradient(135deg, fade(#E2E8F0, 35%), fade(#CBD5E1, 20%));
+  box-shadow: 0 12px 24px fade(#0F172A, 8%);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+
+  &:hover,
+  &:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 30px fade(#0F172A, 12%);
+    border-color: fade(#64748B, 45%);
+  }
+
+  &--rare {
+    border-color: fade(@rarity-rare-border, 50%);
+  }
+
+  &--epic {
+    border-color: fade(@rarity-epic-border, 55%);
+  }
+
+  &--legendary {
+    border-color: fade(@rarity-legendary-border, 65%);
+    box-shadow: 0 18px 34px fade(@rarity-legendary-border, 18%);
+  }
+
+  &-frame {
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #E2E8F0;
+    margin-bottom: 10px;
+  }
+
+  &-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    font-size: 28px;
+  }
+
+  &-copy {
+    display: grid;
+    gap: 8px;
+  }
+
+  &-kicker {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748B;
+    font-weight: 700;
+  }
+
+  &-name {
+    font-size: 14px;
+    line-height: 1.35;
+    color: #0F172A;
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  &-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &-token {
+    font-size: 11px;
+    line-height: 1.2;
+    color: #475569;
+    font-weight: 700;
+  }
+}
+
 // ============================================
 // Blind Box trigger in header
 // ============================================
@@ -714,6 +1016,27 @@
 // ============================================
 
 @media (max-width: 768px) {
+  .CollectibleShowcasePost {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .CollectibleShowcasePost-panel {
+    max-width: 240px;
+  }
+
+  .CollectibleDetailModal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .CollectibleProofModal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .UserCollectiblesPage {
+    grid-template-columns: 1fr;
+  }
+
   .CollectibleGallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 8px;

@@ -175,7 +175,7 @@ export default class WalletConnector extends Component {
       // Update user attributes
       const user = app.session?.user;
       if (user) {
-        user.pushAttributes({ web3Address: address });
+        user.pushAttributes({ web3Address: address, web3AccountId: this.walletId });
       }
 
       m.redraw();

@@ -6,6 +6,7 @@ import CollectibleCard from './CollectibleCard';
 
 interface CollectibleGalleryAttrs {
   user: any;
+  refreshToken?: number;
   onSelect?: (collectible: any) => void;
 }
 
@@ -18,14 +19,29 @@ export default class CollectibleGallery extends Component<CollectibleGalleryAttr
   hasMore: boolean = false;
   offset: number = 0;
   readonly limit: number = 20;
+  lastLoadedUserId: string | null = null;
+  lastRefreshToken: number = 0;
 
   oninit(vnode: any) {
     super.oninit(vnode);
-    this.loading = true;
-    this.collectibles = [];
-    this.rarityFilter = 'all';
-    this.offset = 0;
+    this.resetState();
+    this.lastLoadedUserId = vnode.attrs.user?.id?.() || null;
+    this.lastRefreshToken = vnode.attrs.refreshToken || 0;
     this.loadCollectibles();
+  }
+
+  onbeforeupdate(vnode: any) {
+    const userId = vnode.attrs.user?.id?.() || null;
+    const refreshToken = vnode.attrs.refreshToken || 0;
+
+    if (userId !== this.lastLoadedUserId || refreshToken !== this.lastRefreshToken) {
+      this.lastLoadedUserId = userId;
+      this.lastRefreshToken = refreshToken;
+      this.resetState();
+      this.loadCollectibles();
+    }
+
+    return true;
   }
 
   view() {
@@ -85,6 +101,14 @@ export default class CollectibleGallery extends Component<CollectibleGalleryAttr
     this.rarityFilter = rarity;
   }
 
+  resetState() {
+    this.loading = true;
+    this.collectibles = [];
+    this.rarityFilter = 'all';
+    this.hasMore = false;
+    this.offset = 0;
+  }
+
   loadCollectibles() {
     this.loading = true;
 
@@ -98,6 +122,7 @@ export default class CollectibleGallery extends Component<CollectibleGalleryAttr
       'filter[user]': userId,
       'page[offset]': this.offset,
       'page[limit]': this.limit,
+      include: 'owner',
       sort: '-createdAt',
     };
 

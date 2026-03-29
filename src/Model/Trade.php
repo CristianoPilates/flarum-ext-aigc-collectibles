@@ -3,6 +3,7 @@
 namespace Donk\AigcCollectibles\Model;
 
 use Carbon\Carbon;
+use Donk\AigcCollectibles\StateMachine\HasStateMachine;
 use Flarum\Database\AbstractModel;
 use Flarum\Database\ScopeVisibilityTrait;
 use Flarum\User\User;
@@ -25,7 +26,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Trade extends AbstractModel
 {
+    use HasStateMachine;
     use ScopeVisibilityTrait;
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACCEPTED = 'accepted';
+
+    public const STATUS_SETTLING = 'settling';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_FAILED = 'failed';
 
     protected $table = 'trades';
 
@@ -58,9 +74,14 @@ class Trade extends AbstractModel
         $trade->to_user_id = $seller->id;
         $trade->collectible_id = $collectible->id;
         $trade->offered_boxes = $offeredBoxes;
-        $trade->status = 'pending';
+        $trade->status = self::STATUS_PENDING;
         $trade->note = $note;
 
         return $trade;
+    }
+
+    public function markCompletedAt(): void
+    {
+        $this->completed_at = Carbon::now();
     }
 }

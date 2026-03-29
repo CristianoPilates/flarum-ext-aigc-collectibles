@@ -9,6 +9,15 @@
     processIsolation="true"
     stopOnFailure="false"
 >
+    <php>
+        <env name="DB_DRIVER" value="mysql" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1" force="true"/>
+        <env name="DB_PORT" value="3306" force="true"/>
+        <env name="DB_DATABASE" value="flarum_test" force="true"/>
+        <env name="DB_USERNAME" value="flarum" force="true"/>
+        <env name="DB_PASSWORD" value="flarum" force="true"/>
+        <env name="FLARUM_TEST_TMP_DIR_LOCAL" value="tests/integration/tmp" force="true"/>
+    </php>
     <source>
         <include>
             <directory suffix=".php">../src/</directory>
