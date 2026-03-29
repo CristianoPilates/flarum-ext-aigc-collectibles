@@ -40,6 +40,7 @@ make mcp-headed
 make mcp-state
 make mcp-showcase
 make mcp-proof
+make mcp-messages
 METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 ```
 
@@ -72,6 +73,8 @@ node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
   验收 reply 右侧展柜
 - `mcp-validate-proof.cjs`
   验收四层 proof modal
+- `mcp-validate-messages.cjs`
+  验收 buyer -> seller 私信链路
 - `mcp-client.cjs`
   公共 MCP HTTP client
 

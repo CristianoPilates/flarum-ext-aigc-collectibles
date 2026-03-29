@@ -31,9 +31,10 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof \
+        mcp-showcase mcp-proof mcp-messages \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
+        enable-messages publish-site-runtime \
         site enable disable migrate migrate-reset test help
 
 # === 开发环境编排 ===
@@ -57,7 +58,7 @@ up-external: assert-runtime-clean
 
 init: init-site init-chain init-test-data
 
-init-site: assert-mysql site enable
+init-site: assert-mysql site enable enable-messages publish-site-runtime
 
 init-chain:
 	./scripts/chain/bootstrap.sh
@@ -191,6 +192,9 @@ mcp-showcase:
 mcp-proof:
 	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
 
+mcp-messages:
+	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-messages.cjs"
+
 up-mysql: assert-runtime-clean
 	devenv up mysql
 
@@ -227,6 +231,20 @@ enable: assert-mysql site
 	fi; \
 	echo "$$output" | grep -Fq "already enabled" && exit 0; \
 	exit "$$status"
+
+enable-messages: assert-mysql site
+	@cd $(SITE_DIR) && output="$$(php flarum extension:enable flarum-messages 2>&1)"; \
+	status="$$?"; \
+	printf '%s\n' "$$output"; \
+	if [ "$$status" -eq 0 ]; then \
+		exit 0; \
+	fi; \
+	echo "$$output" | grep -Fq "already enabled" && exit 0; \
+	exit "$$status"
+
+publish-site-runtime:
+	cd $(SITE_DIR) && php flarum assets:publish
+	cd $(SITE_DIR) && php flarum cache:clear
 
 # === 禁用扩展 ===
 disable:
@@ -283,7 +301,7 @@ help:
 	@echo "  make up-anvil       - 单独启动 anvil"
 	@echo "  make up-akashgen    - 单独启动 akashgen"
 	@echo "  make init           - 低频初始化总入口"
-	@echo "  make init-site      - 低频初始化：建站、同步配置、启用扩展"
+	@echo "  make init-site      - 低频初始化：建站、同步配置、启用 collectibles + messages"
 	@echo "  make init-chain     - 低频初始化：部署/复用合约并写回论坛设置"
 	@echo "  make init-test-data - 低频初始化：准备 Playwright 测试数据"
 	@echo "  make verify         - 跑完整验收流程"
@@ -292,6 +310,7 @@ help:
 	@echo "  make mcp-debug-mint - 通过 MCP 排查 collectible 的 mint 状态"
 	@echo "  make mcp-focus-metamask - 通过 MCP 聚焦 MetaMask 页面"
 	@echo "  make mcp-storage    - 通过 MCP 检查 MetaMask 扩展存储"
+	@echo "  make mcp-messages   - 通过 MCP 验证 buyer -> seller 私信链路"
 	@echo "  PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual - 加载 unpacked 扩展"
 	@echo "  playwright test     - 直接运行 Playwright"
 	@echo "  playwright test --headed - 直接运行 headed Playwright"

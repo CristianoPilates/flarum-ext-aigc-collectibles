@@ -164,6 +164,7 @@ test.describe.serial('app smoke @smoke', () => {
     await gotoApp(page, '/u/admin/collectibles');
 
     const result = await page.evaluate(async () => {
+      const csrfToken = window.flarum?.core?.app?.session?.csrfToken || null;
       const response = await fetch('/api/collectibles?filter[user]=1', {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -178,7 +179,10 @@ test.describe.serial('app smoke @smoke', () => {
 
       const mintResponse = await fetch(`/api/collectibles/${unminted.id}/mint`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
       });
       const mintPayload = await mintResponse.json();
 
@@ -211,5 +215,55 @@ test.describe.serial('app smoke @smoke', () => {
     await gotoApp(page, '/u/buyer/collectibles');
     await expect(page).toHaveURL(/\/u\/buyer\/collectibles$/);
     await expect(page.locator('.UserPage, .CollectiblesPage, .WalletConnector').first()).toBeVisible();
+  });
+
+  test('buyer can send a private message to seller @smoke', async () => {
+    const messageText = `Smoke PM ${Date.now()}`;
+
+    await login(page, context, 'buyer');
+    await gotoApp(page, '/messages');
+
+    await expect(page.locator('.MessagesPage, .MessagesPage-nav').first()).toBeVisible();
+
+    const newMessageButton = page.locator('.MessagesPage-newMessage').first();
+    await expect(newMessageButton).toBeVisible();
+    await newMessageButton.click();
+
+    const composer = page.locator('.Composer').first();
+    await expect(composer).toBeVisible();
+
+    const recipientsButton = composer.locator('button').filter({ hasText: 'Recipients' }).first();
+    await expect(recipientsButton).toBeVisible();
+    await recipientsButton.click();
+
+    const selectionModal = await waitForModal(page);
+    const searchInput = selectionModal.locator('.UserSelectionModal-form-input input.FormControl').first();
+    await searchInput.fill('seller');
+    await page.waitForTimeout(900);
+
+    const sellerItem = selectionModal.locator('.UserSelectionModal-listItem').filter({ hasText: 'seller' }).first();
+    await expect(sellerItem).toBeVisible();
+    await sellerItem.click();
+
+    const selectButton = selectionModal.locator('.UserSelectionModal-form-submit .Button--primary').first();
+    await expect(selectButton).toBeEnabled();
+    await selectButton.click();
+
+    const editor = composer.locator('.TextEditor-editor').first();
+    await editor.fill(messageText);
+
+    const sendButton = composer.locator('.Composer-footer .Button--primary').first();
+    await expect(sendButton).toBeEnabled();
+    await sendButton.click();
+
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1200);
+
+    await expect(page).toHaveURL(/\/messages\/dialog\/\d+/);
+    await expect(page.locator('body')).toContainText(messageText);
+
+    await login(page, context, 'seller');
+    await gotoApp(page, '/messages');
+    await expect(page.locator('body')).toContainText(messageText);
   });
 });
