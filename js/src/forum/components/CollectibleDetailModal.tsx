@@ -2,9 +2,9 @@ import app from 'flarum/forum/app';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import TradeRequestModal from './TradeRequestModal';
 import CollectibleProofModal from './CollectibleProofModal';
 import { gatewayUrl } from '../utils/ipfs';
+import { shouldShowPrivateMessageButton, startPrivateMessage } from '../utils/privateMessages';
 
 interface CollectibleDetailModalAttrs {
   collectible: any;
@@ -59,7 +59,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     const canMintAttribute = collectible.canMint?.();
     const canMint = canMintAttribute ?? (status === 'completed' && !tokenId);
     const isShowcase = Boolean(collectible.isShowcase?.());
-    const canOfferTrade = Boolean(currentUser && !isOwnProfile && status === 'completed');
+    const canMessageOwner = Boolean(owner && shouldShowPrivateMessageButton(owner));
     const statusKey = STATUS_KEYS[status];
 
     return (
@@ -149,13 +149,13 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
                 </Button>
               )}
 
-              {canOfferTrade && (
+              {canMessageOwner && (
                 <Button
-                  className="Button Button--primary"
-                  onclick={() => this.openTradeRequest()}
+                  className="Button Button--primary CollectibleDetailModal-messageButton"
+                  onclick={() => void this.openConversation()}
                   disabled={this.loadingAction}
                 >
-                  {app.translator.trans('donk-aigc-collectibles.forum.trade.create_button')}
+                  {app.translator.trans('donk-aigc-collectibles.forum.messages.detail_button')}
                 </Button>
               )}
 
@@ -259,14 +259,14 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     }
   }
 
-  openTradeRequest() {
+  async openConversation() {
     const collectible = this.attrs.collectible;
-    if (!collectible) return;
+    const owner = collectible?.owner?.() || collectible?.user?.();
+
+    if (!owner) return;
 
     this.hide();
-    app.modal.show(TradeRequestModal, {
-      collectible,
-    });
+    await startPrivateMessage(owner);
   }
 
   openProof() {

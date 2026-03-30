@@ -891,35 +891,33 @@
   grid-template-columns: minmax(0, 1fr) 210px;
   gap: 18px;
   align-items: start;
-}
 
-.CollectibleShowcasePost-content {
-  min-width: 0;
+  &-content {
+    min-width: 0;
+  }
 
-  .Post-body {
-    overflow: visible;
+  &-panel {
+    min-width: 0;
   }
 }
 
-.CollectibleShowcasePost-panel {
-  min-width: 0;
-}
-
 .PostCollectibleShowcase {
+  position: relative;
   width: 100%;
-  display: block;
-  text-align: left;
+  display: grid;
+  gap: 8px;
   padding: 10px;
   border: 1px solid fade(#94A3B8, 30%);
-  border-radius: 14px;
+  border-radius: 16px;
   background:
     linear-gradient(180deg, fade(#FFFFFF, 88%), fade(#F8FAFC, 94%)),
     linear-gradient(135deg, fade(#E2E8F0, 35%), fade(#CBD5E1, 20%));
   box-shadow: 0 12px 24px fade(#0F172A, 8%);
+  overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 
   &:hover,
-  &:focus {
+  &:focus-within {
     transform: translateY(-1px);
     box-shadow: 0 18px 30px fade(#0F172A, 12%);
     border-color: fade(#64748B, 45%);
@@ -938,12 +936,22 @@
     box-shadow: 0 18px 34px fade(@rarity-legendary-border, 18%);
   }
 
+  &-preview {
+    width: 100%;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+
   &-frame {
+    position: relative;
     aspect-ratio: 1 / 1;
     border-radius: 12px;
     overflow: hidden;
     background: #E2E8F0;
-    margin-bottom: 10px;
   }
 
   &-image {
@@ -965,7 +973,9 @@
 
   &-copy {
     display: grid;
-    gap: 8px;
+    gap: 6px;
+    padding: 0 2px;
+    transition: opacity 0.18s ease;
   }
 
   &-kicker {
@@ -977,7 +987,7 @@
   }
 
   &-name {
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.35;
     color: #0F172A;
     font-weight: 700;
@@ -996,6 +1006,53 @@
     line-height: 1.2;
     color: #475569;
     font-weight: 700;
+  }
+
+  &--messaging &-actions {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    opacity: 0;
+    transform: translateY(14px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  &-messageButton {
+    width: 100%;
+    justify-content: center;
+    border-radius: 999px;
+    box-shadow: 0 10px 24px fade(#0F172A, 28%);
+  }
+
+  &--messaging:hover &-actions,
+  &--messaging:focus-within &-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  &--messaging:hover &-copy,
+  &--messaging:focus-within &-copy {
+    opacity: 0.28;
+  }
+
+  &-frame::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 44%;
+    background: linear-gradient(180deg, fade(#020617, 0%), fade(#020617, 68%));
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  &--messaging:hover &-frame::after,
+  &--messaging:focus-within &-frame::after {
+    opacity: 1;
   }
 }
 
@@ -1060,5 +1117,24 @@
   .WalletConnector-bound {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (hover: none) {
+  .PostCollectibleShowcase {
+    &--messaging &-actions {
+      position: static;
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+
+    &--messaging &-copy {
+      opacity: 1;
+    }
+
+    &--messaging &-frame::after {
+      opacity: 0;
+    }
   }
 }

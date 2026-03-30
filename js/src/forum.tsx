@@ -95,6 +95,8 @@ app.initializers.add("donk-aigc-collectibles", () => {
 
     if (
       !user ||
+      post?.isHidden?.() ||
+      this?.isEditing?.() ||
       !user.attribute?.("showcaseCollectibleId") ||
       !user.attribute?.("showcaseCollectibleCid")
     ) {

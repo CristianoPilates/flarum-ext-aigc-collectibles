@@ -202,6 +202,13 @@ donk-aigc-collectibles:
       notification_accepted: Your trade offer was accepted!
       notification_rejected: Your trade offer was rejected.
 
+    messages:
+      showcase_button: Message Owner
+      detail_button: Ask About This Collectible
+      unavailable: Private messages are not available right now.
+      permission_denied: Your account can't send private messages right now.
+      self_not_allowed: You can't message yourself.
+
     wallet:
       title: Web3 Wallet
       connect_button: Connect Wallet

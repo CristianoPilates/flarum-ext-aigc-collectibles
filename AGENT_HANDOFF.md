@@ -15,21 +15,24 @@
 - 不要自动化导入钱包
 - mint 必须是用户主动动作
 - 证明 NFT 已经成立时，不要只依赖 MetaMask NFT 列表
+- 每条 commit 之前，都要先用 `mcp-headed` 做实际验收
 
 不要把用户密码写进仓库。
 
 ## 2. 当前现场快照
 
-截至 2026-03-29：
+截至 2026-03-30：
 
 - 当前工作分支：
-  `state-machine`
+  `main`
 - 已落在 `HEAD` 的最近提交：
-  `3b63288` `add reply showcase validation flow`
+  `f672b73`
 - 当前工作树是 dirty 的
-- dirty 内容主要包含两类：
-  - proof modal 功能与测试
-  - 本轮文档清理
+- dirty 内容主要包括：
+  - Phase 1 展柜 CTA -> 私信 的前端实现与 smoke
+  - proof/detail/messages 文案与样式改动
+  - 少量与本轮任务无关的既有脏文件，例如：
+    `contracts/CollectibleNFT.sol`
 
 ## 3. 已确认的事实
 
@@ -68,21 +71,14 @@
 - 所以“MetaMask 已接入”和“链上 NFT 已存在”都是真的
 - 但“用户每次在 MetaMask 里亲手确认 mint”不是当前产品实现
 
-### 3.3 Showcase
+### 3.3 Showcase / Proof
 
-reply 右侧展柜第一版已经实现并通过 headed MCP 验收。
+这两条旧结论仍成立：
 
-已验证过：
+- reply showcase 第一版已落地
+- proof modal 第一版已落地
 
-- `make mcp-showcase`
-- reply 页面存在右侧 showcase panel
-- 点击 panel 可打开 collectible detail modal
-
-### 3.4 Proof
-
-proof modal 第一版已经实现并跑通过 headed MCP 验收。
-
-当前新增内容包括：
+proof 当前已有：
 
 - `GET /api/collectibles/{id}/proof`
 - `CollectibleDetailModal` 里的 `View Proof` 按钮
@@ -90,105 +86,235 @@ proof modal 第一版已经实现并跑通过 headed MCP 验收。
 - `make mcp-proof`
 - `scripts/playwright/mcp-cli/mcp-validate-proof.cjs`
 
-proof modal 当前验证四层：
+### 3.4 Private Messages / Phase 1 CTA
 
-1. `App Record`
-2. `Chain Proof`
-3. `Metadata JSON`
-4. `Image Asset`
+本轮已经把 Phase 1 主链打通。
 
-最近一次成功验证的关键值：
+当前代码状态：
 
-- `Collectible #43`
-- `Token ID = 8`
-- `Metadata CID = QmcLVCHYo8eBbwHGbCYuUkavmZz9XG9gphNjocoEN9nq6L`
-- `Image CID = QmcDxqofG2Wpou9HG7WbsmaatZgCcGrxk9aKc5uvAiwXTx`
-- `ownerOf = 0xabb6bc9ec4c33cf50b4013ff8bb3b4855e35168f`
-- `tokenURI = ipfs://QmcLVCHYo8eBbwHGbCYuUkavmZz9XG9gphNjocoEN9nq6L`
+- 新增：
+  [privateMessages.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/privateMessages.ts)
+- 展柜 CTA 已改成：
+  - 展柜卡片点击：打开藏品详情
+  - 独立按钮：`Message Owner`
+- 藏品详情主 CTA 已从旧 `TradeRequestModal` 改成私信入口
+- 展柜布局已回到 post/reply 右侧：
+  `CollectibleShowcasePost`
+- CTA 视觉已改成：
+  默认隐藏，hover 时从卡片底边浮出
 
-截图产物：
+最关键的修法：
 
-- `.devenv/state/playwright-mcp-output/collectible-proof-modal.png`
+- 不再自己手搓 `MessageComposer` chunk loader
+- 改为复用 `flarum-messages` 官方注入到
+  `UserControls.userControls(user)` 里的
+  `sendMessage` control 的 `onclick`
+- 这样 CTA 私信路径与官方用户卡片“Send Message”路径完全一致
 
-### 3.5 Blind box / rarity / phrase pool
+headed MCP 真实验收结论：
 
-- 10 秒 PoW 阈值已调高，不再容易稳定刷高稀有度
-- phrase pool 已明显扩充，不再几乎全是 dragon 题材
-- 开盒后自动 mint 已移除
+- discussion/reply 页右侧展柜可见
+- hover 后 CTA 出现
+- 点击 `Message Owner` 后，私信 composer 正常出现
+- buyer 发送后会跳到：
+  `/messages/dialog/2`
+- 调试时确认过 composer 状态：
+  - `position = normal`
+  - `mounted = true`
+  - `visible = true`
+  - body component 是 `MessageComposer`
 
-### 3.6 AIGC runtime
+注意：
 
-- `akashgen` 之前 1 小时后自动退出的问题已经在外部仓库修掉
-- 现在按常驻服务处理，健康检查看：
-  `http://127.0.0.1:6571/health`
+- `.Composer` 容器本身偶尔有可见性过渡抖动
+- 但 `.TextEditor-editor` 已经真实可见
+- smoke / 验收应以 editor 可见为准，不要只盯 `.Composer`
+
+与 Phase 1 同轮收口的站点问题：
+
+- `/messages/dialog/:id` 原先会报：
+  `Resource [tags] not found.`
+- 原因是站点已安装 `flarum/tags` 包，但没启用，而且数据库也没跑 tags migration
+- 已直接把 `flarum-tags` 加入 `settings.extensions_enabled`
+- 已执行：
+  `php flarum migrate`
+  跑完 tags 相关 migration
+- 之后 headed 诊断确认：
+  - `GET /api/dialog-messages...` 不再 404
+  - dialog 页面已能正常显示消息流正文
+
+当前判断：
+
+- Phase 1 主链已可提交
+- 下一步可以切第一条 commit
+
+### 3.5 Trade / barter
+
+必须明确：
+
+- 用户已同意不要继续把旧 `Trade` 模型硬补成 barter
+- 当前只是在 Phase 1 中绕开旧 `Trade`，把 CTA 先接到私信
+- `Trade/barter` 领域模型重做仍未开始
+
+现状：
+
+- 旧 `TradeRequestModal` 还在代码里
+- 旧 `Trade` 仍然是“盲盒数量换单个 collectible”的窄模型
+- 用户后续还额外报告了一个旧 bug：
+  `set offer` 后 modal 无法正常关闭
+
+这说明：
+
+- 旧 Trade 路径还要做最小 bugfix
+- 但真正的 barter 重做必须单列为后续阶段工程，不能与 Phase 1 混做
+
+### 3.6 Blind box / rarity / phrase pool
+
+- 后端已经存在真正的 `BlindBox` 模型与 `/blindboxes` API
+- 当前前端主交互仍以“余额 + 开盒 modal”为主
+- 现有流程是：
+  先 appraise，再自动继续 open
+- 用户当前明确要求改成：
+  先 appraise 出 budget，再由用户决定是否 open
+
+用户新增产品要求还包括：
+
+- blind box 不应只作为货币余额
+- 需要独立的 BlindBox 页面
+- 要显示：
+  `type`、`seed`、`status`、`budget`
+- 同 type 统一精美外观
+- 不同 status 不同外观
+- 未鉴定前 budget 显示 `???`
+- 还要展示该 type 可抽取的 phrase pool categories
+
+### 3.7 i18n / 语言
+
+扩展自己的本地化已经注册：
+
+- [extend.php](/home/donk/development/flarum-ext-aigc-collectibles/extend.php)
+  中已有：
+  `new Extend\Locales(__DIR__.'/resources/locale')`
+
+这意味着：
+
+- `resources/locale/en.yml`
+- `resources/locale/zh-hans.yml`
+
+已经是“实装状态”。
+
+如果站点 UI 目前仍只有 English，问题不在本扩展 locale 注册，而在站点层语言包/默认语言：
+
+- 需要安装并启用站点简中语言扩展，例如：
+  `flarum-lang/chinese-simplified`
+- 然后在 Flarum 后台切换默认显示语言
+
+当前仓库 `vendor/` 中已能看到：
+
+- `vendor/flarum-lang/chinese-simplified`
+
+但是否在站点里启用，仍需实际确认。
+
+### 3.8 前端技术栈 / 诊断
+
+用户提到“前端似乎没用到 Mithril.js”，这里要明确：
+
+- Flarum forum 前端本来就是 Mithril 体系
+- 当前代码大量使用：
+  - `flarum/common/Component`
+  - `flarum/forum/app`
+  - `m.redraw()`
+  - Flarum 的 TSX 组件模式
+
+所以答案是：
+
+- 用了 Mithril
+- 只是大部分代码写成 TSX，而不是手写 `m(...)`
+
+诊断现状：
+
+- 已有：
+  `js/tsconfig.json`
+- 可先跑：
+  `npm run check-typings`
+- 当前仓库没有现成：
+  `phpstan.neon`
+- `vendor/bin` 下也没有现成 `phpstan`
+
+所以 PHP 侧若要做静态分析，要先补配置/依赖，或者改走现有测试与运行时校验路径。
 
 ## 4. 当前 dirty 文件
 
-本轮之前已存在的功能性未提交改动：
+当前可见 dirty 文件：
 
-- `Makefile`
+- `contracts/CollectibleNFT.sol`
+- `e2e/app.e2e.spec.cjs`
+- `js/src/forum.tsx`
 - `js/src/forum/components/CollectibleDetailModal.tsx`
+- `js/src/forum/components/PostCollectibleShowcase.tsx`
 - `resources/less/forum.less`
 - `resources/locale/en.yml`
 - `resources/locale/zh-hans.yml`
-- `scripts/playwright/mcp-cli/README.md`
-- `src/Api/Resource/CollectibleResource.php`
-- `src/Provider/CollectibleServiceProvider.php`
-- `js/src/forum/components/CollectibleProofModal.tsx`
-- `scripts/playwright/mcp-cli/mcp-validate-proof.cjs`
-- `src/Service/CollectibleProofService.php`
-- `src/Service/Contracts/CollectibleProofServiceInterface.php`
-- `tests/Fake/FakeCollectibleProofService.php`
-- `tests/integration/api/CollectibleProofChainTest.php`
-- `tests/unit/Service/CollectibleProofServiceTest.php`
+- `js/src/forum/utils/privateMessages.ts`
 
-本轮新增的是文档清理改动。
+说明：
+
+- 其中 `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
+- 其余大部分与 Phase 1 CTA 私信改造直接相关
 
 ## 5. 已跑过的验证
 
+本轮已确认：
+
 - `npm run build` in `js/`
-- `vendor/bin/phpunit -c tests/phpunit.unit.xml --filter CollectibleProofServiceTest`
-- `vendor/bin/phpunit -c tests/phpunit.integration.xml --filter CollectibleProofChainTest`
-- `make mcp-showcase`
-- `make mcp-proof`
+  通过
+- headed MCP：
+  展柜 CTA -> 私信 composer
+  通过
+- headed MCP：
+  buyer 发送后跳转 `/messages/dialog/2`
+  通过
+- headed MCP：
+  `/messages/dialog/2` 消息流正文渲染
+  通过
 
-已知情况：
+注意：
 
-- phpunit 会有 deprecations / warnings，但测试通过
-- headed MCP 如果 browser context 死掉，`mcp-proof` 之类脚本会报 `Session not found` 或 `Target page, context or browser has been closed`
-- 这种情况下优先重启 `make mcp-headed`
+- 真正要进入每条 commit 之前，必须先走 `mcp-headed` 的实际 GUI 验收
+- 不是只靠 headless smoke
 
-## 6. 当前文档体系
+## 6. 当前执行顺序
 
-清理后，Markdown 只保留这几份：
+这是当前认可的顺序，后续会话不要改丢：
 
-- `Manul.md`
-  使用说明 / 运维说明 / 验收说明
-- `CLAUDE.md`
-  架构规则与编码规则
-- `AGENT_HANDOFF.md`
-  当前现场和接手说明
-- `ROADMAP.md`
-  当前唯一有效的计划文档
-- `scripts/playwright/mcp-cli/README.md`
-  Playwright MCP CLI 包装器说明
+1. 先收口 Phase 1：
+   修复并验收 `展柜 CTA -> 私信`
+2. 然后修一批短平快问题：
+   - 旧 `TradeRequestModal` 关闭 bug
+   - detail / proof 的 owner 展示与 profile 跳转
+3. 然后做语言切换与诊断清理
+4. 然后把 BlindBox 从余额重构为一等资产并做独立页面
+5. 然后把开盒流程改成“先鉴定，后 open”
+6. 最后才重做 barter / Trade 领域模型并挂入私信线程
 
-旧的 `NOTE.md` 与 `Notes/*.md` 已视为历史噪音，不再维护。
+关键提醒：
 
-## 7. 下阶段推荐顺序
+- `展柜 CTA` 还没完成，不要因为讨论了 BlindBox / owner / i18n 就把它搁置
+- `Trade 模型重做` 也还没完成，只是明确延期到后续阶段，不是取消
 
-按当前产品共识，推荐顺序如下：
+## 7. commit 规则
 
-1. 提交 proof modal + 文档清理
-2. 启用 `flarum/messages`
-3. 把 blind box 做成可见的一等资产，而不是纯数字
-4. 基于私信重做 barter 领域模型
+用户最新明确要求：
 
-原因：
+- 每条 commit 之前，都要用 `mcp-headed` 实际验收
 
-- 用户真正关心的是私信中的 P2P 社交交易，不是纯 NFT 展示
-- 当前 `Trade` 模型仍然偏“买家出盲盒，卖家出单个 collectible”的窄模型
-- 这和目标中的双向议价、多资产交换、任意组合交换不匹配
+推荐执行模板：
+
+1. 启动：
+   `make mcp-headed`
+2. 用 MCP / headed Chromium 走实际用户路径
+3. 确认通过后再做该 commit
+4. commit 之间不要跳过 GUI 验收
 
 ## 8. 已经明确不要再做的事
 
@@ -197,30 +323,34 @@ proof modal 当前验证四层：
 - 不要把 MetaMask gallery 当作唯一真相
 - 不要把开盒和 mint 再次耦合回去
 - 不要接管用户日常 Chrome
+- 不要把旧 `Trade` 硬补成目标 barter 模型
 
 ## 9. 接手时先看哪些文件
 
 - [Manul.md](/home/donk/development/flarum-ext-aigc-collectibles/Manul.md)
 - [CLAUDE.md](/home/donk/development/flarum-ext-aigc-collectibles/CLAUDE.md)
 - [ROADMAP.md](/home/donk/development/flarum-ext-aigc-collectibles/ROADMAP.md)
-- [scripts/playwright/mcp.config.json](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp.config.json)
-- [scripts/playwright/launch-manual.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/launch-manual.cjs)
-- [scripts/playwright/mcp-cli/README.md](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/README.md)
+- [AGENT_HANDOFF.md](/home/donk/development/flarum-ext-aigc-collectibles/AGENT_HANDOFF.md)
+- [js/src/forum/utils/privateMessages.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/privateMessages.ts)
+- [js/src/forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
+- [js/src/forum/components/PostCollectibleShowcase.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/PostCollectibleShowcase.tsx)
 - [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
 - [js/src/forum/components/CollectibleProofModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleProofModal.tsx)
-- [src/Service/CollectibleProofService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/CollectibleProofService.php)
+- [js/src/forum/components/TradeRequestModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/TradeRequestModal.tsx)
+- [js/src/forum/components/BlindBoxOpener.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BlindBoxOpener.tsx)
+- [src/Api/Resource/BlindBoxResource.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Resource/BlindBoxResource.php)
+- [src/Model/BlindBox.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/BlindBox.php)
 - [src/Model/Trade.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/Trade.php)
 - [src/Service/BlindBoxService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/BlindBoxService.php)
 
 ## 10. 一句话总结
 
-项目已经从“多份 profile、mock provider、不稳定验证”收敛到：
+项目当前不是“所有东西都没做”，而是已经进入一个明确但未收口的过渡态：
 
-- 单一 shared profile
-- 真实 MetaMask
-- 真实 GUI 验收
-- mint 与开盒解耦
-- reply showcase 已落地
-- proof modal 已落地
+- proof 已落地
+- showcase 已落地
+- Phase 1 的 CTA -> 私信 已接上但未验收通过
+- BlindBox 资产化与两段式开盒还未开始
+- Trade/barter 重做仍在后续阶段
 
-下一个真正大的工程阶段，不是补更多小按钮，而是把 blind box 和 PM barter 重新做成一套合理的产品模型。
+下一位 agent 不要偏航。先把 `展柜 CTA -> 私信` 真正打通，再继续后面的 commit 序列。

@@ -222,6 +222,13 @@ donk-aigc-collectibles:
       notification_accepted: 你的交易报价已被接受！
       notification_rejected: 你的交易报价已被拒绝。
 
+    messages:
+      showcase_button: 私信主人
+      detail_button: 我想聊这件藏品
+      unavailable: 私信功能当前不可用。
+      permission_denied: 你的账户当前不能发起私信。
+      self_not_allowed: 不能给自己发私信。
+
     wallet:
       title: Web3 钱包
       connect_button: 连接钱包

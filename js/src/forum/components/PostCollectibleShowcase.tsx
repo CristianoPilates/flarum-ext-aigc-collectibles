@@ -1,7 +1,9 @@
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
+import Button from 'flarum/common/components/Button';
 import CollectibleDetailModal from './CollectibleDetailModal';
 import { gatewayUrl } from '../utils/ipfs';
+import { shouldShowPrivateMessageButton, startPrivateMessage } from '../utils/privateMessages';
 
 interface PostCollectibleShowcaseAttrs {
   user: any;
@@ -22,22 +24,30 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
 
     const imageUrl = gatewayUrl(showcaseCid);
     const collectible = app.store.getById('collectibles', String(showcaseId));
+    const canMessageOwner = shouldShowPrivateMessageButton(user);
+
+    const className =
+      'PostCollectibleShowcase PostCollectibleShowcase--' +
+      (showcaseRarity || 'common') +
+      (canMessageOwner ? ' PostCollectibleShowcase--messaging' : '');
 
     return (
-      <button
-        type="button"
-        className={'PostCollectibleShowcase PostCollectibleShowcase--' + (showcaseRarity || 'common')}
-        onclick={() => this.openCollectibleDetail(collectible, showcaseId)}
-      >
-        <div className="PostCollectibleShowcase-frame">
-          {imageUrl ? (
-            <img className="PostCollectibleShowcase-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />
-          ) : (
-            <div className="PostCollectibleShowcase-placeholder">
-              <i className="fas fa-gem" />
-            </div>
-          )}
-        </div>
+      <div className={className}>
+        <button
+          type="button"
+          className="PostCollectibleShowcase-preview"
+          onclick={() => this.openCollectibleDetail(collectible, showcaseId)}
+        >
+          <div className="PostCollectibleShowcase-frame">
+            {imageUrl ? (
+              <img className="PostCollectibleShowcase-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />
+            ) : (
+              <div className="PostCollectibleShowcase-placeholder">
+                <i className="fas fa-gem" />
+              </div>
+            )}
+          </div>
+        </button>
 
         <div className="PostCollectibleShowcase-copy">
           <div className="PostCollectibleShowcase-kicker">
@@ -55,7 +65,18 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
             ) : null}
           </div>
         </div>
-      </button>
+
+        {canMessageOwner ? (
+          <div className="PostCollectibleShowcase-actions">
+            <Button
+              className="Button Button--primary PostCollectibleShowcase-messageButton"
+              onclick={() => void startPrivateMessage(user)}
+            >
+              {app.translator.trans('donk-aigc-collectibles.forum.messages.showcase_button')}
+            </Button>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
