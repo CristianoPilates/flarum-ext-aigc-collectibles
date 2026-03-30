@@ -26,12 +26,12 @@
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `0d079a0`
+  `c9474da`
 - 当前工作树是 dirty 的
 - dirty 内容主要包括：
-  - 第二条小修：
-    `TradeRequestModal` 关闭 bug
-    `detail/proof owner profile link`
+  - 第三条提交候选：
+    `locale` 运行态脚本
+    `zh-Hans` 兼容 locale 文件
   - 少量与本轮任务无关的既有脏文件，例如：
     `contracts/CollectibleNFT.sol`
 
@@ -149,9 +149,11 @@ headed MCP 真实验收结论：
 - Phase 1 主链已提交：
   `0d079a0`
   `Implement showcase CTA private messaging flow`
-- 下一步是第二条小修 commit：
-  `TradeRequestModal` 关闭 bug
-  `detail/proof owner profile link`
+- 第二条小修已提交：
+  `c9474da`
+  `Fix trade modal close and owner profile links`
+- 下一步是第三条提交：
+  `locale` 运行态治理
 
 ### 3.5 Trade / barter
 
@@ -167,7 +169,7 @@ headed MCP 真实验收结论：
 - 旧 `Trade` 仍然是“盲盒数量换单个 collectible”的窄模型
 - 用户后续报告的旧 bug
   `set offer` 后 modal 无法正常关闭
-  已在工作树中修复，尚未提交
+  已在 `c9474da` 修复并提交
 
 这说明：
 
@@ -215,11 +217,48 @@ headed MCP 真实验收结论：
   `flarum-lang/chinese-simplified`
 - 然后在 Flarum 后台切换默认显示语言
 
-当前仓库 `vendor/` 中已能看到：
+但 2026-03-30 当前已确认一个关键兼容性问题：
 
-- `vendor/flarum-lang/chinese-simplified`
+- `flarum-lang/chinese-simplified` 公开仓库 `composer.json`
+  仍声明 `require flarum/core ^1.0.0`
+- 当前站点是 `Flarum 2.0.0-beta.8`
+- 所以不能把“安装这个包”当作当前站点的稳方案
 
-但是否在站点里启用，仍需实际确认。
+当前已完成的运行态工作：
+
+- 新增：
+  `resources/locale/zh-Hans.yml`
+  作为 `zh-hans.yml` 的兼容别名版本
+- 新增：
+  `scripts/forum/locale-status.php`
+  `scripts/forum/set-default-locale.php`
+- 新增 Makefile 入口：
+  - `make locale-status`
+  - `make locale-set-en`
+  - `make locale-set-zh-hans`
+  - `make locale-set-zh-Hans`
+
+当前 headed 实验结论：
+
+- 把站点 `default_locale` 切到 `zh-Hans` 后
+  扩展自己的中文文案已经生效
+- 证据包括：
+  - `签到`
+  - `藏品`
+  - `交易`
+  - `Web3 钱包`
+  - `断开钱包`
+- 但 Flarum core 仍大量显示英文：
+  - `Settings`
+  - `Security`
+  - `Collectibles`
+  - `All / Common / Rare / Epic / Legendary`
+
+结论：
+
+- 本扩展 `resources/locale/zh-hans.yml`
+  现在已经是“实装并可被站点消费”的
+- 真正缺的是“兼容 Flarum 2 的完整站点简中语言包”
 
 ### 3.8 前端技术栈 / 诊断
 
@@ -254,18 +293,15 @@ headed MCP 真实验收结论：
 当前可见 dirty 文件：
 
 - `contracts/CollectibleNFT.sol`
-- `js/src/forum.tsx`
-- `js/src/forum/components/CollectibleDetailModal.tsx`
-- `js/src/forum/components/CollectibleProofModal.tsx`
-- `js/src/forum/components/TradeRequestModal.tsx`
-- `resources/locale/en.yml`
-- `resources/locale/zh-hans.yml`
-- `src/Service/CollectibleProofService.php`
+- `Makefile`
+- `resources/locale/zh-Hans.yml`
+- `scripts/forum/locale-status.php`
+- `scripts/forum/set-default-locale.php`
 
 说明：
 
 - 其中 `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
-- 其余 dirty 文件属于第二条小修提交范围
+- 其余 dirty 文件属于第三条 locale 提交范围
 
 ## 5. 已跑过的验证
 
@@ -291,6 +327,12 @@ headed MCP 真实验收结论：
 - headed MCP：
   proof modal 中 owner 显示为 `admin`，链接跳转 `/u/admin`
   通过
+- headed MCP：
+  站点切到 `zh-Hans` 后，扩展 UI 文案显示中文
+  通过
+- headed MCP：
+  当前只有扩展文案切成中文，Flarum core 仍大量英文
+  已确认
 
 注意：
 
@@ -307,6 +349,7 @@ headed MCP 真实验收结论：
 2. 然后修一批短平快问题：
    - 旧 `TradeRequestModal` 关闭 bug
    - detail / proof 的 owner 展示与 profile 跳转
+   已提交
 3. 然后做语言切换与诊断清理
 4. 然后把 BlindBox 从余额重构为一等资产并做独立页面
 5. 然后把开盒流程改成“先鉴定，后 open”
@@ -351,6 +394,9 @@ headed MCP 真实验收结论：
 - [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
 - [js/src/forum/components/CollectibleProofModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleProofModal.tsx)
 - [js/src/forum/components/TradeRequestModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/TradeRequestModal.tsx)
+- [scripts/forum/locale-status.php](/home/donk/development/flarum-ext-aigc-collectibles/scripts/forum/locale-status.php)
+- [scripts/forum/set-default-locale.php](/home/donk/development/flarum-ext-aigc-collectibles/scripts/forum/set-default-locale.php)
+- [resources/locale/zh-Hans.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/zh-Hans.yml)
 - [js/src/forum/components/BlindBoxOpener.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BlindBoxOpener.tsx)
 - [src/Api/Resource/BlindBoxResource.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Resource/BlindBoxResource.php)
 - [src/Model/BlindBox.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/BlindBox.php)
@@ -364,8 +410,9 @@ headed MCP 真实验收结论：
 - proof 已落地
 - showcase 已落地
 - Phase 1 的 CTA -> 私信 已提交
-- 第二条小修已完成实现并做过 headed 验收，但尚未提交
+- 第二条小修已提交
+- 第三条 locale 运行态治理已完成实现并做过 headed 验收，但尚未提交
 - BlindBox 资产化与两段式开盒还未开始
 - Trade/barter 重做仍在后续阶段
 
-下一位 agent 不要偏航。先提交第二条小修，再继续后面的 commit 序列。
+下一位 agent 不要偏航。先提交第三条 locale 小提交，再继续后面的 commit 序列。

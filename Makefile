@@ -31,7 +31,7 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof mcp-messages \
+        mcp-showcase mcp-proof mcp-messages locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         enable-messages publish-site-runtime \
@@ -246,6 +246,21 @@ publish-site-runtime:
 	cd $(SITE_DIR) && php flarum assets:publish
 	cd $(SITE_DIR) && php flarum cache:clear
 
+locale-status:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/locale-status.php
+
+locale-set-en:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php en
+	cd $(SITE_DIR) && php flarum cache:clear
+
+locale-set-zh-hans:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php zh-hans
+	cd $(SITE_DIR) && php flarum cache:clear
+
+locale-set-zh-Hans:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php zh-Hans
+	cd $(SITE_DIR) && php flarum cache:clear
+
 # === 禁用扩展 ===
 disable:
 	cd $(SITE_DIR) && php flarum extension:disable donk-aigc-collectibles
@@ -321,5 +336,9 @@ help:
 	@echo "  make enable         - 链接并启用扩展"
 	@echo "  make disable        - 禁用并移除扩展"
 	@echo "  make migrate        - 运行新增迁移"
+	@echo "  make locale-status  - 查看站点 default_locale 与扩展 locale 文件"
+	@echo "  make locale-set-en  - 将站点默认语言切回 English"
+	@echo "  make locale-set-zh-hans - 将站点默认语言切到 zh-hans（扩展中文可用）"
+	@echo "  make locale-set-zh-Hans - 将站点默认语言切到 zh-Hans（兼容完整语言包）"
 	@echo "  make test           - 运行 PHPUnit"
 	@echo ""
