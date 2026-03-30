@@ -77,10 +77,37 @@ donk-aigc-collectibles:
       balance: blind boxes available
       open_button: Open Blind Box
       open_title: Open Blind Box
+      inventory_title: Blind Boxes
+      inventory_subtitle: "{count} active blind box(es) in your inventory"
+      inventory_empty: No blind boxes available right now.
+      own_only: Blind boxes are only visible on your own profile.
       open: Open Blind Box
       open_another: Open Another
       close: Close
       try_again: Try Again
+      appraise_button: Appraise Blind Box
+      open_collectible_button: Open Into Collectible
+      type_label: Type
+      type_checkin_reward: Check-in Reward
+      type_trade_reward: Trade Reward
+      type_unknown: Unknown Type
+      status_label: Status
+      status_unappraised: Unappraised
+      status_appraised: Appraised
+      status_opened: Opened
+      status_unknown: Unknown Status
+      seed_label: Seed
+      budget_label: Budget
+      budget_unknown: "???"
+      budget_value: "{budget}"
+      draw_categories_label: Draw Categories
+      category_subject: Subject
+      category_style: Style
+      category_mood: Mood
+      category_theme: Theme
+      category_unknown: Unknown Category
+      category_required: Required
+      category_optional: Optional
       appraising: "Appraising your blind box with a 10-second proof-of-work..."
       appraising_progress: "{seconds}s left · {attempts} attempts · best {zeros} leading zero(es)"
       appraising_quality: "Current appraisal: {rarity}"
@@ -246,6 +273,7 @@ donk-aigc-collectibles:
       trades: Trades
 
     user:
+      blindboxes_link: Blind Boxes
       collectibles_link: Collectibles
 
     gallery:

@@ -26,12 +26,13 @@
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `c9474da`
+  `83c8ab4`
 - 当前工作树是 dirty 的
 - dirty 内容主要包括：
-  - 第三条提交候选：
-    `locale` 运行态脚本
-    `zh-Hans` 兼容 locale 文件
+  - 第四条提交候选：
+    blind box 资产化页面
+    两段式 appraise/open 流程
+    blind box 样式与 locale 补充
   - 少量与本轮任务无关的既有脏文件，例如：
     `contracts/CollectibleNFT.sol`
 
@@ -152,8 +153,9 @@ headed MCP 真实验收结论：
 - 第二条小修已提交：
   `c9474da`
   `Fix trade modal close and owner profile links`
-- 下一步是第三条提交：
-  `locale` 运行态治理
+- 第三条 locale 已提交：
+  `83c8ab4`
+  `Add locale management scripts and zh-Hans alias`
 
 ### 3.5 Trade / barter
 
@@ -195,6 +197,65 @@ headed MCP 真实验收结论：
 - 不同 status 不同外观
 - 未鉴定前 budget 显示 `???`
 - 还要展示该 type 可抽取的 phrase pool categories
+
+截至当前会话结束前，第四条提交候选已基本做完，但尚未 commit：
+
+- 新增前端 BlindBox model：
+  [BlindBox.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/models/BlindBox.ts)
+- 新增用户盲盒页：
+  [UserBlindBoxesPage.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/UserBlindBoxesPage.tsx)
+- 新增盲盒库存组件：
+  [BlindBoxInventory.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BlindBoxInventory.tsx)
+- `forum.tsx` 已注册：
+  - `blindboxes` store model
+  - `/u/:username/blindboxes`
+  - header 盲盒入口
+  - profile nav `盲盒`
+- `BlindBoxOpener.tsx` 已改成两段式：
+  - `先鉴定盲盒`
+  - 停在 `已鉴定`
+  - 再 `开盒生成藏品`
+- `BlindBoxResource.php` 已新增：
+  - `drawRules`
+  - `trade_reward -> checkin_reward` fallback
+- `resources/less/forum.less` 已新增独立 blind box 页面与卡片样式
+- `resources/locale/en.yml`
+  `resources/locale/zh-hans.yml`
+  `resources/locale/zh-Hans.yml`
+  已补 blind box 页面文案
+
+本轮最关键的真实 bug 已定位并修掉：
+
+- `BlindBoxOpener` 之前把 Flarum model 的 `id()` 错当成属性 `id`
+- 导致 appraise 请求 URL 被拼成函数源码字符串
+- headed 验收里实际表现为：
+  `MethodNotAllowedException: POST`
+- 现已改为显式取 `id()` / `id`
+
+本轮 headed MCP 实机验收结论：
+
+- buyer 访问：
+  `/u/buyer/blindboxes`
+- 可见 3 个独立盲盒卡片
+- 初始状态：
+  - `未鉴定`
+  - budget 为 `???`
+- 点击 `先鉴定盲盒` 后：
+  - 约 10 秒 PoW 鉴定完成
+  - modal 停在 `已鉴定`
+  - budget 显示真实值，例如 `20`
+  - 不会自动开盒
+- 再点击 `开盒生成藏品` 后：
+  - 成功 reveal
+  - 当前一次实测产物：
+    `Collectible #48`
+  - 库存从 `3` 变成 `2`
+
+因此，第 4 条提交已经达到“可提交”状态。下一步只剩：
+
+- 更新本 handoff
+- `git add` 排除 `contracts/CollectibleNFT.sol`
+- 提交第 4 条 commit
 
 ### 3.7 i18n / 语言
 

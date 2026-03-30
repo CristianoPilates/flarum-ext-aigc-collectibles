@@ -9,6 +9,7 @@ import CommentPost from "flarum/forum/components/CommentPost";
 import LinkButton from "flarum/common/components/LinkButton";
 
 import Collectible from "./forum/models/Collectible";
+import BlindBox from "./forum/models/BlindBox";
 import Trade from "./forum/models/Trade";
 import CheckinRecord from "./forum/models/CheckinRecord";
 
@@ -17,15 +18,23 @@ import PostCollectibleBadge from "./forum/components/PostCollectibleBadge";
 import PostCollectibleShowcase from "./forum/components/PostCollectibleShowcase";
 import BlindBoxOpener from "./forum/components/BlindBoxOpener";
 import UserCollectiblesPage from "./forum/components/UserCollectiblesPage";
+import UserBlindBoxesPage from "./forum/components/UserBlindBoxesPage";
 import "./forum/components/TradeRequestModal";
 
 import { connect as wsConnect, subscribe } from "./forum/utils/notifications";
 
 export const extend = [
   new Extend.Store()
+    .add("blindboxes", BlindBox)
     .add("collectibles", Collectible)
     .add("trades", Trade)
     .add("checkin-records", CheckinRecord),
+
+  new Extend.Routes().add(
+    "user.blindboxes",
+    "/u/:username/blindboxes",
+    UserBlindBoxesPage
+  ),
 
   new Extend.Routes().add(
     "user.collectibles",
@@ -54,19 +63,17 @@ app.initializers.add("donk-aigc-collectibles", () => {
       items.add("donk-aigc-collectibles-checkin", <CheckinButton />, 15);
 
       // Blind box opener button
-      items.add(
-        "donk-aigc-collectibles-blindbox",
-        <button
-          className="Button Button--link BlindBoxOpener-trigger"
-          onclick={() => app.modal.show(BlindBoxOpener)}
+      items.add("donk-aigc-collectibles-blindbox", (
+        <LinkButton
+          className="Button Button--link BlindBoxInventory-trigger"
+          href={app.route("user.blindboxes", { username: app.session.user.slug() })}
           title={app.translator.trans(
-            "donk-aigc-collectibles.forum.blind_box.open_title"
+            "donk-aigc-collectibles.forum.blind_box.inventory_title"
           )}
         >
           <i className="fas fa-box-open" />
-        </button>,
-        14
-      );
+        </LinkButton>
+      ), 14);
     }
   });
 
@@ -123,6 +130,19 @@ app.initializers.add("donk-aigc-collectibles", () => {
   flarumExtend(UserPage.prototype, "navItems", function (items: any) {
     const profileUser = this?.user ?? this?.attrs?.user;
     if (!profileUser) return;
+
+    items.add(
+      "blindboxes",
+      <LinkButton
+        href={app.route("user.blindboxes", { username: profileUser.slug() })}
+        icon="fas fa-box-open"
+      >
+        {app.translator.trans(
+          "donk-aigc-collectibles.forum.user.blindboxes_link"
+        )}
+      </LinkButton>,
+      49
+    );
 
     items.add(
       "collectibles",

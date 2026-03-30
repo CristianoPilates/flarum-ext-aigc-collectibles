@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Api\Resource;
 use Donk\AigcCollectibles\Command\AppraiseBlindBox;
 use Donk\AigcCollectibles\Command\OpenBlindBox;
 use Donk\AigcCollectibles\Model\BlindBox;
+use Donk\AigcCollectibles\Model\BlindBoxDrawRule;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
@@ -15,6 +16,10 @@ use Tobyz\JsonApiServer\Context;
 
 class BlindBoxResource extends AbstractDatabaseResource
 {
+    private const DRAW_RULE_FALLBACKS = [
+        'trade_reward' => 'checkin_reward',
+    ];
+
     public function __construct(
         private readonly BusDispatcher $bus,
     ) {}
@@ -83,6 +88,27 @@ class BlindBoxResource extends AbstractDatabaseResource
             Schema\Str::make('seed'),
             Schema\Str::make('status'),
             Schema\Integer::make('budget'),
+            Schema\Arr::make('drawRules')
+                ->get(function (BlindBox $model) {
+                    static $ruleCache = [];
+                    $ruleType = self::DRAW_RULE_FALLBACKS[$model->type] ?? $model->type;
+
+                    if (! array_key_exists($ruleType, $ruleCache)) {
+                        $ruleCache[$ruleType] = BlindBoxDrawRule::query()
+                            ->where('blindbox_type', $ruleType)
+                            ->orderByDesc('required')
+                            ->orderBy('pool_category')
+                            ->get(['pool_category', 'required'])
+                            ->map(fn (BlindBoxDrawRule $rule) => [
+                                'category' => $rule->pool_category,
+                                'required' => (bool) $rule->required,
+                            ])
+                            ->values()
+                            ->all();
+                    }
+
+                    return $ruleCache[$ruleType];
+                }),
             Schema\DateTime::make('createdAt'),
             Schema\DateTime::make('updatedAt'),
 

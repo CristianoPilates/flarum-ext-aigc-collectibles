@@ -97,10 +97,37 @@ donk-aigc-collectibles:
       balance: 可用盲盒
       open_button: 开启盲盒
       open_title: 开启盲盒
+      inventory_title: 我的盲盒
+      inventory_subtitle: "当前拥有 {count} 个可用盲盒"
+      inventory_empty: 当前没有可用盲盒。
+      own_only: 盲盒只会显示在你自己的个人资料页中。
       open: 开启盲盒
       open_another: 再开一个
       close: 关闭
       try_again: 重试
+      appraise_button: 先鉴定盲盒
+      open_collectible_button: 开盒生成藏品
+      type_label: 类型
+      type_checkin_reward: 签到奖励盲盒
+      type_trade_reward: 交易奖励盲盒
+      type_unknown: 未知盲盒
+      status_label: 状态
+      status_unappraised: 未鉴定
+      status_appraised: 已鉴定
+      status_opened: 已开启
+      status_unknown: 未知状态
+      seed_label: 种子
+      budget_label: 预算
+      budget_unknown: "???"
+      budget_value: "{budget}"
+      draw_categories_label: 可抽取类别
+      category_subject: 主体
+      category_style: 风格
+      category_mood: 氛围
+      category_theme: 主题
+      category_unknown: 未知类别
+      category_required: 必选
+      category_optional: 可选
       appraising: 正在进行 10 秒盲盒鉴定（PoW）...
       appraising_progress: "剩余 {seconds} 秒 · 已尝试 {attempts} 次 · 当前最佳前导零 {zeros} 个"
       appraising_quality: "当前鉴定品质：{rarity}"
@@ -239,4 +266,5 @@ donk-aigc-collectibles:
       connection_denied: 钱包连接请求已被拒绝。
 
     user:
+      blindboxes_link: 盲盒
       collectibles_link: 藏品
