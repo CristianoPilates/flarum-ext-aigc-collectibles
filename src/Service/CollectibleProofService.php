@@ -43,6 +43,8 @@ class CollectibleProofService implements CollectibleProofServiceInterface
                 'tokenId' => $collectible->token_id,
                 'metadataCid' => $collectible->metadata_cid,
                 'ipfsCid' => $collectible->ipfs_cid,
+                'ownerId' => $collectible->owner?->id,
+                'ownerSlug' => $collectible->owner?->slug,
                 'ownerUsername' => $collectible->owner?->username,
                 'expectedTokenUri' => $collectible->metadata_cid ? 'ipfs://'.$this->normalizeCid($collectible->metadata_cid) : null,
                 'metadataGatewayUrl' => $collectible->metadata_cid ? $this->gatewayUrl($collectible->metadata_cid) : null,

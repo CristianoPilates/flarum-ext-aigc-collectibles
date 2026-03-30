@@ -1,5 +1,6 @@
 import app from 'flarum/forum/app';
 import Modal from 'flarum/common/components/Modal';
+import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
 interface CollectibleProofModalAttrs {
@@ -66,6 +67,10 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
             app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_section_app'),
             [
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_collectible'), proof.app?.name || '-'),
+              this.renderRow(
+                app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_owner'),
+                this.renderOwnerLink(proof.app)
+              ),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_token_id'), this.renderMaybeValue(proof.app?.tokenId)),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_metadata_cid'), this.renderMaybeValue(proof.app?.metadataCid)),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_image_cid'), this.renderMaybeValue(proof.app?.ipfsCid)),
@@ -190,6 +195,21 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
         {href}
       </a>
     );
+  }
+
+  renderOwnerLink(appLayer?: any) {
+    const ownerUsername = appLayer?.ownerUsername;
+    const ownerSlug = appLayer?.ownerSlug || ownerUsername;
+
+    if (!ownerUsername) {
+      return '-';
+    }
+
+    if (ownerSlug) {
+      return <Link href={app.route('user', { username: ownerSlug })}>{ownerUsername}</Link>;
+    }
+
+    return ownerUsername;
   }
 
   renderJson(value: any) {

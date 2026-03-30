@@ -128,6 +128,7 @@ donk-aigc-collectibles:
       showcase_set: 此藏品已设为帖子展示。
       showcase_remove: 取消展示
       showcase_removed: 已取消藏品展示。
+      owner_label: 拥有者：
       owner: 拥有者：{username}
       original_creator: 创建者：{username}
       times_traded: 交易次数：{count}
@@ -150,6 +151,7 @@ donk-aigc-collectibles:
       proof_open_image: 打开图片
       proof_open_token_uri: 打开 tokenURI 目标
       proof_field_collectible: 藏品
+      proof_field_owner: 拥有者
       proof_field_token_id: Token ID
       proof_field_metadata_cid: Metadata CID
       proof_field_image_cid: 图片 CID

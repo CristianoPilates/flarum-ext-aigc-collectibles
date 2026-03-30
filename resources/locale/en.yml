@@ -108,6 +108,7 @@ donk-aigc-collectibles:
       showcase_set: This collectible is now displayed on your posts.
       showcase_remove: Remove from Showcase
       showcase_removed: Collectible removed from showcase.
+      owner_label: "Owner:"
       owner: "Owner: {username}"
       original_creator: "Created by: {username}"
       times_traded: "Times traded: {count}"
@@ -130,6 +131,7 @@ donk-aigc-collectibles:
       proof_open_image: Open image
       proof_open_token_uri: Open tokenURI target
       proof_field_collectible: Collectible
+      proof_field_owner: Owner
       proof_field_token_id: Token ID
       proof_field_metadata_cid: Metadata CID
       proof_field_image_cid: Image CID

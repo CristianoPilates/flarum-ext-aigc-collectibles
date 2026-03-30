@@ -129,7 +129,8 @@ export default class TradeRequestModal extends Modal {
       })
       .then(() => {
         this.loading = false;
-        this.hide();
+        app.modal.close();
+        m.redraw();
         app.alerts.show(
           { type: 'success' },
           app.translator.trans('donk-aigc-collectibles.forum.trade.offer_sent')
@@ -142,3 +143,5 @@ export default class TradeRequestModal extends Modal {
       });
   }
 }
+
+flarum.reg.add('donk-aigc-collectibles', 'forum/components/TradeRequestModal', TradeRequestModal);

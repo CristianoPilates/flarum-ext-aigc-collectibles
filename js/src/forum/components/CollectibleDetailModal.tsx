@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
+import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import CollectibleProofModal from './CollectibleProofModal';
 import { gatewayUrl } from '../utils/ipfs';
@@ -98,9 +99,10 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
             {owner && (
               <p className="CollectibleDetailModal-line">
-                {app.translator.trans('donk-aigc-collectibles.forum.collectible.owner', {
-                  username: owner.displayName?.() || owner.username?.() || owner.id?.(),
-                })}
+                {app.translator.trans('donk-aigc-collectibles.forum.collectible.owner_label')}{' '}
+                <Link href={app.route.user(owner)}>
+                  {owner.displayName?.() || owner.username?.() || owner.id?.()}
+                </Link>
               </p>
             )}
 

@@ -17,6 +17,7 @@ import PostCollectibleBadge from "./forum/components/PostCollectibleBadge";
 import PostCollectibleShowcase from "./forum/components/PostCollectibleShowcase";
 import BlindBoxOpener from "./forum/components/BlindBoxOpener";
 import UserCollectiblesPage from "./forum/components/UserCollectiblesPage";
+import "./forum/components/TradeRequestModal";
 
 import { connect as wsConnect, subscribe } from "./forum/utils/notifications";
 

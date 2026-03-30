@@ -26,11 +26,12 @@
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `f672b73`
+  `0d079a0`
 - 当前工作树是 dirty 的
 - dirty 内容主要包括：
-  - Phase 1 展柜 CTA -> 私信 的前端实现与 smoke
-  - proof/detail/messages 文案与样式改动
+  - 第二条小修：
+    `TradeRequestModal` 关闭 bug
+    `detail/proof owner profile link`
   - 少量与本轮任务无关的既有脏文件，例如：
     `contracts/CollectibleNFT.sol`
 
@@ -88,7 +89,7 @@ proof 当前已有：
 
 ### 3.4 Private Messages / Phase 1 CTA
 
-本轮已经把 Phase 1 主链打通。
+本轮已经把 Phase 1 主链打通，并已提交。
 
 当前代码状态：
 
@@ -145,8 +146,12 @@ headed MCP 真实验收结论：
 
 当前判断：
 
-- Phase 1 主链已可提交
-- 下一步可以切第一条 commit
+- Phase 1 主链已提交：
+  `0d079a0`
+  `Implement showcase CTA private messaging flow`
+- 下一步是第二条小修 commit：
+  `TradeRequestModal` 关闭 bug
+  `detail/proof owner profile link`
 
 ### 3.5 Trade / barter
 
@@ -160,8 +165,9 @@ headed MCP 真实验收结论：
 
 - 旧 `TradeRequestModal` 还在代码里
 - 旧 `Trade` 仍然是“盲盒数量换单个 collectible”的窄模型
-- 用户后续还额外报告了一个旧 bug：
+- 用户后续报告的旧 bug
   `set offer` 后 modal 无法正常关闭
+  已在工作树中修复，尚未提交
 
 这说明：
 
@@ -248,19 +254,18 @@ headed MCP 真实验收结论：
 当前可见 dirty 文件：
 
 - `contracts/CollectibleNFT.sol`
-- `e2e/app.e2e.spec.cjs`
 - `js/src/forum.tsx`
 - `js/src/forum/components/CollectibleDetailModal.tsx`
-- `js/src/forum/components/PostCollectibleShowcase.tsx`
-- `resources/less/forum.less`
+- `js/src/forum/components/CollectibleProofModal.tsx`
+- `js/src/forum/components/TradeRequestModal.tsx`
 - `resources/locale/en.yml`
 - `resources/locale/zh-hans.yml`
-- `js/src/forum/utils/privateMessages.ts`
+- `src/Service/CollectibleProofService.php`
 
 说明：
 
 - 其中 `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
-- 其余大部分与 Phase 1 CTA 私信改造直接相关
+- 其余 dirty 文件属于第二条小修提交范围
 
 ## 5. 已跑过的验证
 
@@ -277,6 +282,15 @@ headed MCP 真实验收结论：
 - headed MCP：
   `/messages/dialog/2` 消息流正文渲染
   通过
+- headed MCP：
+  `set offer` 成功后旧 `TradeRequestModal` 自动关闭
+  通过
+- headed MCP：
+  detail modal 中 owner 显示为 `admin`，链接跳转 `/u/admin`
+  通过
+- headed MCP：
+  proof modal 中 owner 显示为 `admin`，链接跳转 `/u/admin`
+  通过
 
 注意：
 
@@ -288,7 +302,8 @@ headed MCP 真实验收结论：
 这是当前认可的顺序，后续会话不要改丢：
 
 1. 先收口 Phase 1：
-   修复并验收 `展柜 CTA -> 私信`
+   `展柜 CTA -> 私信`
+   已提交
 2. 然后修一批短平快问题：
    - 旧 `TradeRequestModal` 关闭 bug
    - detail / proof 的 owner 展示与 profile 跳转
@@ -299,7 +314,7 @@ headed MCP 真实验收结论：
 
 关键提醒：
 
-- `展柜 CTA` 还没完成，不要因为讨论了 BlindBox / owner / i18n 就把它搁置
+- `展柜 CTA` 已完成并提交，不要回退到旧 trade CTA 路径
 - `Trade 模型重做` 也还没完成，只是明确延期到后续阶段，不是取消
 
 ## 7. commit 规则
@@ -333,7 +348,6 @@ headed MCP 真实验收结论：
 - [AGENT_HANDOFF.md](/home/donk/development/flarum-ext-aigc-collectibles/AGENT_HANDOFF.md)
 - [js/src/forum/utils/privateMessages.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/privateMessages.ts)
 - [js/src/forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
-- [js/src/forum/components/PostCollectibleShowcase.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/PostCollectibleShowcase.tsx)
 - [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
 - [js/src/forum/components/CollectibleProofModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleProofModal.tsx)
 - [js/src/forum/components/TradeRequestModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/TradeRequestModal.tsx)
@@ -349,8 +363,9 @@ headed MCP 真实验收结论：
 
 - proof 已落地
 - showcase 已落地
-- Phase 1 的 CTA -> 私信 已接上但未验收通过
+- Phase 1 的 CTA -> 私信 已提交
+- 第二条小修已完成实现并做过 headed 验收，但尚未提交
 - BlindBox 资产化与两段式开盒还未开始
 - Trade/barter 重做仍在后续阶段
 
-下一位 agent 不要偏航。先把 `展柜 CTA -> 私信` 真正打通，再继续后面的 commit 序列。
+下一位 agent 不要偏航。先提交第二条小修，再继续后面的 commit 序列。
