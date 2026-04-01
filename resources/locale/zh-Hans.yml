@@ -251,6 +251,12 @@ donk-aigc-collectibles:
     messages:
       showcase_button: 私信主人
       detail_button: 我想聊这件藏品
+      context_intro: 我想聊聊这件藏品：
+      context_collectible: 藏品：{name}
+      context_rarity: 稀有度：{rarity}
+      context_token_id: "Token ID：#{id}"
+      context_source_discussion: 讨论帖：{title}
+      context_source_post: 来源帖子：{url}
       unavailable: 私信功能当前不可用。
       permission_denied: 你的账号当前不能发送私信。
       self_not_allowed: 你不能给自己发私信。

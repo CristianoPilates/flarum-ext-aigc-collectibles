@@ -1,13 +1,20 @@
 import app from 'flarum/forum/app';
+import m from 'mithril';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import CollectibleProofModal from './CollectibleProofModal';
 import { gatewayUrl } from '../utils/ipfs';
-import { shouldShowPrivateMessageButton, startPrivateMessage } from '../utils/privateMessages';
+import {
+  buildCollectibleMessageContent,
+  currentDiscussionTitle,
+  shouldShowPrivateMessageButton,
+  startPrivateMessage,
+} from '../utils/privateMessages';
 
-interface CollectibleDetailModalAttrs {
+interface CollectibleDetailModalAttrs extends IInternalModalAttrs {
   collectible: any;
   isOwnProfile: boolean;
   onUpdated?: () => void;
@@ -267,8 +274,14 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
     if (!owner) return;
 
+    const initialContent = buildCollectibleMessageContent({
+      collectible,
+      sourceDiscussionTitle: currentDiscussionTitle(),
+      sourcePostUrl: typeof window !== 'undefined' ? window.location.href : null,
+    });
+
     this.hide();
-    await startPrivateMessage(owner);
+    await startPrivateMessage(owner, { initialContent });
   }
 
   openProof() {

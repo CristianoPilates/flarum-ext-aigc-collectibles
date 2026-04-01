@@ -21,18 +21,17 @@
 
 ## 2. 当前现场快照
 
-截至 2026-03-30：
+截至 2026-03-31：
 
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `83c8ab4`
+  `4ae5cf3`
 - 当前工作树是 dirty 的
 - dirty 内容主要包括：
-  - 第四条提交候选：
-    blind box 资产化页面
-    两段式 appraise/open 流程
-    blind box 样式与 locale 补充
+  - 一条尚未提交的“静态质量/LSP 清理”候选：
+    前端 TS typings 收敛
+    一批 PHP 低风险 docblock / 泛型 / 返回类型修复
   - 少量与本轮任务无关的既有脏文件，例如：
     `contracts/CollectibleNFT.sol`
 
@@ -156,6 +155,9 @@ headed MCP 真实验收结论：
 - 第三条 locale 已提交：
   `83c8ab4`
   `Add locale management scripts and zh-Hans alias`
+- 第四条 blind box 已提交：
+  `4ae5cf3`
+  `Add blind box inventory and staged opening flow`
 
 ### 3.5 Trade / barter
 
@@ -251,11 +253,7 @@ headed MCP 真实验收结论：
     `Collectible #48`
   - 库存从 `3` 变成 `2`
 
-因此，第 4 条提交已经达到“可提交”状态。下一步只剩：
-
-- 更新本 handoff
-- `git add` 排除 `contracts/CollectibleNFT.sol`
-- 提交第 4 条 commit
+因此，第 4 条 blind box 提交已经完成。当前下一步不再是提交 blind box，而是先收口一条“静态质量提升”提交，并在那之前恢复 headed 验收入口。
 
 ### 3.7 i18n / 语言
 
@@ -321,7 +319,7 @@ headed MCP 真实验收结论：
   现在已经是“实装并可被站点消费”的
 - 真正缺的是“兼容 Flarum 2 的完整站点简中语言包”
 
-### 3.8 前端技术栈 / 诊断
+### 3.8 前端技术栈 / 诊断 / 静态质量
 
 用户提到“前端似乎没用到 Mithril.js”，这里要明确：
 
@@ -346,23 +344,89 @@ headed MCP 真实验收结论：
 - 当前仓库没有现成：
   `phpstan.neon`
 - `vendor/bin` 下也没有现成 `phpstan`
+- 实际可用的 PHP 静态分析入口是：
+  `phpactor worse:analyse src --format=json`
 
-所以 PHP 侧若要做静态分析，要先补配置/依赖，或者改走现有测试与运行时校验路径。
+2026-03-31 当前已完成一轮较大但低风险的静态质量清理，尚未提交：
+
+- 前端：
+  `npm run check-typings` 已通过
+- 前端：
+  `npm run build` 已通过
+- 新增：
+  [js/src/global.d.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/global.d.ts)
+- 已修正一批 TS 问题，包括：
+  - Flarum / Mithril 全局 typings
+  - `Modal` attrs 泛型
+  - `m.route` / `m.redraw` / TSX 推断问题
+  - `user.attribute(...)` 若干不安全调用
+  - `TradePanel` payload 归一化
+  - `WalletConnector` attrs typing
+  - `replaceAll` 兼容性问题
+- PHP 侧已补一批低风险类型信息，包括：
+  - policy 显式返回类型
+  - Eloquent relation 泛型 docblock
+  - repository / service / interface / command 参数与返回注释
+
+当前 `phpactor worse:analyse src --format=json` 剩余项，全部属于框架静态分析误报或高风险改法，不应为了“清零”而改运行时逻辑：
+
+- `Endpoint::defaultSort`
+- `Endpoint::paginate`
+- `Context::getActor`
+- `Builder::whereVisibleTo`
+
+结论：
+
+- 这一轮静态质量已经收敛到合理边界
+- 不应再为追求“分析器全绿”而改 Flarum 运行时用法
 
 ## 4. 当前 dirty 文件
 
 当前可见 dirty 文件：
 
 - `contracts/CollectibleNFT.sol`
-- `Makefile`
-- `resources/locale/zh-Hans.yml`
-- `scripts/forum/locale-status.php`
-- `scripts/forum/set-default-locale.php`
+- `js/src/global.d.ts`
+- `js/src/forum/components/BlindBoxOpener.tsx`
+- `js/src/forum/components/CollectibleDetailModal.tsx`
+- `js/src/forum/components/CollectibleProofModal.tsx`
+- `js/src/forum/components/PostCollectibleBadge.tsx`
+- `js/src/forum/components/PostCollectibleShowcase.tsx`
+- `js/src/forum/components/TradePanel.tsx`
+- `js/src/forum/components/TradeRequestModal.tsx`
+- `js/src/forum/components/UserBlindBoxesPage.tsx`
+- `js/src/forum/components/UserCollectiblesPage.tsx`
+- `js/src/forum/components/WalletConnector.tsx`
+- `js/src/forum/utils/ipfs.ts`
+- `js/src/forum/utils/notifications.ts`
+- `js/src/forum/utils/privateMessages.ts`
+- `js/tsconfig.json`
+- `src/Access/CheckinPolicy.php`
+- `src/Access/CollectiblePolicy.php`
+- `src/Access/TradePolicy.php`
+- `src/Api/Resource/BlindBoxResource.php`
+- `src/Api/UserResourceFields.php`
+- `src/Command/BindWallet.php`
+- `src/Command/CreateTrade.php`
+- `src/Model/BlindBox.php`
+- `src/Model/Collectible.php`
+- `src/Model/CollectibleEvent.php`
+- `src/Model/Trade.php`
+- `src/Model/Web3Account.php`
+- `src/Repository/CheckinRepository.php`
+- `src/Repository/CollectibleRepository.php`
+- `src/Repository/TradeRepository.php`
+- `src/Search/CollectibleSearcher.php`
+- `src/Service/CollectibleProofService.php`
+- `src/Service/Contracts/CollectibleProofServiceInterface.php`
+- `src/Service/Contracts/IPFSServiceInterface.php`
+- `src/Service/Contracts/WalletVerificationServiceInterface.php`
+- `src/Service/NftMintingService.php`
+- `src/StateMachine/StateMachineConfig.php`
 
 说明：
 
 - 其中 `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
-- 其余 dirty 文件属于第三条 locale 提交范围
+- 其余 dirty 文件主要属于“前端 TS + PHP 类型注释清理”这一条尚未提交的质量改动
 
 ## 5. 已跑过的验证
 
@@ -370,6 +434,10 @@ headed MCP 真实验收结论：
 
 - `npm run build` in `js/`
   通过
+- `npm run check-typings` in `js/`
+  通过
+- `phpactor worse:analyse src --format=json`
+  已只剩 Flarum/Tobyz 静态分析误报
 - headed MCP：
   展柜 CTA -> 私信 composer
   通过
@@ -395,6 +463,22 @@ headed MCP 真实验收结论：
   当前只有扩展文案切成中文，Flarum core 仍大量英文
   已确认
 
+2026-03-31 新增确认：
+
+- 论坛 API 当前健康：
+  `curl -fsS http://127.0.0.1:8080/api`
+  可正常返回
+- 提交前 headed 验收链路当前存在阻塞：
+  - 共享 profile 曾被残留 Playwright Chromium / MCP 进程占用
+  - 这批残留自动化进程已被清掉
+  - `make mcp-headed` 现在可以重新监听 `8931`
+  - 但当前 MCP 客户端链路仍会出现：
+    - `fetch failed`
+    - `page.goto: net::ERR_ABORTED at http://127.0.0.1:8080/`
+- 结论：
+  当前不能把“headed 脚本失败”直接当作产品功能回归失败
+  需要先修复 / 收敛 `mcp-headed` 验收入口本身
+
 注意：
 
 - 真正要进入每条 commit 之前，必须先走 `mcp-headed` 的实际 GUI 验收
@@ -411,10 +495,14 @@ headed MCP 真实验收结论：
    - 旧 `TradeRequestModal` 关闭 bug
    - detail / proof 的 owner 展示与 profile 跳转
    已提交
-3. 然后做语言切换与诊断清理
+3. 然后做语言切换与运行态 locale 治理
+   已提交
 4. 然后把 BlindBox 从余额重构为一等资产并做独立页面
-5. 然后把开盒流程改成“先鉴定，后 open”
-6. 最后才重做 barter / Trade 领域模型并挂入私信线程
+   已提交
+5. 然后先做一条静态质量 / LSP 清理提交
+   当前进行中，尚未提交
+6. 修复提交前 `mcp-headed` 验收链路，重跑真实 GUI 回归
+7. 最后才重做 barter / Trade 领域模型并挂入私信线程
 
 关键提醒：
 
@@ -434,6 +522,12 @@ headed MCP 真实验收结论：
 2. 用 MCP / headed Chromium 走实际用户路径
 3. 确认通过后再做该 commit
 4. commit 之间不要跳过 GUI 验收
+
+2026-03-31 当前额外提醒：
+
+- 先不要假设 `/tmp/*.cjs` 验证脚本一定可靠
+- 这套脚本当前处于“部分会被 profile / MCP 连接问题拖垮”的状态
+- 在恢复这套链路之前，不要贸然提交新的 commit
 
 ## 8. 已经明确不要再做的事
 
@@ -459,10 +553,16 @@ headed MCP 真实验收结论：
 - [scripts/forum/set-default-locale.php](/home/donk/development/flarum-ext-aigc-collectibles/scripts/forum/set-default-locale.php)
 - [resources/locale/zh-Hans.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/zh-Hans.yml)
 - [js/src/forum/components/BlindBoxOpener.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BlindBoxOpener.tsx)
+- [js/src/global.d.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/global.d.ts)
 - [src/Api/Resource/BlindBoxResource.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Resource/BlindBoxResource.php)
 - [src/Model/BlindBox.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/BlindBox.php)
 - [src/Model/Trade.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/Trade.php)
 - [src/Service/BlindBoxService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/BlindBoxService.php)
+- [src/Access/CollectiblePolicy.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Access/CollectiblePolicy.php)
+- [src/Access/TradePolicy.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Access/TradePolicy.php)
+- [src/Service/CollectibleProofService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/CollectibleProofService.php)
+- [scripts/playwright/mcp.config.json](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp.config.json)
+- [scripts/playwright/mcp-cli/mcp-client.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-client.cjs)
 
 ## 10. 一句话总结
 
@@ -472,8 +572,170 @@ headed MCP 真实验收结论：
 - showcase 已落地
 - Phase 1 的 CTA -> 私信 已提交
 - 第二条小修已提交
-- 第三条 locale 运行态治理已完成实现并做过 headed 验收，但尚未提交
-- BlindBox 资产化与两段式开盒还未开始
+- 第三条 locale 已提交
+- 第四条 BlindBox 资产化与两段式开盒已提交
+- 当前进行中的不是新功能，而是一条静态质量 / LSP 清理提交
+- 当前最大的阻塞不是业务逻辑，而是提交前 `mcp-headed` 验收链路还未恢复稳定
 - Trade/barter 重做仍在后续阶段
 
-下一位 agent 不要偏航。先提交第三条 locale 小提交，再继续后面的 commit 序列。
+下一位 agent 不要偏航。先恢复 headed 验收入口，再完成这条静态质量提交，然后再进入后续 Phase 2 / barter 相关工作。
+
+## 11. 2026-04-01 本次恢复记录
+
+### 11.1 MCP 验收链路
+
+- `.env` 里的 `PLAYWRIGHT_MCP_URL` 之前写成了 `http://127.0.0.1:8931/mcp`
+- 当前 `@playwright/mcp` 运行时实际要求客户端通过 `http://localhost:8931/mcp` 接入
+- 现已修正为：
+  `PLAYWRIGHT_MCP_URL=http://localhost:8931/mcp`
+- 同时保留服务端绑定：
+  `scripts/playwright/mcp.config.json` / `devenv.nix`
+  仍使用 `127.0.0.1` 监听
+- 结论：
+  当前可用组合是：
+  - 服务监听：`127.0.0.1:8931`
+  - 客户端 URL：`http://localhost:8931/mcp`
+
+### 11.2 私信 composer 崩溃根因与修复
+
+- 真实 headed 验收先复现到：
+  - 官方 `/messages` 新建私信也失败
+  - `.Composer normal visible` 已存在，但 `.TextEditor-editor` 没建出来
+  - 报错：
+    `Cannot read properties of undefined (reading 'append')`
+- 这说明问题不是展柜 CTA 独有，而是 `TextEditor.onbuild()` 执行时
+  `.TextEditor-editorContainer` 偶发还没准备好
+- 已在
+  [js/src/forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
+  加入一个非常窄的前端防御：
+  - override `flarum/common/components/TextEditor.onbuild`
+  - 容器缺失时最多重试 20 次
+  - 容器就绪后再执行原始 `onbuild`
+  - 不改 vendor，不改消息业务逻辑
+
+### 11.3 本次真实 headed 验收结果
+
+- 官方消息页：
+  `node scripts/playwright/mcp-cli/mcp-validate-messages.cjs`
+  已通过
+- 验收结论：
+  - buyer 可在 `/messages` 新建私信
+  - composer 输入框可见
+  - 消息可发送
+  - seller 可看到新消息
+- 展柜 CTA：
+  `node scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs`
+  已通过
+- 验收结论：
+  - discussion / reply 里的展柜 CTA 可点击
+  - composer 正常显示
+  - `.TextEditor-editor` 可见
+  - `composerDisplay` 为 `block`
+
+### 11.4 当前残余注意事项
+
+- `debug-cta-state.cjs` 这类脚本比验收脚本更脆，
+  在 shared MCP / shared browser context 下偶发 `fetch failed`
+- 不要并行跑多个 MCP CLI 脚本
+- 必须串行
+- 推荐顺序：
+  1. `make mcp-headed`
+  2. 等待 `playwright-mcp ready`
+  3. 串行运行单个 `node scripts/playwright/mcp-cli/*.cjs`
+- 目前前台 `make mcp-headed` 比后台 `devenv` 进程更稳定，提交前验收优先用前台模式
+
+### 11.5 Phase 2 已实现：私信附带藏品上下文
+
+用户已明确同意直接进入 Phase 2：
+
+- 目标不是重做旧 `Trade`
+- 而是在 Phase 1 的“展柜 -> 私信主人”基础上，
+  让私信 composer 自动附带当前藏品上下文
+
+本次已完成实现：
+
+- 在
+  [js/src/forum/utils/privateMessages.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/privateMessages.ts)
+  新增：
+  - `PrivateMessageCollectibleContext`
+  - `buildCollectibleMessageContent(...)`
+  - `currentDiscussionTitle()`
+  - 更稳的 `waitForComposerReady()`
+  - `applyInitialContent(...)`
+- `applyInitialContent(...)` 不只写
+  `app.composer.fields.content(...)`
+  也会同步把内容写入底层 editor DOM，
+  避免 composer 已显示但 textarea 没更新
+- 在
+  [js/src/forum/components/PostCollectibleShowcase.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/PostCollectibleShowcase.tsx)
+  接入展柜 CTA 的上下文预填
+- 在
+  [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
+  接入详情弹窗 CTA 的上下文预填
+- 在 locale 中补齐上下文字段：
+  - [resources/locale/en.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/en.yml)
+  - [resources/locale/zh-Hans.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/zh-Hans.yml)
+
+当前 PM 预填内容包含：
+
+- 藏品名
+- 稀有度
+- Token ID
+- 来源讨论帖标题
+- 来源帖子 URL
+
+### 11.6 Phase 2 真实 headed 验收结果
+
+最终稳定使用的验收脚本是：
+
+- [scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs)
+
+该脚本本次已扩充：
+
+- 不只检查 CTA 点击后 composer 是否出现
+- 还额外抓取 `editorValue`
+  直接验证 textarea 实际预填内容
+
+真实 headed 验收已通过，关键结果：
+
+- 展柜 CTA 可点击
+- 私信 composer 正常出现
+- `.TextEditor-editor` 存在
+- `composerDisplay` 为 `block`
+- `editorValue` 已正确写入上下文
+
+本次实际捕获到的 `editorValue` 为：
+
+- `我想聊聊这件藏品：`
+- 空行
+- `藏品：Collectible #45`
+- `稀有度：普通`
+- `Token ID：#9`
+- `讨论帖：Showcase CTA Click Validation 1775053602677`
+- `来源帖子：http://127.0.0.1:8080/d/48-showcase-cta-click-validation-1775053602677`
+
+这说明 Phase 2 当前至少在 showcase CTA 路径上，
+已经实现“带藏品上下文进入私信 composer”。
+
+### 11.7 测试与提交边界提醒
+
+- PHP 集成测试：
+  [tests/integration/api/BlindBoxLifecycleTest.php](/home/donk/development/flarum-ext-aigc-collectibles/tests/integration/api/BlindBoxLifecycleTest.php)
+  已同步修正为动态校验 phrase pool，
+  不再依赖陈旧硬编码词表
+- `vendor/bin/phpunit -c tests/phpunit.integration.xml`
+  已通过：
+  `48 / 48`
+- 当前工作树里仍有大量与静态质量 / BlindBox / 旧 Trade 相关的 dirty 改动
+- 提交 Phase 2 时必须只挑这批相关文件，
+  不要误把
+  `contracts/CollectibleNFT.sol`
+  等无关改动混进去
+
+### 11.8 临时脚本说明
+
+- [scripts/playwright/mcp-cli/validate-showcase-context.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/validate-showcase-context.cjs)
+  是本轮排障时加的辅助脚本
+- 最终可靠验收并不是依赖它，而是依赖
+  [scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs)
+- 是否保留这个辅助脚本，可以在提交前再决定

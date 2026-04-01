@@ -3,7 +3,12 @@ import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import CollectibleDetailModal from './CollectibleDetailModal';
 import { gatewayUrl } from '../utils/ipfs';
-import { shouldShowPrivateMessageButton, startPrivateMessage } from '../utils/privateMessages';
+import {
+  buildCollectibleMessageContent,
+  currentDiscussionTitle,
+  shouldShowPrivateMessageButton,
+  startPrivateMessage,
+} from '../utils/privateMessages';
 
 interface PostCollectibleShowcaseAttrs {
   user: any;
@@ -14,11 +19,11 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
     const user = this.attrs.user;
     if (!user) return null;
 
-    const showcaseId = user.attribute<number>('showcaseCollectibleId');
-    const showcaseName = user.attribute<string>('showcaseCollectibleName');
-    const showcaseCid = user.attribute<string>('showcaseCollectibleCid');
-    const showcaseRarity = user.attribute<string>('showcaseCollectibleRarity');
-    const showcaseTokenId = user.attribute<number>('showcaseCollectibleTokenId');
+    const showcaseId = user.attribute('showcaseCollectibleId') as number | null;
+    const showcaseName = user.attribute('showcaseCollectibleName') as string | null;
+    const showcaseCid = user.attribute('showcaseCollectibleCid') as string | null;
+    const showcaseRarity = user.attribute('showcaseCollectibleRarity') as string | null;
+    const showcaseTokenId = user.attribute('showcaseCollectibleTokenId') as number | null;
 
     if (!showcaseId || !showcaseCid) return null;
 
@@ -70,7 +75,7 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
           <div className="PostCollectibleShowcase-actions">
             <Button
               className="Button Button--primary PostCollectibleShowcase-messageButton"
-              onclick={() => void startPrivateMessage(user)}
+              onclick={() => void startPrivateMessage(user, { initialContent: this.messageContent(showcaseId, collectible) })}
             >
               {app.translator.trans('donk-aigc-collectibles.forum.messages.showcase_button')}
             </Button>
@@ -84,6 +89,20 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
     const key = rarity || 'common';
 
     return app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + key);
+  }
+
+  messageContent(showcaseId: number, collectible: any) {
+    const user = this.attrs.user;
+
+    return buildCollectibleMessageContent({
+      collectible,
+      collectibleId: showcaseId,
+      collectibleName: user?.attribute?.('showcaseCollectibleName') || null,
+      rarity: user?.attribute?.('showcaseCollectibleRarity') || null,
+      tokenId: user?.attribute?.('showcaseCollectibleTokenId') || null,
+      sourceDiscussionTitle: currentDiscussionTitle(),
+      sourcePostUrl: typeof window !== 'undefined' ? window.location.href : null,
+    });
   }
 
   openCollectibleDetail(collectible: any, showcaseId: number) {

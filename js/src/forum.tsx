@@ -1,6 +1,6 @@
 import Extend from "flarum/common/extenders";
 import app from "flarum/forum/app";
-import { extend as flarumExtend } from "flarum/common/extend";
+import { extend as flarumExtend, override } from "flarum/common/extend";
 import User from "flarum/common/models/User";
 import HeaderSecondary from "flarum/forum/components/HeaderSecondary";
 import UserPage from "flarum/forum/components/UserPage";
@@ -57,6 +57,29 @@ export const extend = [
 ];
 
 app.initializers.add("donk-aigc-collectibles", () => {
+  override("flarum/common/components/TextEditor", "onbuild", function (this: any, original: () => void) {
+    const container = this.$?.(".TextEditor-editorContainer")?.[0];
+
+    if (container) {
+      this.__collectiblesEditorBuildRetries = 0;
+      return original();
+    }
+
+    const retries = (this.__collectiblesEditorBuildRetries || 0) + 1;
+    this.__collectiblesEditorBuildRetries = retries;
+
+    if (retries > 20) {
+      console.error("[donk-aigc-collectibles] TextEditor container was not ready during onbuild.");
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (this.element?.isConnected && !this.attrs?.composer?.editor) {
+        this.onbuild();
+      }
+    }, 50);
+  });
+
   // Add check-in button to header
   flarumExtend(HeaderSecondary.prototype, "items", function (items: any) {
     if (app.session?.user) {
