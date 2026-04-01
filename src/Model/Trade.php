@@ -52,16 +52,25 @@ class Trade extends AbstractModel
         'completed_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function fromUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'from_user_id');
     }
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function toUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
     }
 
+    /**
+     * @return BelongsTo<Collectible, self>
+     */
     public function collectible(): BelongsTo
     {
         return $this->belongsTo(Collectible::class, 'collectible_id');

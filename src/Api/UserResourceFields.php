@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Api;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
+use Flarum\Api\Schema\Attribute;
 use Flarum\Api\Schema;
 use Flarum\User\User;
 
@@ -17,6 +18,9 @@ class UserResourceFields
         $this->checkinService = $checkinService;
     }
 
+    /**
+     * @return array<int, Attribute>
+     */
     public function __invoke(): array
     {
         $showcaseCache = [];

@@ -198,10 +198,8 @@ export default class TradePanel extends Component<TradePanelAttrs> {
         },
       })
       .then((response: any) => {
-        this.trades = app.store.pushPayload(response);
-        if (!Array.isArray(this.trades)) {
-          this.trades = [this.trades];
-        }
+        const payload = app.store.pushPayload(response);
+        this.trades = Array.isArray(payload) ? payload : payload ? [payload] : [];
         this.loading = false;
         m.redraw();
       })

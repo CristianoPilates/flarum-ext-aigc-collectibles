@@ -11,11 +11,11 @@ export default class PostCollectibleBadge extends Component<PostCollectibleBadge
     const user = this.attrs.user;
     if (!user) return null;
 
-    const showcaseId = user.attribute<number>('showcaseCollectibleId');
-    const showcaseName = user.attribute<string>('showcaseCollectibleName');
-    const showcaseCid = user.attribute<string>('showcaseCollectibleCid');
-    const showcaseRarity = user.attribute<string>('showcaseCollectibleRarity');
-    const showcaseTokenId = user.attribute<number>('showcaseCollectibleTokenId');
+    const showcaseId = user.attribute('showcaseCollectibleId') as number | null;
+    const showcaseName = user.attribute('showcaseCollectibleName') as string | null;
+    const showcaseCid = user.attribute('showcaseCollectibleCid') as string | null;
+    const showcaseRarity = user.attribute('showcaseCollectibleRarity') as string | null;
+    const showcaseTokenId = user.attribute('showcaseCollectibleTokenId') as number | null;
 
     if (!showcaseId || !showcaseCid) return null;
 

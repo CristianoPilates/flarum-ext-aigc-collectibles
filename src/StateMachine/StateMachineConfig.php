@@ -8,6 +8,9 @@ use Donk\AigcCollectibles\Model\Trade;
 
 class StateMachineConfig
 {
+    /**
+     * @return array<string, mixed>
+     */
     public static function collectible(): array
     {
         return [
@@ -47,6 +50,9 @@ class StateMachineConfig
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public static function blindBox(): array
     {
         return [
@@ -72,6 +78,9 @@ class StateMachineConfig
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public static function trade(): array
     {
         return [

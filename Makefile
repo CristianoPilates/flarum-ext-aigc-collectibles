@@ -6,9 +6,9 @@ EXT_NAME    := donk/flarum-ext-aigc-collectibles
 FLARUM_VER  := ^2.0.0
 PLAYWRIGHT_MCP_PORT := $(shell printf '%s\n' "$(PLAYWRIGHT_MCP_URL)" | sed -n 's#.*:\([0-9][0-9]*\)/.*#\1#p')
 PLAYWRIGHT_MCP_OUTPUT_DIR ?= $(STATE_DIR)/playwright-mcp-output
-# Single shared persistent Chromium profile for both manual and MCP flows.
+# Persistent seed profile for manual wallet setup; MCP runs use a fresh runtime copy.
 PLAYWRIGHT_SHARED_USER_DATA_DIR := $(STATE_DIR)/playwright-profile
-PLAYWRIGHT_MCP_USER_DATA_DIR := $(PLAYWRIGHT_SHARED_USER_DATA_DIR)
+PLAYWRIGHT_MCP_USER_DATA_DIR := $(STATE_DIR)/playwright-mcp-profile
 PLAYWRIGHT_MCP_CONFIG := $(EXT_DIR)/scripts/playwright/mcp.config.json
 PLAYWRIGHT_MCP_CLI_DIR := $(EXT_DIR)/scripts/playwright/mcp-cli
 PLAYWRIGHT_MANUAL_USER_DATA_DIR := $(PLAYWRIGHT_SHARED_USER_DATA_DIR)
@@ -29,7 +29,7 @@ ifeq ($(strip $(SITE_DIR)),)
 $(error SITE_DIR is empty; set FLARUM_SITE_DIR in .env or export SITE_DIR)
 endif
 
-.PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile \
+.PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile prepare-playwright-mcp-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
         mcp-showcase mcp-proof mcp-messages locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
@@ -128,6 +128,18 @@ prepare-playwright-profile:
 	@mkdir -p "$(STATE_DIR)"
 	@if [ ! -e "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then mkdir -p "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)"; fi
 
+prepare-playwright-mcp-profile: prepare-playwright-profile
+	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@mkdir -p "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@if [ -d "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then cp -a "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)/." "$(PLAYWRIGHT_MCP_USER_DATA_DIR)/"; fi
+	@find "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" -maxdepth 1 \( -name 'Singleton*' -o -name 'lockfile' \) -delete
+	@rm -f \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Current Session" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Current Tabs" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Last Session" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Last Tabs"
+	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Sessions"
+
 pw-manual: prepare-playwright-profile
 	@set -eu; \
 	curl -fsS "$(FORUM_URL)" >/dev/null; \
@@ -145,6 +157,7 @@ mcp: prepare-playwright-profile
 	curl -fsS "$(FORUM_URL)" >/dev/null; \
 	pid="$$(ss -ltnp '( sport = :$(PLAYWRIGHT_MCP_PORT) )' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | head -n1)"; \
 	if [ -n "$$pid" ]; then kill "$$pid" >/dev/null 2>&1 || true; fi; \
+	$(MAKE) prepare-playwright-mcp-profile; \
 	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; exit "$$status"' INT TERM EXIT; \
 	echo "playwright-mcp profile: $(PLAYWRIGHT_MCP_USER_DATA_DIR)"; \
 	mcp-server-playwright \
@@ -283,6 +296,7 @@ reset-state: assert-runtime-clean
 	rm -rf .devenv/state/ipfs
 	rm -rf .devenv/state/playwright
 	rm -rf .devenv/state/playwright-profile
+	rm -rf .devenv/state/playwright-mcp-profile
 	rm -rf .devenv/state/playwright-mcp-output
 	rm -f .devenv/state/pw-test-external.pid
 	rm -f .devenv/state/pw-test-site.pid
@@ -300,9 +314,9 @@ help:
 	@echo "  make dev            - 完整开发编排：启动站点本体 + 外部服务 + frontend watch"
 	@echo "  make pw-smoke       - Headless 冒烟测试闭环：拉起测试依赖、初始化并跑 @smoke E2E 子集"
 	@echo "  make pw-manual      - Headed 手工测试：打开可加载 unpacked extensions 的持久化 Chromium"
-	@echo "  make mcp            - MCP 自动化闭环（默认 headless，复用 playwright-profile）"
-	@echo "  make mcp-headed     - MCP 自动化闭环（headed，复用 playwright-profile）"
-	@echo "  make mcp-state      - 通过 MCP 检查当前 shared profile / MetaMask / 应用状态"
+	@echo "  make mcp            - MCP 自动化闭环（默认 headless，使用从 playwright-profile 派生的临时运行 profile）"
+	@echo "  make mcp-headed     - MCP 自动化闭环（headed，使用从 playwright-profile 派生的临时运行 profile）"
+	@echo "  make mcp-state      - 通过 MCP 检查当前 MCP 运行 profile / MetaMask / 应用状态"
 	@echo "  make mcp-minimal-nft - 通过 MCP 跑最小 NFT 路径（需要先提供 METAMASK_PASSWORD）"
 	@echo ""
 	@echo "  === 支撑命令 ==="

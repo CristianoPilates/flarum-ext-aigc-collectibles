@@ -1,13 +1,14 @@
 import app from 'flarum/forum/app';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
 import { displayUserName } from '../utils/users';
 
-interface TradeRequestModalAttrs {
+interface TradeRequestModalAttrs extends IInternalModalAttrs {
   collectible: any;
 }
 
-export default class TradeRequestModal extends Modal {
+export default class TradeRequestModal extends Modal<TradeRequestModalAttrs> {
   offeredBoxes: number = 1;
   note: string = '';
   loading: boolean = false;
@@ -143,5 +144,3 @@ export default class TradeRequestModal extends Modal {
       });
   }
 }
-
-flarum.reg.add('donk-aigc-collectibles', 'forum/components/TradeRequestModal', TradeRequestModal);

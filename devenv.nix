@@ -25,7 +25,7 @@ in
     PLAYWRIGHT_HTML_REPORT_DIR = "${stateDir}/playwright/html-report";
     PLAYWRIGHT_MCP_OUTPUT_DIR = "${stateDir}/playwright-mcp-output";
     PLAYWRIGHT_SHARED_USER_DATA_DIR = "${stateDir}/playwright-profile";
-    PLAYWRIGHT_MCP_USER_DATA_DIR = "${stateDir}/playwright-profile";
+    PLAYWRIGHT_MCP_USER_DATA_DIR = "${stateDir}/playwright-mcp-profile";
   };
 
   packages =
@@ -104,7 +104,8 @@ in
       "$ANVIL_STATE_DIR" \
       "$PLAYWRIGHT_TEST_OUTPUT_DIR" \
       "$PLAYWRIGHT_HTML_REPORT_DIR" \
-      "$PLAYWRIGHT_MCP_OUTPUT_DIR"
+      "$PLAYWRIGHT_MCP_OUTPUT_DIR" \
+      "$PLAYWRIGHT_MCP_USER_DATA_DIR"
 
     if [ ! -e "$PLAYWRIGHT_SHARED_USER_DATA_DIR" ]; then
       mkdir -p "$PLAYWRIGHT_SHARED_USER_DATA_DIR"
@@ -183,11 +184,27 @@ in
     after_host="''${after_host#:}"
     port="''${after_host%%/*}"
 
+    rm -rf "$PLAYWRIGHT_MCP_USER_DATA_DIR"
+    mkdir -p "$PLAYWRIGHT_MCP_USER_DATA_DIR"
+
+    if [ -d "$PLAYWRIGHT_SHARED_USER_DATA_DIR" ]; then
+      cp -a "$PLAYWRIGHT_SHARED_USER_DATA_DIR/." "$PLAYWRIGHT_MCP_USER_DATA_DIR/"
+    fi
+
+    find "$PLAYWRIGHT_MCP_USER_DATA_DIR" -maxdepth 1 \( -name 'Singleton*' -o -name 'lockfile' \) -delete
+    rm -f \
+      "$PLAYWRIGHT_MCP_USER_DATA_DIR/Default/Current Session" \
+      "$PLAYWRIGHT_MCP_USER_DATA_DIR/Default/Current Tabs" \
+      "$PLAYWRIGHT_MCP_USER_DATA_DIR/Default/Last Session" \
+      "$PLAYWRIGHT_MCP_USER_DATA_DIR/Default/Last Tabs"
+    rm -rf "$PLAYWRIGHT_MCP_USER_DATA_DIR/Default/Sessions"
+
     exec mcp-server-playwright \
       --config "${projectRoot}/scripts/playwright/mcp.config.json" \
       --user-data-dir "$PLAYWRIGHT_MCP_USER_DATA_DIR" \
       --headless \
       --no-sandbox \
+      --host "$host" \
       --port "$port"
   '';
 }

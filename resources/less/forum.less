@@ -1279,9 +1279,12 @@
   }
 
   &-copy {
+    position: relative;
+    z-index: 1;
     display: grid;
     gap: 6px;
     padding: 0 2px;
+    pointer-events: none;
     transition: opacity 0.18s ease;
   }
 
@@ -1320,6 +1323,7 @@
     left: 10px;
     right: 10px;
     bottom: 10px;
+    z-index: 3;
     opacity: 0;
     transform: translateY(14px);
     pointer-events: none;

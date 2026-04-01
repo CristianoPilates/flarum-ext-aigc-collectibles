@@ -328,6 +328,9 @@ test.describe.serial('app smoke @smoke', () => {
 
       return {
         discussionUrl: '/d/' + discussionId + '/' + replyNumber,
+        discussionTitle: discussionPayload?.data?.attributes?.title || null,
+        collectibleName: selected.attributes?.name || null,
+        tokenId: selected.attributes?.tokenId || null,
       };
     });
 
@@ -347,7 +350,16 @@ test.describe.serial('app smoke @smoke', () => {
     const composer = page.locator('.Composer').first();
     const editor = composer.locator('.TextEditor-editor').first();
     await expect(editor).toBeVisible();
-    await editor.fill(messageText);
+    const initialValue = await editor.inputValue();
+    expect(initialValue).toContain(setup.collectibleName);
+    expect(initialValue).toContain(setup.discussionTitle);
+    expect(initialValue).toContain('http://127.0.0.1:8080/');
+
+    if (setup.tokenId) {
+      expect(initialValue).toContain(String(setup.tokenId));
+    }
+
+    await editor.fill(`${initialValue}\n\n${messageText}`);
 
     const sendButton = composer.locator('.Composer-footer .Button--primary').first();
     await expect(sendButton).toBeEnabled();

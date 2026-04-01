@@ -1,4 +1,5 @@
 import app from 'flarum/forum/app';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import Modal from 'flarum/common/components/Modal';
@@ -13,7 +14,7 @@ const RARITY_LABELS: Record<string, string> = {
   legendary: 'Legendary',
 };
 
-interface BlindBoxOpenerAttrs {
+interface BlindBoxOpenerAttrs extends IInternalModalAttrs {
   blindBox?: any;
   onUpdated?: () => void;
 }

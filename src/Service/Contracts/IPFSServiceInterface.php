@@ -6,6 +6,9 @@ interface IPFSServiceInterface
 {
     public function upload(string $data): string;
 
+    /**
+     * @param array<string, mixed> $metadata
+     */
     public function uploadJson(array $metadata): string;
 
     public function getGatewayUrl(string $cid): string;

@@ -15,7 +15,7 @@ function extractText(result) {
 async function main() {
   const forumUrl = process.env.FORUM_URL || 'http://127.0.0.1:8080';
   const outputDir = path.resolve(process.env.PLAYWRIGHT_MCP_OUTPUT_DIR || '.devenv/state/playwright-mcp-output');
-  const collectibleId = process.env.PROOF_COLLECTIBLE_ID || '43';
+  const collectibleId = process.env.PROOF_COLLECTIBLE_ID || null;
   const client = await createClient();
 
   try {
@@ -46,7 +46,7 @@ async function main() {
         }
 
         async function goto(pathname) {
-          await page.goto(appUrl(pathname), { waitUntil: 'load' });
+          await page.goto(appUrl(pathname), { waitUntil: 'domcontentloaded' });
           await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });
           await page.waitForLoadState('networkidle').catch(() => {});
           await wait(900);
@@ -59,31 +59,83 @@ async function main() {
         async function login(username, password = 'password') {
           await goto('/');
 
-          const loggedIn = await page.locator('.SessionDropdown').first().isVisible().catch(() => false);
-          if (loggedIn && (await currentUsername()) === username) {
-            return;
+          const response = await page.evaluate(async (credentials) => {
+            const request = await fetch('/api/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...credentials, remember: true }),
+            });
+
+            return await request.json();
+          }, { identification: username, password });
+
+          if (!response?.token) {
+            throw new Error('Login failed for ' + username);
           }
 
-          const loginButton = page.locator('.item-logIn .Button, header .Button:has-text("Log In")').first();
-          if (await loginButton.isVisible().catch(() => false)) {
-            await loginButton.click();
-            await wait(500);
-          }
+          await page.context().addCookies([
+            {
+              name: 'flarum_remember',
+              value: response.token,
+              domain: '127.0.0.1',
+              path: '/',
+            },
+          ]);
 
-          const identification = page.locator('.LogInModal input[name="identification"], .Modal input[name="identification"]').first();
-          await identification.waitFor({ state: 'visible', timeout: 10000 });
-          await identification.fill(username);
-          await page.locator('.LogInModal input[type="password"], .Modal input[type="password"]').first().fill(password);
-          await page.locator('.LogInModal .Button--primary, .Modal .Button--primary').first().click();
-          await page.waitForLoadState('networkidle').catch(() => {});
-          await wait(1200);
+          await goto('/');
         }
 
         await page.setViewportSize({ width: 1440, height: 1280 });
         await login('admin');
+
+        const target = await page.evaluate(async (preferredCollectibleId) => {
+          const app = window.flarum?.core?.app;
+          if (!app?.forum || !app?.session?.user || !app?.request) {
+            throw new Error('Flarum app is not ready');
+          }
+
+          const apiUrl = app.forum.attribute('apiUrl');
+          const userId = app.session.user.id();
+          const params = new URLSearchParams({
+            'filter[user]': String(userId),
+            'page[limit]': '50',
+            include: 'owner',
+            sort: '-createdAt',
+          });
+
+          const payload = await app.request({
+            method: 'GET',
+            url: apiUrl + '/collectibles?' + params.toString(),
+          });
+
+          const items = payload?.data || [];
+          const selected =
+            (preferredCollectibleId
+              ? items.find((item) => String(item.id) === String(preferredCollectibleId))
+              : null) ||
+            items.find((item) => item.attributes?.status === 'completed' && (item.attributes?.metadataCid || item.attributes?.tokenId)) ||
+            null;
+
+          if (!selected) {
+            return null;
+          }
+
+          return {
+            id: String(selected.id),
+            name: selected.attributes?.name || ('Collectible #' + selected.id),
+          };
+        }, TARGET_COLLECTIBLE_ID);
+
+        if (!target?.id) {
+          throw new Error('No completed collectible with proof data was available for admin.');
+        }
+
         await goto('/u/admin/collectibles');
 
-        const targetCard = page.locator('.CollectibleCard').filter({ hasText: 'Collectible #' + TARGET_COLLECTIBLE_ID }).first();
+        const gallery = page.locator('.CollectibleGallery').first();
+        await gallery.waitFor({ state: 'visible', timeout: 15000 });
+
+        const targetCard = page.locator('.CollectibleCard').filter({ hasText: target.name }).first();
         await targetCard.waitFor({ state: 'visible', timeout: 15000 });
         await targetCard.click();
 
@@ -120,7 +172,8 @@ async function main() {
         const proofText = await proofModal.innerText();
 
         return {
-          collectibleId: TARGET_COLLECTIBLE_ID,
+          collectibleId: target.id,
+          collectibleName: target.name,
           screenshotPath,
           state,
           proofText,

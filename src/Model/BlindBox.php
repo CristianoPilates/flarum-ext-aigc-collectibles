@@ -45,11 +45,17 @@ class BlindBox extends AbstractModel
         return $box;
     }
 
+    /**
+     * @return BelongsTo<User, BlindBox>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Collectible, BlindBox>
+     */
     public function collectible(): BelongsTo
     {
         return $this->belongsTo(Collectible::class);

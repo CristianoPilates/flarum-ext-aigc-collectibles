@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class TradeRepository
 {
+    /**
+     * @return Builder<Trade>
+     */
     public function query(): Builder
     {
         return Trade::query();
@@ -25,6 +28,9 @@ class TradeRepository
         return $query->firstOrFail();
     }
 
+    /**
+     * @return Collection<int, Trade>
+     */
     public function findByUser(User $user): Collection
     {
         return $this->query()
@@ -36,6 +42,9 @@ class TradeRepository
             ->get();
     }
 
+    /**
+     * @return Collection<int, Trade>
+     */
     public function findPendingForCollectible(int $collectibleId): Collection
     {
         return $this->query()

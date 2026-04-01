@@ -7,8 +7,12 @@ use Flarum\User\User;
 class BindWallet
 {
     public User $actor;
+    /** @var array<string, mixed> */
     public array $data;
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function __construct(User $actor, array $data)
     {
         $this->actor = $actor;

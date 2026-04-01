@@ -1,9 +1,11 @@
 import app from 'flarum/forum/app';
+import type Mithril from 'mithril';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
-interface CollectibleProofModalAttrs {
+interface CollectibleProofModalAttrs extends IInternalModalAttrs {
   collectible: any;
 }
 
@@ -168,7 +170,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     }
   }
 
-  renderSection(title: string, children: any[]) {
+  renderSection(title: Mithril.Children, children: Mithril.Children) {
     return (
       <section className="CollectibleProofModal-section">
         <h3 className="CollectibleProofModal-sectionTitle">{title}</h3>
@@ -177,7 +179,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     );
   }
 
-  renderRow(label: string, value: any) {
+  renderRow(label: Mithril.Children, value: Mithril.Children) {
     return (
       <div className="CollectibleProofModal-row">
         <span className="CollectibleProofModal-label">{label}</span>
@@ -186,7 +188,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     );
   }
 
-  renderLinkRow(label: string, href?: string | null) {
+  renderLinkRow(label: Mithril.Children, href?: string | null) {
     if (!href) return null;
 
     return this.renderRow(

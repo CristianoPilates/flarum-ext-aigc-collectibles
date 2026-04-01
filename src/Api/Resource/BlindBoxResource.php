@@ -14,6 +14,9 @@ use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
 use Illuminate\Support\Arr;
 use Tobyz\JsonApiServer\Context;
 
+/**
+ * @extends AbstractDatabaseResource<BlindBox>
+ */
 class BlindBoxResource extends AbstractDatabaseResource
 {
     private const DRAW_RULE_FALLBACKS = [

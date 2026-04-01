@@ -4,7 +4,11 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import { isMetaMaskAvailable, connectWallet, signMessage, truncateAddress } from '../utils/web3';
 
-export default class WalletConnector extends Component {
+interface WalletConnectorAttrs {
+  user: any;
+}
+
+export default class WalletConnector extends Component<WalletConnectorAttrs> {
   loading: boolean = false;
   walletAddress: string | null = null;
   walletId: string | null = null;
@@ -108,10 +112,10 @@ export default class WalletConnector extends Component {
     if (!user) return;
 
     // Check if user has web3 account attributes from the API
-    const web3Address = user.attribute<string>('web3Address');
+    const web3Address = user.attribute('web3Address') as string | null;
     if (web3Address) {
       this.walletAddress = web3Address;
-      this.walletId = user.attribute<string>('web3AccountId') || null;
+      this.walletId = (user.attribute('web3AccountId') as string | null) || null;
     }
   }
 

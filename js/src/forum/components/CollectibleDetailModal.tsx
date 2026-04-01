@@ -1,5 +1,4 @@
 import app from 'flarum/forum/app';
-import m from 'mithril';
 import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';

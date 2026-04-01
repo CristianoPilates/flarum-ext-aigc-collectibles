@@ -10,11 +10,17 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CheckinRepository
 {
+    /**
+     * @return Builder<CheckinRecord>
+     */
     public function query(): Builder
     {
         return CheckinRecord::query();
     }
 
+    /**
+     * @return Collection<int, CheckinRecord>
+     */
     public function findByUser(User $user, int $limit = 30): Collection
     {
         return $this->query()

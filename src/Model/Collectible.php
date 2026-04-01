@@ -51,16 +51,25 @@ class Collectible extends AbstractModel
         'token_id' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    /**
+     * @return HasMany<CollectibleEvent, self>
+     */
     public function events(): HasMany
     {
         return $this->hasMany(CollectibleEvent::class, 'collectible_id');
     }
 
+    /**
+     * @return HasMany<Trade, self>
+     */
     public function trades(): HasMany
     {
         return $this->hasMany(Trade::class, 'collectible_id');

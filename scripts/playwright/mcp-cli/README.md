@@ -55,7 +55,21 @@ node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
 前提不变：
 
 - `http://localhost:8931/mcp` 已经在监听
-- 共享 profile 已准备好
+- 手工 seed profile 已准备好
+
+当前 profile 约定：
+
+- `playwright-profile`
+  只给 `make pw-manual` 用
+  用来长期保留 MetaMask 导入/解锁后的持久化状态
+- `playwright-mcp-profile`
+  只给 `make mcp` / `make mcp-headed` 用
+  每次启动前都会从 `playwright-profile` 复制一份新的运行副本
+
+这样做的原因：
+
+- 保留钱包状态
+- 避免旧 tab / beforeunload dialog / session restore 污染下一次 MCP 验收
 
 ## 3. 当前脚本清单
 

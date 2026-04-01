@@ -8,7 +8,7 @@ use Flarum\User\User;
 
 class CollectiblePolicy extends AbstractPolicy
 {
-    public function view(User $actor, Collectible $collectible)
+    public function view(User $actor, Collectible $collectible): ?string
     {
         if ($collectible->status === Collectible::STATUS_COMPLETED) {
             return $this->allow();
@@ -19,14 +19,14 @@ class CollectiblePolicy extends AbstractPolicy
         }
     }
 
-    public function update(User $actor, Collectible $collectible)
+    public function update(User $actor, Collectible $collectible): ?string
     {
         if ($actor->id === $collectible->owner_id) {
             return $this->allow();
         }
     }
 
-    public function trade(User $actor, Collectible $collectible)
+    public function trade(User $actor, Collectible $collectible): ?string
     {
         if ($actor->id === $collectible->owner_id && $collectible->status === Collectible::STATUS_COMPLETED) {
             return $this->allow();
@@ -35,7 +35,7 @@ class CollectiblePolicy extends AbstractPolicy
         return $this->deny();
     }
 
-    public function mint(User $actor, Collectible $collectible)
+    public function mint(User $actor, Collectible $collectible): ?string
     {
         if ($actor->id === $collectible->owner_id
             && $collectible->status === Collectible::STATUS_COMPLETED
@@ -46,7 +46,7 @@ class CollectiblePolicy extends AbstractPolicy
         return $this->deny();
     }
 
-    public function showcase(User $actor, Collectible $collectible)
+    public function showcase(User $actor, Collectible $collectible): ?string
     {
         if ($actor->id === $collectible->owner_id
             && $collectible->status === Collectible::STATUS_COMPLETED) {

@@ -32,21 +32,33 @@ class CollectibleEvent extends AbstractModel
         'created_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<Collectible, self>
+     */
     public function collectible(): BelongsTo
     {
         return $this->belongsTo(Collectible::class, 'collectible_id');
     }
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function fromUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'from_user_id');
     }
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function toUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
     }
 
+    /**
+     * @return BelongsTo<Trade, self>
+     */
     public function trade(): BelongsTo
     {
         return $this->belongsTo(Trade::class, 'trade_id');

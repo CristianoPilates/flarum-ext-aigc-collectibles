@@ -18,30 +18,6 @@ class BlindBoxLifecycleTest extends TestCase
 
     private const SEED = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
     private const BOX_TYPE = 'test_reward';
-    private const SUBJECT_PHRASES = [
-        'dragon',
-        'forest',
-        'phoenix',
-        'clockwork fox',
-        'library automaton',
-    ];
-    private const STYLE_PHRASES = [
-        'oil painting',
-        'pixel art',
-        'ink wash painting',
-        'art nouveau poster',
-        'isometric diorama',
-        'noir comic panel',
-        'bioluminescent concept art',
-    ];
-    private const OPTIONAL_FLAVOR_PHRASES = [
-        'ethereal glow',
-        'dark',
-        'cosmic awe',
-        'midnight bazaar',
-        'solemn grandeur',
-        'desert caravan',
-    ];
 
     protected function setUp(): void
     {
@@ -433,15 +409,32 @@ class BlindBoxLifecycleTest extends TestCase
         $user = $this->database()->table('users')->where('id', 2)->first();
         $this->assertSame(0, (int) $user->blind_box_count);
 
-        // Prompt should contain at least one subject and one style (both required)
         $prompt = $collectible->aigc_prompt;
-        $hasSubject = $this->promptContainsAny($prompt, self::SUBJECT_PHRASES);
-        $hasStyle = $this->promptContainsAny($prompt, self::STYLE_PHRASES);
-        $this->assertTrue($hasSubject, "Prompt should contain a subject phrase: {$prompt}");
-        $this->assertTrue($hasStyle, "Prompt should contain a style phrase: {$prompt}");
+        $requiredCategories = $this->database()->table('blindbox_draw_rules')
+            ->where('blindbox_type', self::BOX_TYPE)
+            ->where('required', 1)
+            ->pluck('pool_category')
+            ->all();
 
-        $hasOptionalFlavor = $this->promptContainsAny($prompt, self::OPTIONAL_FLAVOR_PHRASES);
-        $this->assertTrue($hasOptionalFlavor, "Prompt should contain mood or theme flavor: {$prompt}");
+        foreach ($requiredCategories as $category) {
+            $phrases = $this->activePhrasesForCategories([$category]);
+            $this->assertTrue(
+                $this->promptContainsAny($prompt, $phrases),
+                "Prompt should contain a phrase from required category '{$category}': {$prompt}"
+            );
+        }
+
+        $optionalCategories = $this->database()->table('blindbox_draw_rules')
+            ->where('blindbox_type', self::BOX_TYPE)
+            ->where('required', 0)
+            ->pluck('pool_category')
+            ->all();
+
+        $optionalPhrases = $this->activePhrasesForCategories($optionalCategories);
+        $this->assertTrue(
+            $this->promptContainsAny($prompt, $optionalPhrases),
+            "Prompt should contain at least one optional flavor phrase: {$prompt}"
+        );
     }
 
     /* ═══════════════════════ Helpers ═══════════════════════ */
@@ -490,6 +483,23 @@ class BlindBoxLifecycleTest extends TestCase
         }
 
         return false;
+    }
+
+    /**
+     * @param string[] $categories
+     * @return string[]
+     */
+    private function activePhrasesForCategories(array $categories): array
+    {
+        if ($categories === []) {
+            return [];
+        }
+
+        return $this->database()->table('phrase_pools')
+            ->whereIn('category', $categories)
+            ->where('is_active', 1)
+            ->pluck('phrase')
+            ->all();
     }
 }
 

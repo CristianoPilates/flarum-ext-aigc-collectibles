@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CollectibleSearcher extends AbstractSearcher
 {
+    /**
+     * @return Builder<Collectible>
+     */
     public function getQuery(User $actor): Builder
     {
         return Collectible::query()

@@ -56,6 +56,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function buildChainLayer(Collectible $collectible): array
     {
         if ($collectible->token_id === null) {
@@ -110,6 +113,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function buildMetadataLayer(Collectible $collectible): array
     {
         if (empty($collectible->metadata_cid)) {
@@ -149,6 +155,10 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         }
     }
 
+    /**
+     * @param array<string, mixed> $metadataLayer
+     * @return array<string, mixed>
+     */
     protected function buildImageLayer(Collectible $collectible, array $metadataLayer): array
     {
         $metadataImageCid = is_string($metadataLayer['imageCid'] ?? null) ? $metadataLayer['imageCid'] : null;
@@ -203,6 +213,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         ], 'latest']);
     }
 
+    /**
+     * @param array<int, mixed> $params
+     */
     protected function rpcCall(string $rpcUrl, string $method, array $params): mixed
     {
         try {

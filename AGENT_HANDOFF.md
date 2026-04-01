@@ -9,9 +9,11 @@
 - 全程优先中文，少噪音，先给证据再下结论
 - 不接管用户日常 Chrome
 - 只用 headed Chromium + 真实 MetaMask unpacked extension
-- 只保留一份共享 profile：
+- 保留一份手工 seed profile：
   `.devenv/state/playwright-profile`
-- 钱包导入由用户手工完成，之后长期复用同一份 profile
+- `mcp-headed` 每次启动前都要从 seed profile 派生新的 runtime profile：
+  `.devenv/state/playwright-mcp-profile`
+- 钱包导入由用户手工完成，只写入 seed profile，之后长期复用
 - 不要自动化导入钱包
 - mint 必须是用户主动动作
 - 证明 NFT 已经成立时，不要只依赖 MetaMask NFT 列表
@@ -21,31 +23,40 @@
 
 ## 2. 当前现场快照
 
-截至 2026-03-31：
+截至 2026-04-02：
 
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `4ae5cf3`
+  `17754c9`
 - 当前工作树是 dirty 的
 - dirty 内容主要包括：
-  - 一条尚未提交的“静态质量/LSP 清理”候选：
+  - 一条尚未提交的“静态质量/LSP 清理 + MCP 验收稳定化”候选：
     前端 TS typings 收敛
     一批 PHP 低风险 docblock / 泛型 / 返回类型修复
+    `mcp-headed` 改为每次从 seed profile 复制 fresh runtime profile
   - 少量与本轮任务无关的既有脏文件，例如：
     `contracts/CollectibleNFT.sol`
+    `.codex`
 
 ## 3. 已确认的事实
 
 ### 3.1 浏览器 / MetaMask
 
-- `pw-manual` 与 `mcp-headed` 已统一复用：
+- `pw-manual` 继续复用手工 seed profile：
   `.devenv/state/playwright-profile`
+- `mcp-headed` / `make mcp` 不再直接复用 seed profile
+- 当前稳定方案是：
+  每次启动前从
+  `.devenv/state/playwright-profile`
+  复制出新的运行时 profile：
+  `.devenv/state/playwright-mcp-profile`
+- 这样保留 MetaMask 已导入状态，同时避免旧 tab / beforeunload / session restore 残留污染下一次验收
 - 真实 MetaMask unpacked extension 目录：
   `e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn`
 - mock `window.ethereum` 已移除
 - GUI 路径已经证明能看到真实 MetaMask provider
-- 钱包导入策略已经定为人工一次导入，长期复用 profile
+- 钱包导入策略已经定为人工一次导入，长期复用 seed profile
 
 ### 3.2 最小 NFT 路径
 
@@ -158,6 +169,9 @@ headed MCP 真实验收结论：
 - 第四条 blind box 已提交：
   `4ae5cf3`
   `Add blind box inventory and staged opening flow`
+- Phase 2 已提交：
+  `17754c9`
+  `Add collectible context to private messages`
 
 ### 3.5 Trade / barter
 
@@ -253,7 +267,16 @@ headed MCP 真实验收结论：
     `Collectible #48`
   - 库存从 `3` 变成 `2`
 
-因此，第 4 条 blind box 提交已经完成。当前下一步不再是提交 blind box，而是先收口一条“静态质量提升”提交，并在那之前恢复 headed 验收入口。
+因此，第 4 条 blind box 提交已经完成。当前下一步不再是提交 blind box，而是先收口一条“静态质量提升”提交。
+
+2026-04-02 更新：
+
+- Phase 2 已提交：
+  `17754c9`
+  `Add collectible context to private messages`
+- 当前真正的下一步是：
+  先提交“静态质量 / LSP 清理 + MCP 运行 profile 稳定化”
+  然后再进入 `Phase 3` 的 barter 模型重做
 
 ### 3.7 i18n / 语言
 
@@ -380,26 +403,45 @@ headed MCP 真实验收结论：
 - 这一轮静态质量已经收敛到合理边界
 - 不应再为追求“分析器全绿”而改 Flarum 运行时用法
 
+2026-04-02 新增确认：
+
+- 这批质量修正里，曾有人把若干 Flarum 组件改成运行时
+  `import m from 'mithril'`
+- 这在 Flarum extension 里会引入与全局 `m` 不同的 Mithril runtime
+- 已实际触发过 `/u/:username/collectibles` 页面崩溃：
+  `TypeError: Cannot read properties of undefined (reading 'toLowerCase')`
+- 根因是 `m.route.param('username')` 来自错误的 Mithril 实例
+- 结论：
+  - 运行时 `m` 必须继续使用 Flarum 全局实例
+  - 允许 `import type Mithril from 'mithril'`
+  - 不要再引入运行时 `import m from 'mithril'`
+
 ## 4. 当前 dirty 文件
 
-当前可见 dirty 文件：
+当前可见 dirty 文件大致分两类：
 
-- `contracts/CollectibleNFT.sol`
+应该进入下一条“质量 / MCP 稳定化”提交的文件：
+
+- `Makefile`
+- `devenv.nix`
+- `e2e/app.e2e.spec.cjs`
 - `js/src/global.d.ts`
 - `js/src/forum/components/BlindBoxOpener.tsx`
 - `js/src/forum/components/CollectibleDetailModal.tsx`
 - `js/src/forum/components/CollectibleProofModal.tsx`
 - `js/src/forum/components/PostCollectibleBadge.tsx`
-- `js/src/forum/components/PostCollectibleShowcase.tsx`
 - `js/src/forum/components/TradePanel.tsx`
 - `js/src/forum/components/TradeRequestModal.tsx`
-- `js/src/forum/components/UserBlindBoxesPage.tsx`
 - `js/src/forum/components/UserCollectiblesPage.tsx`
 - `js/src/forum/components/WalletConnector.tsx`
 - `js/src/forum/utils/ipfs.ts`
 - `js/src/forum/utils/notifications.ts`
-- `js/src/forum/utils/privateMessages.ts`
 - `js/tsconfig.json`
+- `resources/less/forum.less`
+- `scripts/playwright/mcp-cli/README.md`
+- `scripts/playwright/mcp-cli/mcp-validate-proof.cjs`
+- `scripts/playwright/mcp-cli/mcp-validate-showcase.cjs`
+- `scripts/playwright/mcp.config.json`
 - `src/Access/CheckinPolicy.php`
 - `src/Access/CollectiblePolicy.php`
 - `src/Access/TradePolicy.php`
@@ -422,11 +464,19 @@ headed MCP 真实验收结论：
 - `src/Service/Contracts/WalletVerificationServiceInterface.php`
 - `src/Service/NftMintingService.php`
 - `src/StateMachine/StateMachineConfig.php`
+- `tests/integration/api/BlindBoxLifecycleTest.php`
+
+明确不要进这条提交的文件：
+
+- `contracts/CollectibleNFT.sol`
+- `.codex`
+- `scripts/playwright/mcp-cli/debug-cta-state.cjs`
+- `scripts/playwright/mcp-cli/validate-showcase-context.cjs`
 
 说明：
 
-- 其中 `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
-- 其余 dirty 文件主要属于“前端 TS + PHP 类型注释清理”这一条尚未提交的质量改动
+- `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
+- 其余 keep 文件主要属于“前端 TS + PHP 类型注释清理 + MCP 验收稳定化”这一条尚未提交的质量改动
 
 ## 5. 已跑过的验证
 
@@ -463,21 +513,27 @@ headed MCP 真实验收结论：
   当前只有扩展文案切成中文，Flarum core 仍大量英文
   已确认
 
-2026-03-31 新增确认：
+2026-04-02 新增确认：
 
 - 论坛 API 当前健康：
   `curl -fsS http://127.0.0.1:8080/api`
   可正常返回
-- 提交前 headed 验收链路当前存在阻塞：
-  - 共享 profile 曾被残留 Playwright Chromium / MCP 进程占用
-  - 这批残留自动化进程已被清掉
-  - `make mcp-headed` 现在可以重新监听 `8931`
-  - 但当前 MCP 客户端链路仍会出现：
-    - `fetch failed`
-    - `page.goto: net::ERR_ABORTED at http://127.0.0.1:8080/`
-- 结论：
-  当前不能把“headed 脚本失败”直接当作产品功能回归失败
-  需要先修复 / 收敛 `mcp-headed` 验收入口本身
+- 旧的共享长寿命 MCP 运行态是导致验收不稳定的主要来源：
+  - 旧 tab 残留
+  - beforeunload dialog 残留
+  - session restore 残留
+- 当前稳定方案已经落地：
+  - `pw-manual` 使用 seed profile
+  - `mcp-headed` / `make mcp` 每次先复制 fresh runtime profile
+- 实测最稳的真实 GUI 验收路径是：
+  使用隔离端口启动单次 MCP 运行，例如 `8932`
+- 已通过的隔离 headed 验收包括：
+  - showcase 展柜可见且详情可打开
+  - proof modal 可打开并显示预期 section
+  - `/u/admin/collectibles` 页面基础渲染正常
+- 因此：
+  不能再把 `8931` 共享态偶发失败直接理解为业务功能回归
+  提交前应优先使用 fresh runtime profile 的实际 GUI 验收
 
 注意：
 
@@ -501,8 +557,9 @@ headed MCP 真实验收结论：
    已提交
 5. 然后先做一条静态质量 / LSP 清理提交
    当前进行中，尚未提交
-6. 修复提交前 `mcp-headed` 验收链路，重跑真实 GUI 回归
-7. 最后才重做 barter / Trade 领域模型并挂入私信线程
+6. 这条提交同时收口 MCP fresh runtime profile 稳定化
+7. 最后才进入 `Phase 3`：
+   重做 barter / Trade 领域模型并挂入私信线程
 
 关键提醒：
 
@@ -523,20 +580,21 @@ headed MCP 真实验收结论：
 3. 确认通过后再做该 commit
 4. commit 之间不要跳过 GUI 验收
 
-2026-03-31 当前额外提醒：
+2026-04-02 当前额外提醒：
 
-- 先不要假设 `/tmp/*.cjs` 验证脚本一定可靠
-- 这套脚本当前处于“部分会被 profile / MCP 连接问题拖垮”的状态
-- 在恢复这套链路之前，不要贸然提交新的 commit
+- 不要并行跑多个 MCP CLI 脚本
+- `8931` 共享态仍可能偶发不稳
+- 提交前优先使用 fresh runtime profile 的真实 GUI 验收
+- `/tmp/*.cjs` 只作为临时排障辅助，不要把它们提交进仓库
 
 ## 8. 已经明确不要再做的事
 
-- 不要再搞第二份 profile
 - 不要自动导入钱包
 - 不要把 MetaMask gallery 当作唯一真相
 - 不要把开盒和 mint 再次耦合回去
 - 不要接管用户日常 Chrome
 - 不要把旧 `Trade` 硬补成目标 barter 模型
+- 不要让 `mcp-headed` 直接复用 seed profile
 
 ## 9. 接手时先看哪些文件
 
@@ -574,11 +632,12 @@ headed MCP 真实验收结论：
 - 第二条小修已提交
 - 第三条 locale 已提交
 - 第四条 BlindBox 资产化与两段式开盒已提交
-- 当前进行中的不是新功能，而是一条静态质量 / LSP 清理提交
-- 当前最大的阻塞不是业务逻辑，而是提交前 `mcp-headed` 验收链路还未恢复稳定
+- Phase 2 的私信藏品上下文也已提交
+- 当前进行中的不是新业务功能，而是一条静态质量 / LSP 清理 + MCP 稳定化提交
+- 当前最大的下一阶段任务是 `Phase 3` 的 barter 重构
 - Trade/barter 重做仍在后续阶段
 
-下一位 agent 不要偏航。先恢复 headed 验收入口，再完成这条静态质量提交，然后再进入后续 Phase 2 / barter 相关工作。
+下一位 agent 不要偏航。先完成这条静态质量提交，然后进入 Phase 3 的 barter 设计与实现。
 
 ## 11. 2026-04-01 本次恢复记录
 
@@ -595,6 +654,22 @@ headed MCP 真实验收结论：
   当前可用组合是：
   - 服务监听：`127.0.0.1:8931`
   - 客户端 URL：`http://localhost:8931/mcp`
+
+2026-04-02 补充：
+
+- 仅修正 `localhost` / `127.0.0.1` 还不够
+- 真正稳定下来的关键是：
+  `Makefile` / `devenv.nix` / `scripts/playwright/mcp.config.json`
+  现在统一使用：
+  - seed profile：
+    `.devenv/state/playwright-profile`
+  - runtime profile：
+    `.devenv/state/playwright-mcp-profile`
+- `mcp-headed` 每次启动前都会重建 runtime profile，
+  并删除 `Singleton*`、`Current Session`、`Last Session`、`Sessions/`
+  等残留状态文件
+- 实际上，当前最可靠的验收方式是单次隔离端口运行，例如：
+  `8932`
 
 ### 11.2 私信 composer 崩溃根因与修复
 
@@ -739,3 +814,22 @@ headed MCP 真实验收结论：
 - 最终可靠验收并不是依赖它，而是依赖
   [scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs)
 - 是否保留这个辅助脚本，可以在提交前再决定
+
+## 12. 2026-04-02 当前提交前状态
+
+- 当前 `HEAD`：
+  `17754c9`
+  `Add collectible context to private messages`
+- 当前待提交批次不是 Phase 3 业务代码，
+  而是“静态质量 / LSP 清理 + MCP runtime profile 稳定化”
+- 这批里已经确认的真实回归并已修复：
+  - 若干组件一度被改成运行时 `import m from 'mithril'`
+  - 这会破坏 Flarum 全局 Mithril 实例一致性
+  - 已实际导致 `/u/:username/collectibles` 页面崩溃
+  - 当前修法是移除运行时 `m` 导入，只保留 type-only 导入
+- 提交前真实验收应优先覆盖：
+  - showcase 展柜打开与详情
+  - proof modal
+  - `/u/:username/collectibles`
+- 当前完成这条提交后，下一阶段就是 `Phase 3`：
+  重新设计挂在私信线程里的 barter 模型
