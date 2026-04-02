@@ -883,6 +883,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
 - 已新增 composer-inline 验收脚本：
   - [mcp-inspect-barter-composer.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-inspect-barter-composer.cjs)
   - [mcp-validate-barter-composer.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-validate-barter-composer.cjs)
+  - [mcp-validate-barter-composer-validation.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-validate-barter-composer-validation.cjs)
 - `mcp-inspect-barter-composer.cjs` 最新实测结果：
   - `DialogSection-streamWrap = true`
   - `BarterThreadPanel = true`
@@ -906,14 +907,29 @@ Blind box 资产化与两段式开盒已经提交并落地：
       `data-proposal-id`
       `data-proposal-status`
   - 因此 headed 验收现在可以稳定追踪“本次刚创建的 proposal”
-  - 最终结果为：
-    - `buyerView.myCount = 9`
+  - 2026-04-02 最新实测结果为：
+    - `buyerView.myCount = 8`
     - `buyerView.theirCount = 4`
     - `buyerView.composerVisible = false`
     - `buyerView.proposalStatus = 协商中`
     - `buyerView.proposalActions = ["发起还价","取消"]`
-    - `sellerView.status = 已完成`
+    - `sellerView.status = 已成交`
     - `sellerView.actionTexts = []`
+- `mcp-validate-barter-composer-validation.cjs` 最新实测已通过：
+  - `empty-assets -> 至少选择一项资产。`
+  - `missing-counterparty-assets -> 协商必须同时包含双方资产。`
+  - `missing-message -> 请先在私信输入框里写下你要发送的话，再发送协商。`
+- 2026-04-02 当前测试基线：
+  - 目标 unit tests：
+    `BlindBoxServiceTest|CollectibleProofServiceTest`
+    `14 / 14` 通过
+  - 全量 unit coverage：
+    - Classes `1.52% (1/66)`
+    - Methods `13.72% (31/226)`
+    - Lines `18.27% (364/1992)`
+  - 当前高价值服务覆盖：
+    - `BlindBoxService` lines `42.77%`
+    - `CollectibleProofService` lines `88.83%`
 
 ### 13.4 当前还没做的事
 

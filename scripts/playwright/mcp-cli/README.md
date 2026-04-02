@@ -99,6 +99,8 @@ METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
   检查私信线程内 barter composer 是否按当前 proposal-in-PM 路线正确挂载
 - `mcp-validate-barter-composer.cjs`
   验收 buyer 发起 proposal、seller 接受 proposal 的线程内 barter 主链路
+- `mcp-validate-barter-composer-validation.cjs`
+  验收 barter composer 的前端校验分支
 - `mcp-client.cjs`
   公共 MCP HTTP client
 
