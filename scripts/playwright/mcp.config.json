@@ -1,7 +1,6 @@
 {
   "browser": {
     "browserName": "chromium",
-    "userDataDir": "/home/donk/development/flarum-ext-aigc-collectibles/.devenv/state/playwright-mcp-profile",
     "launchOptions": {
       "channel": "chromium",
       "headless": false,

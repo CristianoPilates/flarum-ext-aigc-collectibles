@@ -12,7 +12,7 @@
 - 保留一份手工 seed profile：
   `.devenv/state/playwright-profile`
 - `mcp-headed` 每次启动前都要从 seed profile 派生新的 runtime profile：
-  `.devenv/state/playwright-mcp-profile`
+  `.devenv/state/playwright-mcp-runtime/profile.*`
 - 钱包导入由用户手工完成，只写入 seed profile，之后长期复用
 - 不要自动化导入钱包
 - mint 必须是用户主动动作
@@ -47,7 +47,7 @@
   每次启动前从
   `.devenv/state/playwright-profile`
   复制出新的运行时 profile：
-  `.devenv/state/playwright-mcp-profile`
+  `.devenv/state/playwright-mcp-runtime/profile.*`
 - 这样保留 MetaMask 已导入状态，同时避免旧 tab / beforeunload / session restore 残留污染下一次验收
 - 真实 MetaMask unpacked extension 目录：
   `e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn`

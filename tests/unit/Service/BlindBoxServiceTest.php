@@ -71,6 +71,7 @@ class BlindBoxServiceTest extends TestCase
         $from = $this->makeUser(id: 1, blindBoxCount: 10);
         $to = $this->makeUser(id: 2, blindBoxCount: 0);
         $selectBuilder = Mockery::mock();
+        $ownershipBuilder = Mockery::mock();
         $moveBuilder = Mockery::mock();
         $fromCountBuilder = Mockery::mock();
         $fromUserBuilder = Mockery::mock();
@@ -78,13 +79,13 @@ class BlindBoxServiceTest extends TestCase
         $toUserBuilder = Mockery::mock();
 
         $this->db->shouldReceive('transaction')
-            ->once()
+            ->twice()
             ->andReturnUsing(fn (callable $callback) => $callback());
 
         $this->db->shouldReceive('table')
-            ->times(4)
+            ->times(5)
             ->with('blindboxes')
-            ->andReturn($selectBuilder, $moveBuilder, $fromCountBuilder, $toCountBuilder);
+            ->andReturn($selectBuilder, $ownershipBuilder, $moveBuilder, $fromCountBuilder, $toCountBuilder);
 
         $this->db->shouldReceive('table')
             ->twice()
@@ -124,6 +125,30 @@ class BlindBoxServiceTest extends TestCase
             ->once()
             ->with('id', [11, 12, 13])
             ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('where')
+            ->once()
+            ->with('user_id', 1)
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('status', ['unappraised', 'appraised'])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('id', [11, 12, 13])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('lockForUpdate')
+            ->once()
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('pluck')
+            ->once()
+            ->with('id')
+            ->andReturn(new Collection([11, 12, 13]));
 
         $moveBuilder->shouldReceive('update')
             ->once()

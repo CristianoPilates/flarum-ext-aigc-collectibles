@@ -67,9 +67,9 @@ METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 - `playwright-profile`
   只给 `make pw-manual` 用
   用来长期保留 MetaMask 导入/解锁后的持久化状态
-- `playwright-mcp-profile`
+- `playwright-mcp-runtime/profile.*`
   只给 `make mcp` / `make mcp-headed` 用
-  每次启动前都会从 `playwright-profile` 复制一份新的运行副本
+  每次启动都会从 `playwright-profile` 复制一份新的临时运行副本，退出后清理
 
 这样做的原因：
 

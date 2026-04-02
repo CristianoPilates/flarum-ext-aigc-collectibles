@@ -8,7 +8,8 @@ PLAYWRIGHT_MCP_PORT := $(shell printf '%s\n' "$(PLAYWRIGHT_MCP_URL)" | sed -n 's
 PLAYWRIGHT_MCP_OUTPUT_DIR ?= $(STATE_DIR)/playwright-mcp-output
 # Persistent seed profile for manual wallet setup; MCP runs use a fresh runtime copy.
 PLAYWRIGHT_SHARED_USER_DATA_DIR := $(STATE_DIR)/playwright-profile
-PLAYWRIGHT_MCP_USER_DATA_DIR := $(STATE_DIR)/playwright-mcp-profile
+PLAYWRIGHT_MCP_RUNTIME_ROOT := $(STATE_DIR)/playwright-mcp-runtime
+PLAYWRIGHT_MCP_USER_DATA_DIR ?= $(PLAYWRIGHT_MCP_RUNTIME_ROOT)/default
 PLAYWRIGHT_MCP_CONFIG := $(EXT_DIR)/scripts/playwright/mcp.config.json
 PLAYWRIGHT_MCP_CLI_DIR := $(EXT_DIR)/scripts/playwright/mcp-cli
 DEVENV_EXEC := $(EXT_DIR)/scripts/runtime/with-devenv.sh
@@ -130,6 +131,7 @@ prepare-playwright-profile:
 	@if [ ! -e "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then mkdir -p "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)"; fi
 
 prepare-playwright-mcp-profile: prepare-playwright-profile
+	@mkdir -p "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)"
 	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
 	@mkdir -p "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
 	@if [ -d "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then \
@@ -155,17 +157,18 @@ mcp-headed:
 	@$(MAKE) mcp PW_MCP_HEADLESS=0
 
 mcp: prepare-playwright-profile
-	@mkdir -p "$(PLAYWRIGHT_MCP_OUTPUT_DIR)" "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@mkdir -p "$(PLAYWRIGHT_MCP_OUTPUT_DIR)" "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)"
 	@set -eu; \
 	curl -fsS "$(FORUM_URL)" >/dev/null; \
 	pid="$$(ss -ltnp '( sport = :$(PLAYWRIGHT_MCP_PORT) )' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | head -n1)"; \
 	if [ -n "$$pid" ]; then kill "$$pid" >/dev/null 2>&1 || true; fi; \
-	$(MAKE) prepare-playwright-mcp-profile; \
-	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; exit "$$status"' INT TERM EXIT; \
-	echo "playwright-mcp profile: $(PLAYWRIGHT_MCP_USER_DATA_DIR)"; \
+	runtime_dir="$$(mktemp -d "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)/profile.XXXXXX")"; \
+	$(MAKE) prepare-playwright-mcp-profile PLAYWRIGHT_MCP_USER_DATA_DIR="$$runtime_dir"; \
+	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; if [ -n "$${runtime_dir:-}" ]; then rm -rf "$$runtime_dir"; fi; exit "$$status"' INT TERM EXIT; \
+	echo "playwright-mcp profile: $$runtime_dir"; \
 	"$(DEVENV_EXEC)" mcp-server-playwright \
 	  --config "$(PLAYWRIGHT_MCP_CONFIG)" \
-	  --user-data-dir "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" \
+	  --user-data-dir "$$runtime_dir" \
 	  $$( [ "$(PW_MCP_HEADLESS)" = "1" ] && printf '%s' '--headless' ) \
 	  --no-sandbox \
 	  & \
@@ -305,7 +308,7 @@ reset-state: assert-runtime-clean
 	rm -rf .devenv/state/ipfs
 	rm -rf .devenv/state/playwright
 	rm -rf .devenv/state/playwright-profile
-	rm -rf .devenv/state/playwright-mcp-profile
+	rm -rf .devenv/state/playwright-mcp-runtime
 	rm -rf .devenv/state/playwright-mcp-output
 	rm -f .devenv/state/pw-test-external.pid
 	rm -f .devenv/state/pw-test-site.pid

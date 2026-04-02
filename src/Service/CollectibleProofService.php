@@ -306,7 +306,7 @@ class CollectibleProofService implements CollectibleProofServiceInterface
             return null;
         }
 
-        if (preg_match('#/ipfs/([^/?#]+)#', $value, $matches)) {
+        if (preg_match('~/(?:ipfs)/([^/?#]+)~', $value, $matches)) {
             return $matches[1];
         }
 

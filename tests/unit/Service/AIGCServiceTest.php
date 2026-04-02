@@ -102,17 +102,19 @@ class AIGCServiceTest extends TestCase
     // ==========================================
 
     /** @test */
-    public function it_throws_exception_if_api_is_not_configured_when_generating_image(): void
+    public function it_returns_a_fallback_image_if_api_is_not_configured_when_generating_image(): void
     {
         // 覆盖配置，模拟未配置
         $this->settingsMock->shouldReceive('get')
             ->with('donk-aigc-collectibles.aigc-api-url')
             ->andReturn('');
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('AIGC API is not configured.');
+        $result = $this->service->generateImage('A cute donk', 'common');
 
-        $this->service->generateImage('A cute donk', 'common');
+        $this->assertStringContainsString('<svg', $result);
+        $this->assertStringContainsString('AIGC COLLECTIBLE', $result);
+        $this->assertStringContainsString('FALLBACK RENDER', $result);
+        $this->assertStringContainsString('COMMON', $result);
     }
 
     /** @test */
@@ -154,16 +156,18 @@ class AIGCServiceTest extends TestCase
     }
 
     /** @test */
-    public function it_throws_exception_on_api_request_failure(): void
+    public function it_returns_a_fallback_image_on_api_request_failure(): void
     {
         // 模拟 Guzzle 抛出网络异常 (如超时、401 未授权、500 服务器错误等)
         $serviceWithMockedHttp = $this->createServiceWithMockedHttp([
             new RequestException('Error Communicating with Server', new Request('POST', 'test')),
         ]);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('AIGC API request failed: Error Communicating with Server');
+        $result = $serviceWithMockedHttp->generateImage('A cute donk', 'common');
 
-        $serviceWithMockedHttp->generateImage('A cute donk', 'common');
+        $this->assertStringContainsString('<svg', $result);
+        $this->assertStringContainsString('AIGC COLLECTIBLE', $result);
+        $this->assertStringContainsString('FALLBACK RENDER', $result);
+        $this->assertStringContainsString('COMMON', $result);
     }
 }
