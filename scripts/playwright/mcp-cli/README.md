@@ -41,21 +41,26 @@ make mcp-state
 make mcp-showcase
 make mcp-proof
 make mcp-messages
+make mcp-barter-inspect
+make mcp-barter
 METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 ```
 
-也可以直接用 `node` 执行：
+也可以直接执行，但要显式经过项目的 `devenv` 环境：
 
 ```bash
-node scripts/playwright/mcp-cli/mcp-inspect-state.cjs
-node scripts/playwright/mcp-cli/mcp-validate-showcase.cjs
-node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
+./scripts/runtime/with-devenv.sh node scripts/playwright/mcp-cli/mcp-inspect-state.cjs
+./scripts/runtime/with-devenv.sh node scripts/playwright/mcp-cli/mcp-validate-showcase.cjs
+./scripts/runtime/with-devenv.sh node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
+./scripts/runtime/with-devenv.sh node scripts/playwright/mcp-cli/mcp-inspect-barter-composer.cjs
+./scripts/runtime/with-devenv.sh node scripts/playwright/mcp-cli/mcp-validate-barter-composer.cjs
 ```
 
 前提不变：
 
 - `http://localhost:8931/mcp` 已经在监听
 - 手工 seed profile 已准备好
+- 命令执行时必须显式进入项目 `devenv` 环境
 
 当前 profile 约定：
 
@@ -70,6 +75,7 @@ node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
 
 - 保留钱包状态
 - 避免旧 tab / beforeunload dialog / session restore 污染下一次 MCP 验收
+- 避免把 `.env` 的项目配置和 `devenv` 的工具链环境混在一起
 
 ## 3. 当前脚本清单
 
@@ -89,6 +95,10 @@ node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
   验收四层 proof modal
 - `mcp-validate-messages.cjs`
   验收 buyer -> seller 私信链路
+- `mcp-inspect-barter-composer.cjs`
+  检查私信线程内 barter composer 是否按当前 proposal-in-PM 路线正确挂载
+- `mcp-validate-barter-composer.cjs`
+  验收 buyer 发起 proposal、seller 接受 proposal 的线程内 barter 主链路
 - `mcp-client.cjs`
   公共 MCP HTTP client
 
@@ -101,3 +111,17 @@ node scripts/playwright/mcp-cli/mcp-validate-proof.cjs
 - 可以挂在 `make` 入口下形成稳定习惯
 
 如果只是临时探索页面，直接让 AI 驱动 MCP 更合适。
+
+## 5. 已退役脚本
+
+下面这些脚本已经不再代表当前产品路径，已从仓库移除：
+
+- `mcp-inspect-barter-create-modal.cjs`
+- `mcp-inspect-barter-modal.cjs`
+- `mcp-validate-barter-thread.cjs`
+
+原因：
+
+- 它们围绕 `.CreateBarterProposalModal` 编写
+- 当前 barter 主路径已经改为私信 composer 内联 proposal
+- 继续保留只会误导后续排障与验收

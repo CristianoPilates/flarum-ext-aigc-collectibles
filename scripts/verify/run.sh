@@ -4,6 +4,10 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "$script_dir/../.." && pwd)"
 
+if [ -z "${IN_NIX_SHELL:-}" ]; then
+  exec "$project_root/scripts/runtime/with-devenv.sh" bash "$0" "$@"
+fi
+
 PROBE_STRICT=1 "$project_root/scripts/health/probe.sh"
 make -C "$project_root" init-chain
 make -C "$project_root" init-test-data

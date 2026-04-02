@@ -11,6 +11,7 @@ PLAYWRIGHT_SHARED_USER_DATA_DIR := $(STATE_DIR)/playwright-profile
 PLAYWRIGHT_MCP_USER_DATA_DIR := $(STATE_DIR)/playwright-mcp-profile
 PLAYWRIGHT_MCP_CONFIG := $(EXT_DIR)/scripts/playwright/mcp.config.json
 PLAYWRIGHT_MCP_CLI_DIR := $(EXT_DIR)/scripts/playwright/mcp-cli
+DEVENV_EXEC := $(EXT_DIR)/scripts/runtime/with-devenv.sh
 PLAYWRIGHT_MANUAL_USER_DATA_DIR := $(PLAYWRIGHT_SHARED_USER_DATA_DIR)
 PLAYWRIGHT_MANUAL_CHANNEL ?= chromium
 PLAYWRIGHT_MANUAL_EXTENSION_DIRS ?= $(EXT_DIR)/e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn
@@ -31,7 +32,7 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile prepare-playwright-mcp-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof mcp-messages locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
+        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         enable-messages publish-site-runtime \
@@ -67,7 +68,7 @@ init-test-data:
 	php ./scripts/playwright/prepare-data.php
 
 assert-mysql:
-	@mysql \
+	@"$(DEVENV_EXEC)" mysql \
 		-u "$(DB_USERNAME)" \
 		-p"$(DB_PASSWORD)" \
 		-h "$(DB_HOST)" \
@@ -122,7 +123,7 @@ pw-smoke: assert-runtime-clean assert-no-pw-smoke-scene
 	done; \
 	make init-chain; \
 	make init-test-data; \
-	playwright test --grep @smoke
+	"$(DEVENV_EXEC)" playwright test --grep @smoke
 
 prepare-playwright-profile:
 	@mkdir -p "$(STATE_DIR)"
@@ -148,7 +149,7 @@ pw-manual: prepare-playwright-profile
 	PLAYWRIGHT_MANUAL_USER_DATA_DIR="$(PLAYWRIGHT_MANUAL_USER_DATA_DIR)" \
 	PLAYWRIGHT_MANUAL_CHANNEL="$(PLAYWRIGHT_MANUAL_CHANNEL)" \
 	PLAYWRIGHT_MANUAL_EXTENSION_DIRS="$(PLAYWRIGHT_MANUAL_EXTENSION_DIRS)" \
-	node ./scripts/playwright/launch-manual.cjs
+	"$(DEVENV_EXEC)" node ./scripts/playwright/launch-manual.cjs
 
 mcp-headed:
 	@$(MAKE) mcp PW_MCP_HEADLESS=0
@@ -162,7 +163,7 @@ mcp: prepare-playwright-profile
 	$(MAKE) prepare-playwright-mcp-profile; \
 	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; exit "$$status"' INT TERM EXIT; \
 	echo "playwright-mcp profile: $(PLAYWRIGHT_MCP_USER_DATA_DIR)"; \
-	mcp-server-playwright \
+	"$(DEVENV_EXEC)" mcp-server-playwright \
 	  --config "$(PLAYWRIGHT_MCP_CONFIG)" \
 	  --user-data-dir "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" \
 	  $$( [ "$(PW_MCP_HEADLESS)" = "1" ] && printf '%s' '--headless' ) \
@@ -187,28 +188,34 @@ mcp: prepare-playwright-profile
 
 # Optional CLI wrappers over the running Playwright MCP server.
 mcp-state:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-state.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-state.cjs"
 
 mcp-minimal-nft:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-minimal-nft.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-minimal-nft.cjs"
 
 mcp-debug-mint:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-debug-mint-state.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-debug-mint-state.cjs"
 
 mcp-focus-metamask:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-focus-metamask.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-focus-metamask.cjs"
 
 mcp-storage:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-metamask-storage.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-metamask-storage.cjs"
 
 mcp-showcase:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-showcase.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-showcase.cjs"
 
 mcp-proof:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
 
 mcp-messages:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-messages.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-messages.cjs"
+
+mcp-barter-inspect:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-barter-composer.cjs"
+
+mcp-barter:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-composer.cjs"
 
 up-mysql: assert-runtime-clean
 	devenv up mysql
@@ -342,6 +349,8 @@ help:
 	@echo "  make mcp-focus-metamask - 通过 MCP 聚焦 MetaMask 页面"
 	@echo "  make mcp-storage    - 通过 MCP 检查 MetaMask 扩展存储"
 	@echo "  make mcp-messages   - 通过 MCP 验证 buyer -> seller 私信链路"
+	@echo "  make mcp-barter-inspect - 通过 MCP 检查私信线程内 barter composer 是否成功挂载"
+	@echo "  make mcp-barter     - 通过 MCP 验证 proposal-in-PM 主链路（buyer 发起，seller 接受）"
 	@echo "  PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual - 加载 unpacked 扩展"
 	@echo "  playwright test     - 直接运行 Playwright"
 	@echo "  playwright test --headed - 直接运行 headed Playwright"

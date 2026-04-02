@@ -1007,15 +1007,21 @@ headed MCP 真实验收结论：
 
 当前已有的 MCP 脚本里：
 
-- `mcp-inspect-barter-create-modal.cjs`
-- `mcp-inspect-barter-modal.cjs`
-- `mcp-validate-barter-thread.cjs`
-
-这些脚本大多还是 modal 时代写的。
-
-下一位 agent 最好：
-
 - 优先使用已经存在的 composer-inline 脚本：
   - `mcp-inspect-barter-composer.cjs`
   - `mcp-validate-barter-composer.cjs`
+- 优先使用 `make` 入口：
+  - `make mcp-barter-inspect`
+  - `make mcp-barter`
+- 2026-04-02 当前已确认根因：
+  - `.env` 只提供项目配置
+  - `direnv` / `devenv` 才提供 Playwright / MCP / mysql / NODE_PATH 等工具链环境
+  - 当前 shell 在仓库目录里，不等于已经进入 `devenv`
+  - 当前修复方向是统一通过
+    `scripts/runtime/with-devenv.sh`
+    显式进入项目环境
 - 不要继续围绕 `.CreateBarterProposalModal` 做诊断
+- 2026-04-02 当前仓库已删除 modal-era barter MCP 脚本：
+  - `mcp-inspect-barter-create-modal.cjs`
+  - `mcp-inspect-barter-modal.cjs`
+  - `mcp-validate-barter-thread.cjs`
