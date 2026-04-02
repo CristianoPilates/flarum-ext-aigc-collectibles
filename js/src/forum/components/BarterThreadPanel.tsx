@@ -4,6 +4,7 @@ import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
 import BarterProposal from '../models/BarterProposal';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { displayUserName } from '../utils/users';
 import { gatewayUrl } from '../utils/ipfs';
 import { emitBarterThreadUpdated, onBarterThreadUpdated } from '../utils/barterEvents';
@@ -231,14 +232,15 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
     const imageUrl = snapshot?.ipfsCid ? gatewayUrl(snapshot.ipfsCid) : null;
     const ownerUser = item.ownerUser?.();
     const ownerSlug = ownerUser?.slug?.();
+    const displayName = displayCollectibleName(snapshot?.name, item.assetId?.());
 
     return (
       <div className="BarterAssetCard-body">
-        {imageUrl ? <img className="BarterAssetCard-image" src={imageUrl} alt={snapshot?.name || ''} loading="lazy" /> : null}
+        {imageUrl ? <img className="BarterAssetCard-image" src={imageUrl} alt={displayName} loading="lazy" /> : null}
         <div className="BarterAssetCard-copy">
-          <div className="BarterAssetCard-name">{snapshot?.name || `Collectible #${item.assetId?.()}`}</div>
+          <div className="BarterAssetCard-name">{displayName}</div>
           <div className="BarterAssetCard-meta">
-            {snapshot?.rarity ? <span className={`CollectibleRarity CollectibleRarity--${snapshot.rarity}`}>{this.rarityLabel(snapshot.rarity)}</span> : null}
+            {snapshot?.rarity ? <span className={`CollectibleRarity CollectibleRarity--${snapshot.rarity}`}>{collectibleRarityLabel(snapshot.rarity)}</span> : null}
             {snapshot?.tokenId ? <span className="BarterAssetCard-token">#{snapshot.tokenId}</span> : null}
           </div>
           {ownerSlug ? (
@@ -367,10 +369,6 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
 
   assetTypeLabel(assetType?: string | null) {
     return this.trans(`donk-aigc-collectibles.forum.barter.asset_type_${assetType || 'unknown'}`);
-  }
-
-  rarityLabel(rarity?: string | null) {
-    return this.trans(`donk-aigc-collectibles.forum.collectible.rarity_${rarity || 'common'}`);
   }
 
   async openComposer(proposal?: BarterProposal | null) {

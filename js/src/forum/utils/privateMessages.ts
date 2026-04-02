@@ -1,5 +1,6 @@
 import app from 'flarum/forum/app';
 import extractText from 'flarum/common/utils/extractText';
+import { displayCollectibleName } from './collectibles';
 
 interface StartPrivateMessageOptions {
   initialContent?: string;
@@ -138,7 +139,7 @@ function resolveCollectibleId(context: PrivateMessageCollectibleContext): string
 }
 
 export function buildCollectibleMessageContent(context: PrivateMessageCollectibleContext): string {
-  const collectibleName = resolveCollectibleName(context) || `Collectible #${resolveCollectibleId(context) || '?'}`;
+  const collectibleName = displayCollectibleName(resolveCollectibleName(context), resolveCollectibleId(context));
   const rarity = resolveCollectibleRarity(context);
   const tokenId = resolveCollectibleTokenId(context);
   const lines = [

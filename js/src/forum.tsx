@@ -212,8 +212,8 @@ app.initializers.add("donk-aigc-collectibles", () => {
 
     vnode.children[1] = (
       <div className="DialogSection-streamWrap">
-        {stream}
         <BarterThreadPanel dialog={dialog} />
+        {stream}
       </div>
     );
 

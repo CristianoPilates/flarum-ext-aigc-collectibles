@@ -1,15 +1,8 @@
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
-import Button from 'flarum/common/components/Button';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
 import { displayUserName } from '../utils/users';
-
-const RARITY_LABELS: Record<string, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
-};
 
 interface CollectibleCardAttrs {
   collectible: any;
@@ -37,7 +30,7 @@ export default class CollectibleCard extends Component<CollectibleCardAttrs> {
     const status = collectible.status();
     const ipfsCid = collectible.ipfsCid();
     const imageUrl = ipfsCid ? gatewayUrl(ipfsCid) : null;
-    const name = collectible.name();
+    const name = displayCollectibleName(collectible.name?.(), collectible.id?.());
     const owner = showOwner ? collectible.user() : null;
 
     const classes = [
@@ -82,7 +75,7 @@ export default class CollectibleCard extends Component<CollectibleCardAttrs> {
 
         <div className="CollectibleCard-info">
           <span className="CollectibleCard-name">{name}</span>
-          <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{RARITY_LABELS[rarity] || rarity}</span>
+          <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{collectibleRarityLabel(rarity)}</span>
           {showOwner && owner && <span className="CollectibleCard-owner">{displayUserName(owner)}</span>}
           {collectible.tokenId() && (
             <span className="CollectibleCard-nft" title="NFT">

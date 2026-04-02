@@ -123,6 +123,7 @@ donk-aigc-collectibles:
       gallery_title: My Collectibles
       gallery_title_user: "{username}'s Collectibles"
       detail_title: Collectible Details
+      name_fallback: "Collectible {idLabel}"
       rarity_common: Common
       rarity_rare: Rare
       rarity_epic: Epic
@@ -181,55 +182,6 @@ donk-aigc-collectibles:
       history_traded: "Traded: {from} -> {to} for {boxes} blind box(es)"
       history_minted: Minted as NFT by {username}
       history_burned: Burned by {username}
-
-    trade:
-      panel_title: Trades
-      title: Trades
-      create_button: Offer Trade
-      create_title: Make a Trade Offer
-      offer_label: Blind Boxes to Offer
-      offer_amount: Blind Boxes to Offer
-      offer_placeholder: Enter the number of blind boxes
-      note_label: Note (optional)
-      note_placeholder: Add a message to the collectible owner...
-      submit: Send Offer
-      cancel: Cancel Offer
-      cancel_action: Cancel
-      accept: Accept Trade
-      reject: Reject Trade
-      confirm_accept: "Accept this trade? You will give up your collectible in exchange for {boxes} blind box(es)."
-      confirm_reject: Are you sure you want to reject this trade offer?
-      confirm_cancel: Are you sure you want to cancel this trade offer?
-      status_pending: Pending
-      status_accepted: Accepted
-      status_rejected: Rejected
-      status_cancelled: Cancelled
-      incoming: Incoming Offers
-      outgoing: My Offers
-      history: Trade History
-      empty: No trades to display.
-      no_incoming: No incoming trade offers.
-      no_outgoing: You haven't made any trade offers.
-      success_created: Trade offer sent!
-      success_accepted: Trade completed! The collectible is now yours.
-      success_rejected: Trade offer rejected.
-      success_cancelled: Trade offer cancelled.
-      error_insufficient: "The buyer no longer has enough blind boxes to complete this trade."
-      error_self_trade: You cannot trade with yourself.
-      error_not_owner: This collectible no longer belongs to the expected owner.
-      no_trades: No trade history yet.
-      offered_boxes: "{count} blind box(es) offered"
-      available: available
-      from_user: "From: {username}"
-      to_user: "To: {username}"
-      owned_by: "Owned by {username}"
-      unknown_user: Unknown User
-      offers_you: offers you
-      you_offered: you offered
-      offer_sent: Trade offer sent!
-      notification_received: You received a new trade offer!
-      notification_accepted: Your trade offer was accepted!
-      notification_rejected: Your trade offer was rejected.
 
     messages:
       showcase_button: Message Owner
@@ -324,7 +276,6 @@ donk-aigc-collectibles:
 
     nav:
       collectibles: Collectibles
-      trades: Trades
 
     user:
       blindboxes_link: Blind Boxes
@@ -341,14 +292,6 @@ donk-aigc-collectibles:
       load_more: Load More
 
     notification:
-      trade_received_title: New Trade Offer
-      trade_received_body: "{username} offered {boxes} blind box(es) for your {collectible}."
-      trade_accepted_title: Trade Accepted
-      trade_accepted_body: "{username} accepted your trade offer for {collectible}."
-      trade_rejected_title: Trade Rejected
-      trade_rejected_body: "{username} rejected your trade offer for {collectible}."
-      trade_cancelled_title: Trade Cancelled
-      trade_cancelled_body: "{username} cancelled their trade offer for {collectible}."
       collectible_ready_title: Collectible Ready
       collectible_ready_body: Your new collectible has been generated!
       collectible_failed_title: Generation Failed

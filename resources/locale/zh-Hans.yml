@@ -143,6 +143,7 @@ donk-aigc-collectibles:
       gallery_title: 我的藏品
       gallery_title_user: "{username} 的藏品"
       detail_title: 藏品详情
+      name_fallback: "藏品 {idLabel}"
       rarity_common: 普通
       rarity_rare: 稀有
       rarity_epic: 史诗
@@ -201,52 +202,6 @@ donk-aigc-collectibles:
       history_traded: 交易：{from} -> {to}，{boxes} 个盲盒
       history_minted: 由 {username} 铸造为 NFT
       history_burned: 由 {username} 销毁
-
-    trade:
-      panel_title: 交易
-      title: 交易
-      create_button: 发起交易
-      create_title: 发起交易报价
-      offer_label: 出价盲盒数量
-      offer_amount: 出价盲盒数量
-      offer_placeholder: 输入盲盒数量
-      note_label: 备注（可选）
-      note_placeholder: 给藏品持有者留言...
-      submit: 发送报价
-      cancel: 取消报价
-      cancel_action: 取消
-      accept: 接受交易
-      reject: 拒绝交易
-      confirm_accept: 接受此交易？你将用藏品换取 {boxes} 个盲盒。
-      confirm_reject: 确定要拒绝此交易报价吗？
-      confirm_cancel: 确定要取消此交易报价吗？
-      status_pending: 待处理
-      status_accepted: 已接受
-      status_rejected: 已拒绝
-      status_cancelled: 已取消
-      incoming: 收到的报价
-      outgoing: 我发出的报价
-      history: 交易历史
-      empty: 暂无交易记录。
-      no_incoming: 暂无收到的交易报价。
-      no_outgoing: 你还没有发出任何交易报价。
-      success_created: 交易报价已发送！
-      success_accepted: 交易完成！藏品已归你所有。
-      success_rejected: 已拒绝交易报价。
-      success_cancelled: 已取消交易报价。
-      error_insufficient: 买方的盲盒余额不足，无法完成此交易。
-      error_self_trade: 不能与自己交易。
-      error_not_owner: 此藏品已不属于预期的持有者。
-      no_trades: 暂无交易记录。
-      offered_boxes: 出价 {count} 个盲盒
-      available: 可用
-      from_user: 来自：{username}
-      to_user: 发送至：{username}
-      owned_by: 由 {username} 持有
-      unknown_user: 未知用户
-      offers_you: 向你出价
-      you_offered: 你出价了
-      offer_sent: 交易报价已发送！
 
     messages:
       showcase_button: 私信主人

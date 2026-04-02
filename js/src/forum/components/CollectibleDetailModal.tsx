@@ -5,6 +5,7 @@ import Button from 'flarum/common/components/Button';
 import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import CollectibleProofModal from './CollectibleProofModal';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
 import {
   buildCollectibleMessageContent,
@@ -18,13 +19,6 @@ interface CollectibleDetailModalAttrs extends IInternalModalAttrs {
   isOwnProfile: boolean;
   onUpdated?: () => void;
 }
-
-const RARITY_LABELS: Record<string, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
-};
 
 const STATUS_KEYS: Record<string, string> = {
   generating: 'status_generating',
@@ -68,6 +62,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     const isShowcase = Boolean(collectible.isShowcase?.());
     const canMessageOwner = Boolean(owner && shouldShowPrivateMessageButton(owner));
     const statusKey = STATUS_KEYS[status];
+    const displayName = displayCollectibleName(collectible.name?.(), collectible.id?.());
 
     return (
       <div className="Modal-body CollectibleDetailModal-body">
@@ -76,7 +71,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
         <div className="CollectibleDetailModal-layout">
           <div className="CollectibleDetailModal-media">
             {imageUrl ? (
-              <img className="CollectibleDetailModal-image" src={imageUrl} alt={collectible.name()} loading="lazy" />
+              <img className="CollectibleDetailModal-image" src={imageUrl} alt={displayName} loading="lazy" />
             ) : (
               <div className="CollectibleDetailModal-placeholder">
                 {status === 'generating' ? <LoadingIndicator size="large" /> : <i className="fas fa-image" />}
@@ -85,11 +80,11 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
           </div>
 
           <div className="CollectibleDetailModal-content">
-            <h3 className="CollectibleDetailModal-name">{collectible.name()}</h3>
+            <h3 className="CollectibleDetailModal-name">{displayName}</h3>
 
             <div className="CollectibleDetailModal-meta">
               <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
-                {RARITY_LABELS[rarity] || rarity}
+                {collectibleRarityLabel(rarity)}
               </span>
               {statusKey && (
                 <span className="CollectibleDetailModal-status">

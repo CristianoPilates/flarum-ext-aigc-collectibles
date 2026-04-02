@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import CollectibleDetailModal from './CollectibleDetailModal';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
 import {
   buildCollectibleMessageContent,
@@ -35,6 +36,7 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
       'PostCollectibleShowcase PostCollectibleShowcase--' +
       (showcaseRarity || 'common') +
       (canMessageOwner ? ' PostCollectibleShowcase--messaging' : '');
+    const displayName = displayCollectibleName(showcaseName, showcaseId);
 
     return (
       <div className={className}>
@@ -58,10 +60,10 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
           <div className="PostCollectibleShowcase-kicker">
             {app.translator.trans('donk-aigc-collectibles.forum.post_showcase.kicker')}
           </div>
-          <div className="PostCollectibleShowcase-name">{showcaseName || 'Collectible #' + showcaseId}</div>
+          <div className="PostCollectibleShowcase-name">{displayName}</div>
           <div className="PostCollectibleShowcase-meta">
             <span className={'CollectibleRarity CollectibleRarity--' + (showcaseRarity || 'common')}>
-              {this.rarityLabel(showcaseRarity)}
+              {collectibleRarityLabel(showcaseRarity)}
             </span>
             {showcaseTokenId ? (
               <span className="PostCollectibleShowcase-token">
@@ -83,12 +85,6 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
         ) : null}
       </div>
     );
-  }
-
-  rarityLabel(rarity?: string | null) {
-    const key = rarity || 'common';
-
-    return app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + key);
   }
 
   messageContent(showcaseId: number, collectible: any) {

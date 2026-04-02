@@ -4,6 +4,7 @@ import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import { displayCollectibleName } from '../utils/collectibles';
 
 interface CollectibleProofModalAttrs extends IInternalModalAttrs {
   collectible: any;
@@ -68,7 +69,10 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
           {this.renderSection(
             app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_section_app'),
             [
-              this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_collectible'), proof.app?.name || '-'),
+              this.renderRow(
+                app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_collectible'),
+                displayCollectibleName(proof.app?.name, proof.app?.collectibleId)
+              ),
               this.renderRow(
                 app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_owner'),
                 this.renderOwnerLink(proof.app)

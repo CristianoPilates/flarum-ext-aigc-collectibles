@@ -1,5 +1,6 @@
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
+import { displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
 
 interface PostCollectibleBadgeAttrs {
@@ -20,14 +21,15 @@ export default class PostCollectibleBadge extends Component<PostCollectibleBadge
     if (!showcaseId || !showcaseCid) return null;
 
     const imageUrl = gatewayUrl(showcaseCid);
+    const displayName = displayCollectibleName(showcaseName, showcaseId);
 
     return (
       <span
         className={'PostCollectibleBadge PostCollectibleBadge--' + (showcaseRarity || 'common')}
-        title={(showcaseName || '') + (showcaseTokenId ? ' · NFT #' + showcaseTokenId : '')}
+        title={displayName + (showcaseTokenId ? ' · NFT #' + showcaseTokenId : '')}
       >
         {imageUrl ? (
-          <img className="PostCollectibleBadge-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />
+          <img className="PostCollectibleBadge-image" src={imageUrl} alt={displayName} loading="lazy" />
         ) : (
           <i className="fas fa-gem PostCollectibleBadge-icon" />
         )}

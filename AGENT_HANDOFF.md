@@ -23,7 +23,7 @@
 
 ## 2. 当前现场快照
 
-截至 2026-04-02：
+截至 2026-04-03：
 
 - 当前工作分支：
   `main`
@@ -35,6 +35,27 @@
   - 删除旧 `Trade` 的运行时入口
   - 删除旧 `Trade` 对应测试
   - 保留历史数据库表与 `trade_id` 字段，不在本条提交物理删表
+
+补充：
+
+- 本轮尚有未提交前端回归改动，主题不是“加功能”，而是“收口 / 回归 / 收缩”
+- 已把私信线程中的协商区改成消息流上方的横向 banner，而不是右侧 rail
+- 用户已明确确认：
+  - 横向 banner 需要横向滚动
+  - 不需要垂直方向滚动条
+  - 协商区不应过宽、喧宾夺主
+- 已修掉一个真实前端回归：
+  - 原先协商区和 composer 中出现 `藏品 ,#47`
+  - 现已恢复为 `藏品 #47`
+- 原因不是业务数据脏，而是前端把 `translator.trans(...)` 的结果直接 `String(...)`，把格式化结果串坏了
+- 当前修法：
+  - [collectibles.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/collectibles.ts) 改用 `extractText(...)`
+  - 不再对翻译结果直接做 `String(...)`
+- 本轮 headed MCP 串行验收已再次确认：
+  - `BarterThreadPanel` 仍挂在 `.DialogSection-streamWrap` 内
+  - 协商 composer 仍能正常打开
+  - 文案已是 `藏品 #47`
+  - 验收必须串行，不要并行跑多个 MCP wrapper
 
 ## 3. 已确认的事实
 

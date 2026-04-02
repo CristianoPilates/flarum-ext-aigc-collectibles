@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { displayUserName } from '../utils/users';
 import type { BarterAsset } from '../utils/barterComposer';
 import {
@@ -164,7 +165,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
 
   assetLabel(asset: BarterAsset): string {
     if (asset.assetType === 'collectible') {
-      return asset.name || `Collectible #${asset.id}`;
+      return displayCollectibleName(asset.name, asset.id);
     }
 
     return String(this.trans(`donk-aigc-collectibles.forum.blind_box.type_${asset.type || 'unknown'}`));
@@ -172,9 +173,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
 
   assetMeta(asset: BarterAsset): string {
     if (asset.assetType === 'collectible') {
-      const rarity = asset.rarity
-        ? String(this.trans(`donk-aigc-collectibles.forum.collectible.rarity_${asset.rarity}`))
-        : '';
+      const rarity = asset.rarity ? collectibleRarityLabel(asset.rarity) : '';
       const tokenId = asset.tokenId ? `#${asset.tokenId}` : '';
 
       return [rarity, tokenId].filter(Boolean).join(' · ');

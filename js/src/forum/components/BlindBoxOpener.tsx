@@ -4,15 +4,9 @@ import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import Modal from 'flarum/common/components/Modal';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { subscribe, unsubscribe } from '../utils/notifications';
 import { gatewayUrl } from '../utils/ipfs';
-
-const RARITY_LABELS: Record<string, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
-};
 
 interface BlindBoxOpenerAttrs extends IInternalModalAttrs {
   blindBox?: any;
@@ -210,7 +204,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
         </p>
         <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
           {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraising_quality', {
-            rarity: RARITY_LABELS[rarity] || rarity,
+            rarity: collectibleRarityLabel(rarity),
           })}
         </span>
       </div>
@@ -233,7 +227,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
         </p>
         {this.pendingRarity && (
           <span className={'CollectibleRarity CollectibleRarity--' + this.pendingRarity}>
-            {RARITY_LABELS[this.pendingRarity] || this.pendingRarity}
+            {collectibleRarityLabel(this.pendingRarity)}
           </span>
         )}
       </div>
@@ -244,20 +238,21 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     const collectible = this.generatedCollectible;
     const rarity = collectible.rarity();
     const imageUrl = collectible.ipfsCid() ? gatewayUrl(collectible.ipfsCid()) : null;
+    const displayName = displayCollectibleName(collectible.name?.(), collectible.id?.());
 
     return (
       <div className={'Modal-body BlindBoxOpener-body BlindBoxOpener-reveal BlindBoxOpener-reveal--' + rarity}>
         <div className="BlindBoxOpener-revealCard">
           {imageUrl ? (
-            <img className="BlindBoxOpener-revealImage" src={imageUrl} alt={collectible.name()} loading="lazy" />
+            <img className="BlindBoxOpener-revealImage" src={imageUrl} alt={displayName} loading="lazy" />
           ) : (
             <div className="BlindBoxOpener-revealPlaceholder">
               <i className="fas fa-image" />
             </div>
           )}
         </div>
-        <h3 className="BlindBoxOpener-revealName">{collectible.name()}</h3>
-        <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{RARITY_LABELS[rarity] || rarity}</span>
+        <h3 className="BlindBoxOpener-revealName">{displayName}</h3>
+        <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{collectibleRarityLabel(rarity)}</span>
         <div className="BlindBoxOpener-revealActions">
           <Button className="Button" onclick={() => this.hide()}>
             {app.translator.trans('donk-aigc-collectibles.forum.blind_box.close')}
