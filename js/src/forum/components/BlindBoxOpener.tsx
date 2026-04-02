@@ -5,6 +5,14 @@ import Button from 'flarum/common/components/Button';
 import Modal from 'flarum/common/components/Modal';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
+import {
+  blindBoxBudget,
+  blindBoxId,
+  blindBoxSeed,
+  computeBlindBoxPow,
+  rarityFromBudget,
+  rarityFromZeros,
+} from '../utils/blindBoxes';
 import { transText } from '../utils/i18n';
 import { subscribe, unsubscribe } from '../utils/notifications';
 import { gatewayUrl } from '../utils/ipfs';
@@ -102,7 +110,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     }
 
     const status = blindBox.status?.() || blindBox.attributes?.status || 'unappraised';
-    const budget = blindBox.budget?.() ?? blindBox.attributes?.budget ?? null;
+    const budget = blindBoxBudget(blindBox);
     const type = blindBox.type?.() || blindBox.attributes?.type || 'unknown';
     const drawRules = Array.isArray(blindBox.drawRules?.())
       ? blindBox.drawRules()
@@ -315,7 +323,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
   async runAppraisalFlow() {
     try {
       const readyBox = await this.appraiseBlindBox(this.blindBox);
-      const readyBoxId = this.getBlindBoxId(readyBox) || this.getBlindBoxId(this.blindBox);
+      const readyBoxId = blindBoxId(readyBox) || blindBoxId(this.blindBox);
       this.blindBox = readyBoxId ? app.store.getById('blindboxes', readyBoxId) || this.blindBox : this.blindBox;
       this.appraising = false;
       this.generating = false;
@@ -339,12 +347,12 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
       }
 
       const readyBox = this.blindBox;
-      const readyBoxId = this.getBlindBoxId(readyBox);
+      const readyBoxId = blindBoxId(readyBox);
       if (!readyBoxId) {
         throw new Error('Blind box id is missing.');
       }
 
-      this.pendingRarity = this.rarityFromBudget(readyBox.budget?.() ?? readyBox.attributes?.budget ?? 0);
+      this.pendingRarity = rarityFromBudget(blindBoxBudget(readyBox) || 0);
 
       const response: any = await app.request({
         method: 'POST',
@@ -379,14 +387,20 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
   }
 
   async appraiseBlindBox(box: any): Promise<any> {
-    const boxId = this.getBlindBoxId(box);
-    const seed = box.seed?.() || box.attributes?.seed;
+    const boxId = blindBoxId(box);
+    const seed = blindBoxSeed(box);
     if (!boxId || !seed) {
       throw new Error('Blind box seed is missing.');
     }
 
-    const pow = await this.computePow(seed, 10_000);
-    this.pendingRarity = this.rarityFromZeros(pow.zeros);
+    const pow = await computeBlindBoxPow(seed, 10_000, (progress) => {
+      this.pendingPowZeros = progress.zeros;
+      this.pendingPowAttempts = progress.attempts;
+      this.pendingPowSecondsLeft = progress.secondsLeft;
+      this.pendingRarity = progress.rarity;
+      m.redraw();
+    });
+    this.pendingRarity = rarityFromZeros(pow.zeros);
 
     const response: any = await app.request({
       method: 'POST',
@@ -402,7 +416,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     const budget = readyBox?.attributes?.budget;
 
     if (typeof budget === 'number') {
-      this.pendingRarity = this.rarityFromBudget(budget);
+      this.pendingRarity = rarityFromBudget(budget);
     }
 
     if (box.pushAttributes) {
@@ -413,105 +427,6 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     }
 
     return readyBox;
-  }
-
-  getBlindBoxId(box: any): string | null {
-    if (!box) return null;
-    if (typeof box.id === 'function') return String(box.id());
-    if (box.id !== undefined && box.id !== null) return String(box.id);
-    if (box.data?.id !== undefined && box.data?.id !== null) return String(box.data.id);
-    return null;
-  }
-
-  async computePow(
-    seed: string,
-    durationMs: number = 10_000
-  ): Promise<{ nonce: string; hash: string; zeros: number; attempts: number }> {
-    const deadline = performance.now() + durationMs;
-    const uiUpdateIntervalMs = 200;
-    const yieldEvery = 100;
-
-    let nonce = '0';
-    let hash = await this.sha256(seed + nonce);
-    let bestZeros = this.leadingZeros(hash);
-    let attempts = 1;
-    let lastUiUpdate = performance.now();
-
-    this.updatePowProgress(deadline, bestZeros, attempts);
-
-    while (performance.now() < deadline) {
-      const candidateNonce = attempts.toString(16);
-      const candidateHash = await this.sha256(seed + candidateNonce);
-      attempts++;
-      const zeros = this.leadingZeros(candidateHash);
-
-      if (zeros > bestZeros) {
-        nonce = candidateNonce;
-        hash = candidateHash;
-        bestZeros = zeros;
-      }
-
-      const now = performance.now();
-      if (now - lastUiUpdate >= uiUpdateIntervalMs) {
-        this.updatePowProgress(deadline, bestZeros, attempts);
-        lastUiUpdate = now;
-      }
-
-      if (attempts % yieldEvery === 0) {
-        await this.yieldToBrowser();
-      }
-    }
-
-    this.updatePowProgress(deadline, bestZeros, attempts);
-
-    return { nonce, hash, zeros: bestZeros, attempts };
-  }
-
-  updatePowProgress(deadline: number, zeros: number, attempts: number) {
-    const secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
-
-    this.pendingPowZeros = zeros;
-    this.pendingPowAttempts = attempts;
-    this.pendingPowSecondsLeft = secondsLeft;
-    this.pendingRarity = this.rarityFromZeros(zeros);
-    m.redraw();
-  }
-
-  async yieldToBrowser(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-
-  async sha256(value: string): Promise<string> {
-    const bytes = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-
-    return Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, '0'))
-      .join('');
-  }
-
-  leadingZeros(hash: string): number {
-    let count = 0;
-
-    while (count < hash.length && hash[count] === '0') {
-      count++;
-    }
-
-    return count;
-  }
-
-  rarityFromZeros(zeros: number): string {
-    if (zeros >= 7) return 'legendary';
-    if (zeros >= 6) return 'epic';
-    if (zeros >= 5) return 'rare';
-    return 'common';
-  }
-
-  rarityFromBudget(budget: number): string {
-    if (budget >= 160) return 'legendary';
-    if (budget >= 80) return 'epic';
-    if (budget >= 40) return 'rare';
-    return 'common';
   }
 
   onCollectibleReady(data: any) {
