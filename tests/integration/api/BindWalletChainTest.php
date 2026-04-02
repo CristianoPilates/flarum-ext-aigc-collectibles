@@ -8,6 +8,7 @@ use Flarum\Extend;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class BindWalletChainTest extends TestCase
 {
@@ -36,7 +37,7 @@ class BindWalletChainTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function guest_cannot_request_nonce(): void
     {
         $request = $this->request('POST', '/api/web3-accounts/nonce', [
@@ -65,7 +66,7 @@ class BindWalletChainTest extends TestCase
         $this->assertSame(401, $response->getStatusCode(), $body);
     }
 
-    /** @test */
+    #[Test]
     public function user_can_request_nonce(): void
     {
         $response = $this->send(
@@ -90,7 +91,7 @@ class BindWalletChainTest extends TestCase
         $this->assertNotEmpty($body['data']['attributes']['message'] ?? null, json_encode($body));
     }
 
-    /** @test */
+    #[Test]
     public function nonce_rejects_invalid_address(): void
     {
         $response = $this->send(
@@ -109,7 +110,7 @@ class BindWalletChainTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function full_bind_wallet_flow(): void
     {
         $address = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -163,7 +164,7 @@ class BindWalletChainTest extends TestCase
         $this->assertEquals(strtolower($address), $account->address);
     }
 
-    /** @test */
+    #[Test]
     public function user_with_existing_wallet_cannot_bind_another(): void
     {
         $address = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -205,7 +206,7 @@ class BindWalletChainTest extends TestCase
         $this->assertEquals(422, $verifyResponse->getStatusCode(), (string) $verifyResponse->getBody());
     }
 
-    /** @test */
+    #[Test]
     public function already_bound_address_cannot_be_rebound(): void
     {
         // Try to bind the address that user 3 already has
@@ -254,4 +255,3 @@ class WalletTestServiceOverrides extends AbstractServiceProvider
         $this->container->singleton(WalletVerificationServiceInterface::class, FakeWalletVerificationService::class);
     }
 }
-

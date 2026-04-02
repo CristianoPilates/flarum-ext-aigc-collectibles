@@ -4,6 +4,7 @@ namespace Donk\AigcCollectibles\Tests\integration\api;
 
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class BarterProposalChainTest extends TestCase
 {
@@ -118,7 +119,7 @@ class BarterProposalChainTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function proposer_can_create_a_thread_bound_mixed_asset_barter_proposal(): void
     {
         $threadId = 9077;
@@ -182,7 +183,7 @@ class BarterProposalChainTest extends TestCase
         $this->assertSame('collectible', $items[2]->asset_type);
     }
 
-    /** @test */
+    #[Test]
     public function counterparty_can_accept_and_settle_a_mixed_asset_barter_proposal(): void
     {
         $threadId = 9078;
@@ -228,7 +229,7 @@ class BarterProposalChainTest extends TestCase
         $this->assertSame(self::BOB_ID, (int) $events[0]->to_user_id);
     }
 
-    /** @test */
+    #[Test]
     public function counterparty_can_reject_and_proposer_can_cancel_a_barter_proposal(): void
     {
         $rejectThreadId = 9079;
@@ -264,7 +265,7 @@ class BarterProposalChainTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function creating_a_counterproposal_supersedes_the_previous_revision(): void
     {
         $threadId = 9081;
@@ -339,7 +340,7 @@ class BarterProposalChainTest extends TestCase
         $this->assertSame((string) $proposalId, $replacementResource['relationships']['replacesProposal']['data']['id']);
     }
 
-    /** @test */
+    #[Test]
     public function blind_box_index_can_be_filtered_by_counterparty_in_barter_flow(): void
     {
         $threadId = 9082;
@@ -364,7 +365,7 @@ class BarterProposalChainTest extends TestCase
         $this->assertSame([self::BOB_BOX_UNAPPRAISED_ID, self::BOB_BOX_APPRAISED_ID], $ids);
     }
 
-    /** @test */
+    #[Test]
     public function barter_assets_endpoint_returns_both_sides_assets_for_a_direct_dialog(): void
     {
         $threadId = 9083;

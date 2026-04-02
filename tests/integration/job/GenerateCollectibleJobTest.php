@@ -14,6 +14,7 @@ use Flarum\Testing\integration\TestCase;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Queue\Jobs\SyncJob;
+use PHPUnit\Framework\Attributes\Test;
 use SM\Factory\FactoryInterface;
 
 class GenerateCollectibleJobTest extends TestCase
@@ -66,7 +67,7 @@ class GenerateCollectibleJobTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function successful_generation_completes_collectible_without_auto_minting(): void
     {
         $container = $this->app()->getContainer();
@@ -89,7 +90,7 @@ class GenerateCollectibleJobTest extends TestCase
         $this->assertNull($collectible->token_id);
     }
 
-    /** @test */
+    #[Test]
     public function failed_generation_marks_collectible_failed_and_restores_a_real_blind_box(): void
     {
         $container = $this->app()->getContainer();
@@ -130,7 +131,7 @@ class GenerateCollectibleJobTest extends TestCase
         $this->assertSame(1, (int) $originalBox->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function sync_queue_failures_are_treated_as_final_attempts_and_refunded(): void
     {
         $container = $this->app()->getContainer();

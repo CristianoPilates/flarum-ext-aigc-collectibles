@@ -11,6 +11,7 @@ use Donk\AigcCollectibles\Tests\Fake\FakeNftMintingService;
 use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class BlindBoxLifecycleTest extends TestCase
 {
@@ -61,7 +62,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Appraise ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function appraise_with_valid_pow_transitions_to_appraised(): void
     {
         $pow = $this->computePow(self::SEED);
@@ -83,7 +84,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertGreaterThan(0, $box->budget);
     }
 
-    /** @test */
+    #[Test]
     public function appraise_rejects_invalid_hash(): void
     {
         $response = $this->send(
@@ -102,7 +103,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('unappraised', $box->status);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_appraise_already_appraised(): void
     {
         $this->database()->table('blindboxes')
@@ -124,7 +125,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
     }
 
-    /** @test */
+    #[Test]
     public function cannot_appraise_other_users_blindbox(): void
     {
         $this->database()->table('blindboxes')
@@ -148,7 +149,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Open ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function open_creates_collectible_and_transitions_to_opened(): void
     {
         $this->database()->table('blindboxes')
@@ -180,7 +181,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals(0, $collectible->times_traded);
     }
 
-    /** @test */
+    #[Test]
     public function open_with_epic_budget_yields_epic_rarity(): void
     {
         $this->database()->table('blindboxes')
@@ -201,7 +202,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('epic', $collectible->rarity);
     }
 
-    /** @test */
+    #[Test]
     public function open_with_legendary_budget_yields_legendary_rarity(): void
     {
         $this->database()->table('blindboxes')
@@ -222,7 +223,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('legendary', $collectible->rarity);
     }
 
-    /** @test */
+    #[Test]
     public function appraise_pow_thresholds_map_to_expected_budgets_and_rarities(): void
     {
         $cases = [
@@ -307,7 +308,7 @@ class BlindBoxLifecycleTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function trade_reward_boxes_fallback_to_default_reward_rules_when_specific_rules_are_missing(): void
     {
         $this->database()->table('blindboxes')
@@ -334,7 +335,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertNotNull($box->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_open_unappraised(): void
     {
         // status is still 'unappraised' from setUp
@@ -351,7 +352,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertNull($box->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_open_already_opened(): void
     {
         $this->database()->table('blindboxes')
@@ -369,7 +370,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Full Lifecycle ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function full_lifecycle_appraise_then_open(): void
     {
         // 1. Appraise
