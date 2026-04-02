@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+//
 
 /**
  * @title CollectibleNFT
@@ -18,7 +19,9 @@ contract CollectibleNFT is ERC721URIStorage, Ownable {
     event CollectibleBurned(uint256 indexed tokenId, address indexed burner);
 
     constructor()
+    //初始化父类ERC721
         ERC721("AigcCollectible", "AIGC")
+        //初始化父类Ownable, 部署这个合约的钱包地址自动成为 owner
         Ownable(msg.sender)
     {
         _nextTokenId = 1;
@@ -38,6 +41,7 @@ contract CollectibleNFT is ERC721URIStorage, Ownable {
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, tokenURI_);
 
+        //这里发送一次日志广播
         emit CollectibleMinted(tokenId, to, tokenURI_);
 
         return tokenId;
