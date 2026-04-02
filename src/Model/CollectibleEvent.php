@@ -63,7 +63,7 @@ class CollectibleEvent extends AbstractModel
         ?int $tradeId = null,
         ?array $metadata = null
     ): self {
-        $event = new static();
+        $event = new self();
         $event->collectible_id = $collectible->id;
         $event->event_type = $eventType;
         $event->from_user_id = $fromUserId;

@@ -73,7 +73,7 @@ class Collectible extends AbstractModel
 
     public static function createDraft(int $ownerId, string $aigcPrompt, string $rarity): self
     {
-        $collectible = new static;
+        $collectible = new self();
         $collectible->owner_id = $ownerId;
         $collectible->aigc_prompt = $aigcPrompt;
         $collectible->rarity = $rarity;

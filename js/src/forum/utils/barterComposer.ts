@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Stream from 'flarum/common/utils/Stream';
 import type BarterProposal from '../models/BarterProposal';
 import { emitBarterThreadUpdated } from './barterEvents';
+import { transText } from './i18n';
 
 const MESSAGE_COMPOSER_PATH = 'ext:flarum/messages/forum/components/MessageComposer';
 
@@ -144,9 +145,7 @@ export async function loadBarterAssets(composer: any, dialog: any, force: boolea
 
     return payload;
   } catch (error: any) {
-    fields.barterError(
-      error?.response?.errors?.[0]?.detail || (app.translator.trans('donk-aigc-collectibles.forum.barter.load_failed') as string)
-    );
+    fields.barterError(error?.response?.errors?.[0]?.detail || transText('donk-aigc-collectibles.forum.barter.load_failed'));
     fields.barterAssets(null);
     fields.barterLoadedDialogId(null);
     return null;
@@ -194,19 +193,19 @@ export function validateBarterComposer(composer: any): string | null {
   }
 
   if (!fields.barterAssets()) {
-    const message = app.translator.trans('donk-aigc-collectibles.forum.barter.load_failed') as string;
+    const message = transText('donk-aigc-collectibles.forum.barter.load_failed');
     fields.barterValidationError(message);
     return message;
   }
 
   if (fields.barterMySelections().length === 0 && fields.barterTheirSelections().length === 0) {
-    const message = app.translator.trans('donk-aigc-collectibles.forum.barter.validation_assets_required') as string;
+    const message = transText('donk-aigc-collectibles.forum.barter.validation_assets_required');
     fields.barterValidationError(message);
     return message;
   }
 
   if (fields.barterMySelections().length === 0 || fields.barterTheirSelections().length === 0) {
-    const message = app.translator.trans('donk-aigc-collectibles.forum.barter.validation_both_sides_required') as string;
+    const message = transText('donk-aigc-collectibles.forum.barter.validation_both_sides_required');
     fields.barterValidationError(message);
     return message;
   }
@@ -214,7 +213,7 @@ export function validateBarterComposer(composer: any): string | null {
   const content = String(composer.fields.content?.() || '').trim();
 
   if (content.length === 0) {
-    const message = app.translator.trans('donk-aigc-collectibles.forum.barter.validation_message_required') as string;
+    const message = transText('donk-aigc-collectibles.forum.barter.validation_message_required');
     fields.barterValidationError(message);
     return message;
   }

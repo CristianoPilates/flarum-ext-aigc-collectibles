@@ -17,6 +17,8 @@ class CollectiblePolicy extends AbstractPolicy
         if ($actor->id === $collectible->owner_id) {
             return $this->allow();
         }
+
+        return null;
     }
 
     public function update(User $actor, Collectible $collectible): ?string
@@ -24,6 +26,8 @@ class CollectiblePolicy extends AbstractPolicy
         if ($actor->id === $collectible->owner_id) {
             return $this->allow();
         }
+
+        return null;
     }
 
     public function mint(User $actor, Collectible $collectible): ?string

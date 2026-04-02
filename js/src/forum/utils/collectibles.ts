@@ -1,14 +1,11 @@
-import app from 'flarum/forum/app';
-import extractText from 'flarum/common/utils/extractText';
+import { transText } from './i18n';
 
 const DEFAULT_COLLECTIBLE_NAME = /^Collectible #(.+)$/i;
 
 export function collectibleLabel(id?: string | number | null): string {
   const displayId = id === null || id === undefined || id === '' ? '?' : String(id);
 
-  return extractText(
-    app.translator.trans('donk-aigc-collectibles.forum.collectible.name_fallback', { idLabel: `#${displayId}` })
-  );
+  return transText('donk-aigc-collectibles.forum.collectible.name_fallback', { idLabel: `#${displayId}` });
 }
 
 export function displayCollectibleName(name?: string | null, id?: string | number | null): string {
@@ -28,5 +25,5 @@ export function displayCollectibleName(name?: string | null, id?: string | numbe
 }
 
 export function collectibleRarityLabel(rarity?: string | null): string {
-  return extractText(app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + (rarity || 'common')));
+  return transText('donk-aigc-collectibles.forum.collectible.rarity_' + (rarity || 'common'));
 }

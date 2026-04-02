@@ -5,6 +5,7 @@ import Button from 'flarum/common/components/Button';
 import Modal from 'flarum/common/components/Modal';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
+import { transText } from '../utils/i18n';
 import { subscribe, unsubscribe } from '../utils/notifications';
 import { gatewayUrl } from '../utils/ipfs';
 
@@ -326,7 +327,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
       this.error =
         error?.response?.errors?.[0]?.detail ||
         error?.message ||
-        String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+        transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
       m.redraw();
     }
   }
@@ -334,7 +335,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
   async runOpenFlow() {
     try {
       if (!this.blindBox) {
-        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')));
+        throw new Error(transText('donk-aigc-collectibles.forum.blind_box.insufficient'));
       }
 
       const readyBox = this.blindBox;
@@ -352,7 +353,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
 
       const collectibleId = response?.data?.relationships?.collectible?.data?.id;
       if (!collectibleId) {
-        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed')));
+        throw new Error(transText('donk-aigc-collectibles.forum.blind_box.generation_failed'));
       }
 
       this.pendingCollectibleId = collectibleId;
@@ -372,7 +373,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
       this.error =
         error?.response?.errors?.[0]?.detail ||
         error?.message ||
-        String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+        transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
       m.redraw();
     }
   }
@@ -533,7 +534,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     if (!this.pendingCollectibleId || !this.generating) return;
     if (this.pollAttempts >= this.MAX_POLL_ATTEMPTS) {
       this.generating = false;
-      this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_timeout'));
+      this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_timeout');
       m.redraw();
       return;
     }
@@ -552,7 +553,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
           this.fetchCollectible(this.pendingCollectibleId!);
         } else if (status === 'failed') {
           this.generating = false;
-          this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+          this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
           // Refund is done server-side
           m.redraw();
         } else {
@@ -576,7 +577,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
       })
       .catch(() => {
         this.generating = false;
-        this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+        this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
         this.stopPolling();
         m.redraw();
       });

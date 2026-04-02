@@ -33,9 +33,9 @@ class BlindBox extends AbstractModel
 
     const STATUS_OPENED = 'opened';
 
-    public static function createForUser(User $user, string $type): static
+    public static function createForUser(User $user, string $type): self
     {
-        $box = new static;
+        $box = new self();
         $box->user_id = $user->id;
         $box->type = $type;
         $box->seed = bin2hex(random_bytes(32));

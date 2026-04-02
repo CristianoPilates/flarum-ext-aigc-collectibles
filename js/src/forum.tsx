@@ -31,6 +31,7 @@ import {
   loadBarterAssets,
   validateBarterComposer,
 } from "./forum/utils/barterComposer";
+import { transText } from "./forum/utils/i18n";
 
 export const extend = [
   new Extend.Store()
@@ -284,7 +285,7 @@ app.initializers.add("donk-aigc-collectibles", () => {
           app.alerts.show(
             { type: "error" },
             error?.response?.errors?.[0]?.detail ||
-              (app.translator.trans("donk-aigc-collectibles.forum.barter.action_failed") as string)
+              transText("donk-aigc-collectibles.forum.barter.action_failed")
           );
         }
 
@@ -295,7 +296,7 @@ app.initializers.add("donk-aigc-collectibles", () => {
       .catch((error: any) => {
         fields.barterError(
           error?.response?.errors?.[0]?.detail ||
-            (app.translator.trans("donk-aigc-collectibles.forum.barter.action_failed") as string)
+            transText("donk-aigc-collectibles.forum.barter.action_failed")
         );
       })
       .finally(() => {

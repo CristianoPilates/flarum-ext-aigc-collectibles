@@ -39,7 +39,7 @@ class Web3Account extends AbstractModel
 
     public static function create(User $user, string $address, string $source = 'metamask', string $type = 'evm'): self
     {
-        $account = new static();
+        $account = new self();
         $account->user_id = $user->id;
         $account->address = strtolower($address);
         $account->source = $source;

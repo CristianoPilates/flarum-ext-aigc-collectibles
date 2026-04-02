@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
+import { transText } from '../utils/i18n';
 import { displayUserName } from '../utils/users';
 import type { BarterAsset } from '../utils/barterComposer';
 import {
@@ -168,7 +169,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
       return displayCollectibleName(asset.name, asset.id);
     }
 
-    return String(this.trans(`donk-aigc-collectibles.forum.blind_box.type_${asset.type || 'unknown'}`));
+    return transText(`donk-aigc-collectibles.forum.blind_box.type_${asset.type || 'unknown'}`);
   }
 
   assetMeta(asset: BarterAsset): string {
@@ -179,13 +180,13 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
       return [rarity, tokenId].filter(Boolean).join(' · ');
     }
 
-    const status = String(this.trans(`donk-aigc-collectibles.forum.blind_box.status_${asset.status || 'unknown'}`));
+    const status = transText(`donk-aigc-collectibles.forum.blind_box.status_${asset.status || 'unknown'}`);
     const budget =
       typeof asset.budget === 'number'
         ? String(asset.budget)
-        : String(this.trans('donk-aigc-collectibles.forum.blind_box.budget_unknown'));
+        : transText('donk-aigc-collectibles.forum.blind_box.budget_unknown');
 
-    return `${status} · ${String(this.trans('donk-aigc-collectibles.forum.blind_box.budget_label'))}: ${budget}`;
+    return `${status} · ${transText('donk-aigc-collectibles.forum.blind_box.budget_label')}: ${budget}`;
   }
 
   async toggleEnabled() {

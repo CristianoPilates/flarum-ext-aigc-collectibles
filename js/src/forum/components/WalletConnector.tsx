@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import { transText } from '../utils/i18n';
 import { isMetaMaskAvailable, connectWallet, signMessage, truncateAddress } from '../utils/web3';
 
 interface WalletConnectorAttrs {
@@ -81,9 +82,9 @@ export default class WalletConnector extends Component<WalletConnectorAttrs> {
     }
 
     const stepLabels: Record<string, string> = {
-      connecting: String(app.translator.trans('donk-aigc-collectibles.forum.wallet.step_connecting')),
-      signing: String(app.translator.trans('donk-aigc-collectibles.forum.wallet.step_signing')),
-      verifying: String(app.translator.trans('donk-aigc-collectibles.forum.wallet.step_verifying')),
+      connecting: transText('donk-aigc-collectibles.forum.wallet.step_connecting'),
+      signing: transText('donk-aigc-collectibles.forum.wallet.step_signing'),
+      verifying: transText('donk-aigc-collectibles.forum.wallet.step_verifying'),
     };
 
     return (
@@ -192,7 +193,7 @@ export default class WalletConnector extends Component<WalletConnectorAttrs> {
       } else if (error.response?.errors?.[0]?.detail) {
         this.error = error.response.errors[0].detail;
       } else {
-        this.error = String(app.translator.trans('donk-aigc-collectibles.forum.wallet.bind_failed'));
+        this.error = transText('donk-aigc-collectibles.forum.wallet.bind_failed');
       }
 
       m.redraw();
@@ -225,7 +226,7 @@ export default class WalletConnector extends Component<WalletConnectorAttrs> {
         this.loading = false;
         this.error =
           error.response?.errors?.[0]?.detail ||
-          String(app.translator.trans('donk-aigc-collectibles.forum.wallet.unbind_failed'));
+          transText('donk-aigc-collectibles.forum.wallet.unbind_failed');
         m.redraw();
       });
   }
