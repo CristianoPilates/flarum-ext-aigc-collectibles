@@ -56,7 +56,7 @@ class CollectibleProofServiceTest extends TestCase
         $this->service = new CollectibleProofService($this->settings, $this->ipfs, $this->client);
     }
 
-    /** @test */
+    #[Test]
     public function it_builds_a_complete_four_layer_proof_for_a_minted_collectible(): void
     {
         $metadataJson = json_encode([
@@ -106,7 +106,7 @@ class CollectibleProofServiceTest extends TestCase
         $this->assertSame('http://127.0.0.1:8888/ipfs/QmImageCid', $proof['image']['gatewayUrl']);
     }
 
-    /** @test */
+    #[Test]
     public function it_reports_not_minted_chain_state_without_throwing(): void
     {
         $collectible = new Collectible();

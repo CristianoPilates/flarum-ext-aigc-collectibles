@@ -13,6 +13,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 
 class CheckinServiceTest extends TestCase
 {
@@ -42,7 +43,7 @@ class CheckinServiceTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_validation_exception_when_user_has_already_checked_in_today(): void
     {
         $user = $this->makeUser(id: 101);
@@ -69,7 +70,7 @@ class CheckinServiceTest extends TestCase
         $service->performCheckin($user);
     }
 
-    /** @test */
+    #[Test]
     public function it_reads_reward_from_settings_and_returns_the_transaction_result(): void
     {
         $user = $this->makeUser(id: 202);
@@ -105,10 +106,7 @@ class CheckinServiceTest extends TestCase
         $this->assertSame($expectedRecord, $actualRecord);
     }
 
-    /**
-     * @test
-     *
-     */
+    #[Test]
     public function it_checks_today_status_via_the_users_last_checkin_timestamp(): void
     {
         $userA = $this->makeUser(id: 1);

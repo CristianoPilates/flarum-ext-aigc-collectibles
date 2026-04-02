@@ -930,6 +930,12 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - 当前高价值服务覆盖：
     - `BlindBoxService` lines `42.77%`
     - `CollectibleProofService` lines `88.83%`
+- 2026-04-02 后续噪声清理结果：
+  - unit test 中遗留的 `PHPUnit Deprecations: 26` 已清零
+  - 当前 `tests/phpunit.unit.xml` 运行结果为：
+    - `33 tests`
+    - `155 assertions`
+    - `OK`
 
 ### 13.4 当前还没做的事
 

@@ -13,6 +13,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
 class AIGCServiceTest extends TestCase
@@ -59,13 +60,13 @@ class AIGCServiceTest extends TestCase
     // 测试 isConfigured()
     // ==========================================
 
-    /** @test */
+    #[Test]
     public function it_returns_true_when_api_is_fully_configured(): void
     {
         $this->assertTrue($this->service->isConfigured());
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_false_when_api_key_is_missing(): void
     {
         // 覆盖 setUp 中的默认行为，模拟 Key 为空
@@ -80,7 +81,7 @@ class AIGCServiceTest extends TestCase
     // 测试 buildPrompt() (使用反射)
     // ==========================================
 
-    /** @test */
+    #[Test]
     public function it_builds_the_correct_prompt_based_on_rarity(): void
     {
         $reflection = new \ReflectionMethod($this->service, 'buildPrompt');
@@ -101,7 +102,7 @@ class AIGCServiceTest extends TestCase
     // 测试 generateImage()
     // ==========================================
 
-    /** @test */
+    #[Test]
     public function it_returns_a_fallback_image_if_api_is_not_configured_when_generating_image(): void
     {
         // 覆盖配置，模拟未配置
@@ -117,7 +118,7 @@ class AIGCServiceTest extends TestCase
         $this->assertStringContainsString('COMMON', $result);
     }
 
-    /** @test */
+    #[Test]
     public function it_generates_an_image_successfully(): void
     {
         $fakeImageContent = 'fake-image-binary-data';
@@ -137,7 +138,7 @@ class AIGCServiceTest extends TestCase
         $this->assertSame($fakeImageContent, $result);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_exception_on_unexpected_api_response_format(): void
     {
         // 模拟 API 返回了 200，但是 JSON 结构不对（缺少 b64_json 字段）
@@ -155,7 +156,7 @@ class AIGCServiceTest extends TestCase
         $serviceWithMockedHttp->generateImage('A cute donk', 'common');
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_a_fallback_image_on_api_request_failure(): void
     {
         // 模拟 Guzzle 抛出网络异常 (如超时、401 未授权、500 服务器错误等)

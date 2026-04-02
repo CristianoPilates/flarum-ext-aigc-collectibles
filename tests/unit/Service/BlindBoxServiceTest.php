@@ -43,7 +43,7 @@ class BlindBoxServiceTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_the_users_blind_box_balance(): void
     {
         $user = $this->makeUser(id: 1, blindBoxCount: 7);
@@ -66,7 +66,7 @@ class BlindBoxServiceTest extends TestCase
         $this->assertSame(7, $this->service->balanceOf($user));
     }
 
-    /** @test */
+    #[Test]
     public function it_transfers_blind_boxes_between_users(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 10);
@@ -207,7 +207,7 @@ class BlindBoxServiceTest extends TestCase
         $this->service->transfer($from, $to, 3);
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_invalid_transfer_amount(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 10);
@@ -220,7 +220,7 @@ class BlindBoxServiceTest extends TestCase
         $this->service->transfer($from, $to, 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_when_the_sender_cannot_cover_the_transfer(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 1);

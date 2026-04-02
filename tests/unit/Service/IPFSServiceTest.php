@@ -10,12 +10,12 @@ use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 
-/**
- * @covers \Donk\AigcCollectibles\Service\IPFSService
- */
+#[CoversClass(IPFSService::class)]
 class IPFSServiceTest extends TestCase
 {
     /** @var SettingsRepositoryInterface&MockInterface */
@@ -41,7 +41,7 @@ class IPFSServiceTest extends TestCase
         $this->service = new IPFSService($this->settings, $this->client);
     }
 
-    /** @test */
+    #[Test]
     public function it_uploads_binary_data_and_returns_the_cid(): void
     {
         $response = Mockery::mock(ResponseInterface::class);
@@ -62,7 +62,7 @@ class IPFSServiceTest extends TestCase
         $this->assertSame('QmImageCid', $cid);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_when_upload_response_format_is_unexpected(): void
     {
         $response = Mockery::mock(ResponseInterface::class);
@@ -80,7 +80,7 @@ class IPFSServiceTest extends TestCase
         $this->service->upload('raw-image-data');
     }
 
-    /** @test */
+    #[Test]
     public function it_wraps_guzzle_exception_when_upload_fails(): void
     {
         $this->client->shouldReceive('post')
@@ -96,7 +96,7 @@ class IPFSServiceTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_uploads_json_metadata_and_returns_the_cid(): void
     {
         $metadata = [
@@ -123,7 +123,7 @@ class IPFSServiceTest extends TestCase
         $this->assertSame('QmMetadataCid', $cid);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_when_metadata_upload_response_format_is_unexpected(): void
     {
         $response = Mockery::mock(ResponseInterface::class);
@@ -141,7 +141,7 @@ class IPFSServiceTest extends TestCase
         $this->service->uploadJson(['name' => 'Collectible']);
     }
 
-    /** @test */
+    #[Test]
     public function it_wraps_guzzle_exception_when_metadata_upload_fails(): void
     {
         $this->client->shouldReceive('post')
@@ -157,7 +157,7 @@ class IPFSServiceTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_when_api_url_is_not_configured(): void
     {
         $this->settings->shouldReceive('get')
@@ -172,7 +172,7 @@ class IPFSServiceTest extends TestCase
         $this->service->upload('raw-image-data');
     }
 
-    /** @test */
+    #[Test]
     public function it_builds_gateway_url_with_custom_setting_and_trims_slashes(): void
     {
         $this->settings->shouldReceive('get')
@@ -185,7 +185,7 @@ class IPFSServiceTest extends TestCase
         $this->assertSame('https://gateway.example.com/ipfs/QmGatewayCid', $gatewayUrl);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_use_partial_mock_and_chain_mock_for_metadata_upload(): void
     {
         $metadata = ['name' => 'Partial'];
