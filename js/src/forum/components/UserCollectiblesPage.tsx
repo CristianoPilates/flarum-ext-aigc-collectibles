@@ -2,7 +2,6 @@ import app from 'flarum/forum/app';
 import UserPage from 'flarum/forum/components/UserPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import CollectibleGallery from './CollectibleGallery';
-import TradePanel from './TradePanel';
 import WalletConnector from './WalletConnector';
 import CollectibleDetailModal from './CollectibleDetailModal';
 
@@ -34,7 +33,6 @@ export default class UserCollectiblesPage extends UserPage {
 
         {isOwnProfile && (
           <div className="UserCollectiblesPage-sidebar">
-            <TradePanel user={user} onChanged={() => this.refreshData()} />
             <WalletConnector user={user} />
           </div>
         )}

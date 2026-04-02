@@ -178,8 +178,8 @@ headed MCP 真实验收结论：
 必须明确：
 
 - 用户已同意不要继续把旧 `Trade` 模型硬补成 barter
-- 当前只是在 Phase 1 中绕开旧 `Trade`，把 CTA 先接到私信
-- `Trade/barter` 领域模型重做仍未开始
+- Phase 1 / Phase 2 已经绕开旧 `Trade`，把 CTA 先接到私信并附带藏品上下文
+- Phase 3 也已经开始，方向已从旧 modal 改成“proposal 挂在私信线程里”
 
 现状：
 
@@ -192,7 +192,9 @@ headed MCP 真实验收结论：
 这说明：
 
 - 旧 Trade 路径还要做最小 bugfix
-- 但真正的 barter 重做必须单列为后续阶段工程，不能与 Phase 1 混做
+- 但真正的 barter 重做不能继续依附旧 `Trade`
+- 当前新方向是单独的 `BarterProposal` / `BarterProposalItem`
+  挂在私信线程里做持续协商
 
 ### 3.6 Blind box / rarity / phrase pool
 
@@ -558,13 +560,15 @@ headed MCP 真实验收结论：
 5. 然后先做一条静态质量 / LSP 清理提交
    当前进行中，尚未提交
 6. 这条提交同时收口 MCP fresh runtime profile 稳定化
-7. 最后才进入 `Phase 3`：
-   重做 barter / Trade 领域模型并挂入私信线程
+7. 然后进入 `Phase 3`：
+   重做 barter / proposal 模型并挂入私信线程
+8. 当前已经进入 `Phase 3`，但尚未提交
 
 关键提醒：
 
 - `展柜 CTA` 已完成并提交，不要回退到旧 trade CTA 路径
-- `Trade 模型重做` 也还没完成，只是明确延期到后续阶段，不是取消
+- `Trade 模型重做` 不是取消，而是已经转向 `BarterProposal` 方案
+- 不要再恢复 modal barter 路线
 
 ## 7. commit 规则
 
@@ -634,10 +638,16 @@ headed MCP 真实验收结论：
 - 第四条 BlindBox 资产化与两段式开盒已提交
 - Phase 2 的私信藏品上下文也已提交
 - 当前进行中的不是新业务功能，而是一条静态质量 / LSP 清理 + MCP 稳定化提交
-- 当前最大的下一阶段任务是 `Phase 3` 的 barter 重构
-- Trade/barter 重做仍在后续阶段
+- 当前最大的未收口业务任务是 `Phase 3` 的 barter proposal-in-PM 收口
+- 旧 `Trade` 不再是目标模型
+- 2026-04-02 当前前台主路径已进一步收口：
+  - [UserCollectiblesPage.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/UserCollectiblesPage.tsx)
+    不再挂旧 `TradePanel`
+  - 前端旧 `TradePanel` / `TradeRequestModal` / `forum` 侧 `Trade` model 注册已移除
+  - 私信线程文案已从“交易”切成“协商 / 提案”
+  - 后端旧 `Trade` 兼容层暂时还在，但已退出主 UX
 
-下一位 agent 不要偏航。先完成这条静态质量提交，然后进入 Phase 3 的 barter 设计与实现。
+下一位 agent 不要偏航。先看清当前 dirty tree 里哪些属于质量提交、哪些属于 Phase 3，然后在每条 commit 前都先做 headed MCP 实测。
 
 ## 11. 2026-04-01 本次恢复记录
 
@@ -833,3 +843,179 @@ headed MCP 真实验收结论：
   - `/u/:username/collectibles`
 - 当前完成这条提交后，下一阶段就是 `Phase 3`：
   重新设计挂在私信线程里的 barter 模型
+
+## 13. 2026-04-02 Phase 3 方向已变更
+
+这一条非常关键，下一位 agent 不要继续沿用旧思路：
+
+- 用户已经明确否决 `CreateBarterProposalModal`
+- 原因不是实现难度，而是产品方向不对
+- 用户不想在一个局促 modal 里“为了交易而交易”
+- 用户希望 barter 仍然发生在私信上下文中
+
+当前已确认的新方向：
+
+- 不做独立 barter modal
+- 提案配置直接放进 PM composer
+- 用户在同一个 composer 里：
+  - 正常输入私信正文
+  - 选择“我愿意给什么资产”
+  - 选择“我想要对方什么资产”
+- 不再单独维护 barter `附言`
+- 真正想说的话就直接发在私信正文里
+- proposal 作为附带的协商对象创建
+
+### 13.1 当前未提交实现状态
+
+已落地但尚未提交的 Phase 3 代码包括：
+
+- 后端 barter 生命周期骨架：
+  - `BarterProposal`
+  - `BarterProposalItem`
+  - create / accept / reject / cancel
+  - mixed asset settle
+- 新增 thread 资产接口：
+  - `GET /api/barter-assets`
+  - controller:
+    [ListBarterAssetsController.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Controller/ListBarterAssetsController.php)
+  - service formatter:
+    [BarterAssetFormatter.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/BarterAssetFormatter.php)
+- 前端 composer 内联 barter：
+  - [BarterComposerPanel.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BarterComposerPanel.tsx)
+  - [barterComposer.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/barterComposer.ts)
+  - [BarterThreadPanel.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BarterThreadPanel.tsx)
+  - [forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
+
+已经移除：
+
+- `CreateBarterProposalModal.tsx`
+
+### 13.2 当前 Phase 3 交互设计
+
+私信线程里现在应当是这样的结构：
+
+- 右侧：
+  `BarterThreadPanel`
+  展示提案历史、接受/拒绝/取消
+- 底部 composer：
+  `BarterComposerPanel`
+  负责开启/关闭 barter 草稿、勾选双方资产、随消息一起发 proposal
+
+当前实现逻辑：
+
+- 不启用 barter 时：
+  `MessageComposer` 保持原生私信发送
+- 启用 barter 时：
+  - 仍然先发送 PM 正文
+  - 然后立即创建 `barter-proposal`
+  - proposal 不再带单独 `message`
+  - 提案文本以 PM 正文为准
+
+这与用户的意图一致：
+
+- 聊天是主轴
+- 协商对象挂在线程里
+- 不是打开一个独立交易弹窗
+
+### 13.3 当前验证状态
+
+已通过的静态/集成验证：
+
+- `cd js && npm run check-typings -- --pretty false`
+- `cd js && npm run build`
+- `vendor/bin/phpunit -c tests/phpunit.integration.xml --filter BarterProposalChainTest`
+
+其中新增了一条 API 测试：
+
+- `barter_assets_endpoint_returns_both_sides_assets_for_a_direct_dialog`
+
+注意：
+
+- `ListBarterAssetsController` 不能直接依赖 `$request->getQueryParams()`
+  读出 `filter[...]`
+- 已仿照 `BlindBoxResource` 加了：
+  `parse_str($request->getUri()->getQuery(), $query)`
+  作为回退
+- 否则集成测试里会得到：
+  `Thread ID is required.`
+
+2026-04-02 本轮新增确认：
+
+- 已实际核对 `flarum/messages` 上游源码：
+  - `MessageStream` 官方回复入口就是
+    `ReplyPlaceholder -> app.composer.load(() => import('./MessageComposer'))`
+  - 当前本地 `openBarterComposer()` 复用这条链路是正确方向
+- 已核对运行时 registry：
+  - 正确可扩展路径是：
+    `ext:flarum/messages/forum/components/DialogSection`
+    `ext:flarum/messages/forum/components/MessageComposer`
+  - 不是：
+    `flarum/messages/forum/components/...`
+- 当前 `openBarterComposer()` 的稳定策略是：
+  - 先尝试点击当前线程里的 `.ReplyPlaceholder`
+  - 复用官方 `MessageComposer` 打开链路
+  - 只有失败时才 fallback 到手工 `composer.load(...)`
+  - 这样可避开之前手工 load 导致的 `ReplyComposer.bind` 类崩溃
+- 已新增 composer-inline 验收脚本：
+  - [mcp-inspect-barter-composer.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-inspect-barter-composer.cjs)
+  - [mcp-validate-barter-composer.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-validate-barter-composer.cjs)
+- `mcp-inspect-barter-composer.cjs` 最新实测结果：
+  - `DialogSection-streamWrap = true`
+  - `BarterThreadPanel = true`
+  - 点击“发起提案”后：
+    - `composerVisible = true`
+    - `editorExists = true`
+    - `barterPanelExists = true`
+    - buyer 侧资产：
+      - collectibles `4`
+      - blind boxes `5`
+    - seller 侧资产：
+      - collectibles `0`
+      - blind boxes `4`
+- `mcp-validate-barter-composer.cjs` 最新 full validation 已通过：
+  - buyer 发 proposal 成功
+  - seller accept 成功
+  - 当前脚本已经不再依赖 `.BarterProposalCard:first` 的脆弱选择器
+  - `BarterThreadPanel` 现在会：
+    - 前端显式按 `createdAt desc` / `revisionNumber desc` / `id desc` 排序
+    - 为每张卡输出：
+      `data-proposal-id`
+      `data-proposal-status`
+  - 因此 headed 验收现在可以稳定追踪“本次刚创建的 proposal”
+  - 最终结果为：
+    - `buyerView.myCount = 9`
+    - `buyerView.theirCount = 4`
+    - `buyerView.composerVisible = false`
+    - `buyerView.proposalStatus = 已提案`
+    - `buyerView.proposalActions = ["发起还价","取消"]`
+    - `sellerView.status = 已完成`
+    - `sellerView.actionTexts = []`
+
+### 13.4 当前还没做的事
+
+- 这轮 Phase 3 主链虽然已经通过过 headed MCP，
+  但提交前仍应再跑一次：
+  1. `make publish-site-runtime`
+  2. 确认 `mcp-headed` 正常
+  3. 串行执行：
+     - `node scripts/playwright/mcp-cli/mcp-inspect-barter-composer.cjs`
+     - `node scripts/playwright/mcp-cli/mcp-validate-barter-composer.cjs`
+- 还没有按提交边界整理当前 dirty tree
+- 还没有决定这一轮是先提交 Phase 3，还是先继续拆分质量提交
+
+### 13.5 脚本现状提醒
+
+当前已有的 MCP 脚本里：
+
+- `mcp-inspect-barter-create-modal.cjs`
+- `mcp-inspect-barter-modal.cjs`
+- `mcp-validate-barter-thread.cjs`
+
+这些脚本大多还是 modal 时代写的。
+
+下一位 agent 最好：
+
+- 优先使用已经存在的 composer-inline 脚本：
+  - `mcp-inspect-barter-composer.cjs`
+  - `mcp-validate-barter-composer.cjs`
+- 不要继续围绕 `.CreateBarterProposalModal` 做诊断

@@ -4,10 +4,12 @@ namespace Donk\AigcCollectibles\Provider;
 
 use Donk\AigcCollectibles\Api\UserResourceFields;
 use Donk\AigcCollectibles\Service\AIGCService;
+use Donk\AigcCollectibles\Service\BarterService;
 use Donk\AigcCollectibles\Service\BlindBoxService;
 use Donk\AigcCollectibles\Service\CheckinService;
 use Donk\AigcCollectibles\Service\CollectibleProofService;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\BarterServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CollectibleProofServiceInterface;
@@ -34,10 +36,12 @@ class CollectibleServiceProvider extends AbstractServiceProvider
                 StateMachineConfig::collectible(),
                 StateMachineConfig::blindBox(),
                 StateMachineConfig::trade(),
+                StateMachineConfig::barterProposal(),
             ]);
         });
 
         $this->container->singleton(BlindBoxServiceInterface::class, BlindBoxService::class);
+        $this->container->singleton(BarterServiceInterface::class, BarterService::class);
         $this->container->singleton(CheckinServiceInterface::class, CheckinService::class);
         $this->container->singleton(CollectibleProofServiceInterface::class, CollectibleProofService::class);
         $this->container->singleton(AIGCServiceInterface::class, AIGCService::class);

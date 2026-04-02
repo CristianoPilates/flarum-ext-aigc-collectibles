@@ -10,8 +10,9 @@ import LinkButton from "flarum/common/components/LinkButton";
 
 import Collectible from "./forum/models/Collectible";
 import BlindBox from "./forum/models/BlindBox";
-import Trade from "./forum/models/Trade";
 import CheckinRecord from "./forum/models/CheckinRecord";
+import BarterProposal from "./forum/models/BarterProposal";
+import BarterProposalItem from "./forum/models/BarterProposalItem";
 
 import CheckinButton from "./forum/components/CheckinButton";
 import PostCollectibleBadge from "./forum/components/PostCollectibleBadge";
@@ -19,15 +20,24 @@ import PostCollectibleShowcase from "./forum/components/PostCollectibleShowcase"
 import BlindBoxOpener from "./forum/components/BlindBoxOpener";
 import UserCollectiblesPage from "./forum/components/UserCollectiblesPage";
 import UserBlindBoxesPage from "./forum/components/UserBlindBoxesPage";
-import "./forum/components/TradeRequestModal";
+import BarterThreadPanel from "./forum/components/BarterThreadPanel";
+import BarterComposerPanel from "./forum/components/BarterComposerPanel";
 
 import { connect as wsConnect, subscribe } from "./forum/utils/notifications";
+import {
+  createBarterProposalFromComposer,
+  ensureBarterComposerFields,
+  hasBarterDraft,
+  loadBarterAssets,
+  validateBarterComposer,
+} from "./forum/utils/barterComposer";
 
 export const extend = [
   new Extend.Store()
     .add("blindboxes", BlindBox)
+    .add("barter-proposal-items", BarterProposalItem)
+    .add("barter-proposals", BarterProposal)
     .add("collectibles", Collectible)
-    .add("trades", Trade)
     .add("checkin-records", CheckinRecord),
 
   new Extend.Routes().add(
@@ -184,32 +194,112 @@ app.initializers.add("donk-aigc-collectibles", () => {
   // Connect WebSocket for real-time notifications
   if (app.session?.user) {
     wsConnect();
-
-    subscribe("trade.created", () => {
-      app.alerts.show(
-        { type: "info" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_received"
-        )
-      );
-    });
-
-    subscribe("trade.accepted", () => {
-      app.alerts.show(
-        { type: "success" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_accepted"
-        )
-      );
-    });
-
-    subscribe("trade.rejected", () => {
-      app.alerts.show(
-        { type: "info" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_rejected"
-        )
-      );
-    });
   }
+
+  override("ext:flarum/messages/forum/components/DialogSection", "view", function (this: any, original: () => any) {
+    const vnode = original();
+    const dialog = this?.attrs?.dialog;
+
+    if (!vnode || !dialog) {
+      return vnode;
+    }
+
+    const stream = vnode.children?.[1];
+
+    if (!stream) {
+      return vnode;
+    }
+
+    vnode.children[1] = (
+      <div className="DialogSection-streamWrap">
+        {stream}
+        <BarterThreadPanel dialog={dialog} />
+      </div>
+    );
+
+    return vnode;
+  });
+
+  flarumExtend("ext:flarum/messages/forum/components/MessageComposer", "oninit", function (this: any, _value: unknown, vnode: any) {
+    ensureBarterComposerFields(this.composer);
+
+    const dialog = vnode.attrs?.replyingTo;
+
+    if (dialog?.id?.()) {
+      void loadBarterAssets(this.composer, dialog);
+    }
+  });
+
+  flarumExtend("ext:flarum/messages/forum/components/MessageComposer", "headerItems", function (this: any, items: any) {
+    const dialog = this.attrs?.replyingTo;
+
+    if (!dialog?.id?.()) {
+      return;
+    }
+
+    items.add(
+      "donk-aigc-collectibles-barter-composer",
+      <BarterComposerPanel composer={this.composer} dialog={dialog} />,
+      90
+    );
+  });
+
+  override("ext:flarum/messages/forum/components/MessageComposer", "hasChanges", function (this: any, original: () => boolean) {
+    return original() || hasBarterDraft(this.composer);
+  });
+
+  override("ext:flarum/messages/forum/components/MessageComposer", "onsubmit", function (this: any, original: () => void) {
+    const fields = ensureBarterComposerFields(this.composer);
+
+    if (!fields.barterEnabled()) {
+      return original();
+    }
+
+    const validationError = validateBarterComposer(this.composer);
+
+    if (validationError) {
+      m.redraw();
+      return;
+    }
+
+    this.loading = true;
+    fields.barterError(null);
+    fields.barterValidationError(null);
+
+    const data = this.data();
+
+    app.store
+      .createRecord("dialog-messages")
+      .save(data, {
+        params: {
+          include: ["dialog"],
+        },
+      })
+      .then(async (message: any) => {
+        const dialog = this.attrs.replyingTo || message.dialog?.() || this.attrs.replyingTo;
+
+        try {
+          await createBarterProposalFromComposer(dialog, this.composer);
+        } catch (error: any) {
+          app.alerts.show(
+            { type: "error" },
+            error?.response?.errors?.[0]?.detail ||
+              (app.translator.trans("donk-aigc-collectibles.forum.barter.action_failed") as string)
+          );
+        }
+
+        this.composer.hide();
+        m.route.set(app.route("dialog", { id: message.data.relationships!.dialog.data.id }));
+        this.attrs.onsubmit?.(message);
+      })
+      .catch((error: any) => {
+        fields.barterError(
+          error?.response?.errors?.[0]?.detail ||
+            (app.translator.trans("donk-aigc-collectibles.forum.barter.action_failed") as string)
+        );
+      })
+      .finally(() => {
+        this.loaded();
+      });
+  });
 });

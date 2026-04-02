@@ -26,4 +26,9 @@ interface BlindBoxServiceInterface
      * Transfer blind boxes from one user to another atomically.
      */
     public function transfer(User $from, User $to, int $amount): void;
+
+    /**
+     * @param int[] $boxIds
+     */
+    public function transferSpecific(User $from, User $to, array $boxIds): void;
 }

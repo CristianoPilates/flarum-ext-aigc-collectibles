@@ -10,6 +10,8 @@ use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Api\Sort\SortColumn;
+use Flarum\Foundation\ValidationException;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
 use Illuminate\Support\Arr;
 use Tobyz\JsonApiServer\Context;
@@ -25,6 +27,7 @@ class BlindBoxResource extends AbstractDatabaseResource
 
     public function __construct(
         private readonly BusDispatcher $bus,
+        private readonly ConnectionInterface $db,
     ) {}
 
     public function type(): string
@@ -39,8 +42,63 @@ class BlindBoxResource extends AbstractDatabaseResource
 
     public function query(Context $context): object
     {
-        return parent::query($context)
-            ->where('user_id', $context->getActor()->id);
+        $query = parent::query($context);
+        $queryParams = $context->request->getQueryParams();
+
+        if ($queryParams === []) {
+            parse_str($context->request->getUri()->getQuery(), $queryParams);
+        }
+
+        $filters = is_array($queryParams['filter'] ?? null) ? $queryParams['filter'] : [];
+        $requestedUserId = $filters['user'] ?? $filters['owner'] ?? null;
+        $ownerUserId = is_numeric($requestedUserId) ? (int) $requestedUserId : (int) $context->getActor()->id;
+
+        if ($ownerUserId !== (int) $context->getActor()->id) {
+            $dialogId = $filters['dialog'] ?? null;
+
+            if (! is_numeric($dialogId) || (int) $dialogId < 1) {
+                throw new ValidationException(['dialog' => 'A direct private message dialog is required when loading another user\'s blind boxes.']);
+            }
+
+            $this->assertDialogParticipants((int) $dialogId, (int) $context->getActor()->id, $ownerUserId);
+        }
+
+        return $query->where('user_id', $ownerUserId);
+    }
+
+    private function assertDialogParticipants(int $dialogId, int $actorUserId, int $ownerUserId): void
+    {
+        $schema = $this->db->getSchemaBuilder();
+
+        if (! $schema->hasTable('dialogs') || ! $schema->hasTable('dialog_user')) {
+            throw new ValidationException(['dialog' => 'Private messages are not available in this environment.']);
+        }
+
+        $dialog = $this->db->table('dialogs')->where('id', $dialogId)->first();
+
+        if (! $dialog) {
+            throw new ValidationException(['dialog' => 'Private message dialog not found.']);
+        }
+
+        if (($dialog->type ?? null) !== 'direct') {
+            throw new ValidationException(['dialog' => 'Only direct private message dialogs can expose barter blind boxes.']);
+        }
+
+        $participantIds = $this->db->table('dialog_user')
+            ->where('dialog_id', $dialogId)
+            ->pluck('user_id')
+            ->map(static fn ($userId) => (int) $userId)
+            ->all();
+
+        $participantIds = array_values(array_unique($participantIds));
+
+        if (
+            count($participantIds) !== 2
+            || ! in_array($actorUserId, $participantIds, true)
+            || ! in_array($ownerUserId, $participantIds, true)
+        ) {
+            throw new ValidationException(['dialog' => 'Both users must belong to the same direct private message dialog.']);
+        }
     }
 
     public function endpoints(): array

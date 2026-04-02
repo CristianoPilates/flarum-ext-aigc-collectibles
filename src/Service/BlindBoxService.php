@@ -251,6 +251,43 @@ class BlindBoxService implements BlindBoxServiceInterface
                 throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
             }
 
+            $this->transferSpecific($from, $to, $boxIds);
+        });
+    }
+
+    /**
+     * @param int[] $boxIds
+     */
+    public function transferSpecific(User $from, User $to, array $boxIds): void
+    {
+        if ($boxIds === []) {
+            return;
+        }
+
+        $boxIds = array_values(array_unique(array_map('intval', $boxIds)));
+        $transferableStatuses = [
+            BlindBox::STATUS_UNAPPRAISED,
+            BlindBox::STATUS_APPRAISED,
+        ];
+
+        $this->db->transaction(function () use ($from, $to, $boxIds, $transferableStatuses) {
+            $ownedBoxIds = $this->db->table('blindboxes')
+                ->where('user_id', $from->id)
+                ->whereIn('status', $transferableStatuses)
+                ->whereIn('id', $boxIds)
+                ->lockForUpdate()
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->all();
+
+            sort($ownedBoxIds);
+            $expectedBoxIds = $boxIds;
+            sort($expectedBoxIds);
+
+            if ($ownedBoxIds !== $expectedBoxIds) {
+                throw new ValidationException(['blind_box' => 'One or more blind boxes are unavailable for transfer.']);
+            }
+
             $this->db->table('blindboxes')
                 ->whereIn('id', $boxIds)
                 ->update([

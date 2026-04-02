@@ -18,11 +18,16 @@ return [
 
     // API Resources (replaces Routes + ApiSerializer)
     new Extend\ApiResource(Api\Resource\BlindBoxResource::class),
+    new Extend\ApiResource(Api\Resource\BarterProposalResource::class),
+    new Extend\ApiResource(Api\Resource\BarterProposalItemResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleResource::class),
     new Extend\ApiResource(Api\Resource\TradeResource::class),
     new Extend\ApiResource(Api\Resource\CheckinRecordResource::class),
     new Extend\ApiResource(Api\Resource\Web3AccountResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleEventResource::class),
+
+    (new Extend\Routes('api'))
+        ->get('/barter-assets', 'donk.aigc-collectibles.barter-assets.index', Api\Controller\ListBarterAssetsController::class),
 
     (new Extend\SearchDriver(DatabaseSearchDriver::class))
         ->addSearcher(Model\Collectible::class, Search\CollectibleSearcher::class)
@@ -35,6 +40,8 @@ return [
         ->hasMany('tradesReceived', Model\Trade::class, 'to_user_id')
         ->hasMany('checkinRecords', Model\CheckinRecord::class, 'user_id')
         ->hasMany('web3Accounts', Model\Web3Account::class, 'user_id')
+        ->hasMany('barterProposalsCreated', Model\BarterProposal::class, 'proposer_user_id')
+        ->hasMany('barterProposalsReceived', Model\BarterProposal::class, 'counterparty_user_id')
         ->hasOne('showcaseCollectible', Model\Collectible::class, 'id', 'showcase_collectible_id')
         ->default('blind_box_count', 0)
         ->cast('blind_box_count', 'integer'),
@@ -44,6 +51,7 @@ return [
 
     (new Extend\Policy)
         ->modelPolicy(Model\Collectible::class, Access\CollectiblePolicy::class)
+        ->modelPolicy(Model\BarterProposal::class, Access\BarterProposalPolicy::class)
         ->modelPolicy(Model\Trade::class, Access\TradePolicy::class),
 
     (new Extend\Settings)

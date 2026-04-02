@@ -131,7 +131,9 @@ prepare-playwright-profile:
 prepare-playwright-mcp-profile: prepare-playwright-profile
 	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
 	@mkdir -p "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
-	@if [ -d "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then cp -a "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)/." "$(PLAYWRIGHT_MCP_USER_DATA_DIR)/"; fi
+	@if [ -d "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then \
+		tar -C "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" -cf - . | tar -C "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" -xf -; \
+	fi
 	@find "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" -maxdepth 1 \( -name 'Singleton*' -o -name 'lockfile' \) -delete
 	@rm -f \
 		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Current Session" \

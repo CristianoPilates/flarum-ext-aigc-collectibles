@@ -261,6 +261,50 @@ donk-aigc-collectibles:
       permission_denied: 你的账号当前不能发送私信。
       self_not_allowed: 你不能给自己发私信。
 
+    barter:
+      thread_title: 线程内协商
+      thread_subtitle: 先聊天，再在这条私信线程里发起、修改并确认交换提案。
+      create_button: 发起提案
+      counter_button: 发起还价
+      composer_kicker: 提案草稿
+      composer_title: "为 {username} 配置提案"
+      enable_button: 添加提案
+      disable_button: 取消提案
+      summary_yours: "你已选择 {count} 项"
+      summary_theirs: "对方已选择 {count} 项"
+      your_offer: 你的出价
+      their_offer: 对方出价
+      collectibles_label: 藏品
+      blind_boxes_label: 盲盒
+      refresh: 刷新
+      loading: 加载中...
+      empty: 当前线程里还没有提案。
+      load_failed: 提案加载失败。
+      action_failed: 提案更新失败。
+      proposer: "{username} 发起"
+      offer_from: "{username} 提供"
+      revision: "第 {number} 版"
+      accept: 接受
+      reject: 拒绝
+      cancel: 取消
+      your_asset: 你的资产
+      collectible_link: 查看藏品页
+      no_assets: 当前没有可选资产。
+      validation_assets_required: 至少选择一项资产。
+      validation_both_sides_required: 提案必须同时包含双方资产。
+      validation_message_required: 请先在私信输入框里写下你要发送的话，再发送提案。
+      status_proposed: 已提案
+      status_accepted: 已接受
+      status_settling: 结算中
+      status_completed: 已成交
+      status_rejected: 已拒绝
+      status_cancelled: 已取消
+      status_superseded: 已被替代
+      status_failed: 已失败
+      asset_type_collectible: 藏品
+      asset_type_blind_box: 盲盒
+      asset_type_unknown: 资产
+
     wallet:
       title: Web3 钱包
       connect_button: 连接钱包

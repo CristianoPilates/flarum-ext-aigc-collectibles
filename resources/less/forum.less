@@ -922,170 +922,418 @@
 }
 
 // ============================================
-// Trade Panel
+// Barter Thread
 // ============================================
 
-.TradePanel {
-  &-title {
-    font-size: 18px;
-    margin: 0 0 12px;
-  }
-
-  &-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid #E5E7EB;
-    padding-bottom: 8px;
-
-    .active {
-      font-weight: 700;
-      border-bottom: 2px solid currentColor;
-    }
-  }
-
-  &-empty {
-    text-align: center;
-    color: #9CA3AF;
-    padding: 20px;
-  }
-
-  &-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  &-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid #E5E7EB;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-
-    &--accepted {
-      border-color: #86EFAC;
-      background: #F0FDF4;
-    }
-
-    &--rejected {
-      border-color: #FCA5A5;
-      background: #FEF2F2;
-    }
-
-    &--cancelled {
-      opacity: 0.6;
-    }
-
-    &Info {
-      flex: 1;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    &User {
-      font-weight: 600;
-    }
-
-    &Boxes {
-      i {
-        color: @rarity-legendary;
-      }
-      font-weight: 600;
-    }
-
-    &Actions {
-      display: flex;
-      gap: 4px;
-    }
-  }
-
-  &-statusBadge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-
-    &--pending {
-      background: #FEF3C7;
-      color: #D97706;
-    }
-    &--accepted {
-      background: #D1FAE5;
-      color: #059669;
-    }
-    &--rejected {
-      background: #FEE2E2;
-      color: #DC2626;
-    }
-    &--cancelled {
-      background: #F3F4F6;
-      color: #6B7280;
-    }
-  }
+.DialogSection-streamWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  min-height: 0;
 }
 
-// ============================================
-// Trade Request Modal
-// ============================================
+.BarterThreadPanel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #FFFFFF, #F8FAFC);
+  box-shadow: 0 12px 24px fade(#0F172A, 6%);
+  max-height: calc(100vh - 220px);
+  overflow: auto;
 
-.TradeRequestModal {
-  &-body {
-    padding: 20px;
-  }
-
-  &-target {
-    margin-bottom: 20px;
-    padding: 12px;
-    background: #F9FAFB;
-    border-radius: 8px;
-  }
-
-  &-targetInfo {
+  &-header {
     display: flex;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &-headerActions {
+    display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  &-owner {
-    font-size: 12px;
-    color: #6B7280;
+  &-title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.15;
   }
 
-  &-inputGroup {
+  &-subtitle {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.45;
+  }
+
+  &-loading,
+  &-empty {
+    padding: 18px 14px;
+    border-radius: 12px;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    color: #64748B;
+    text-align: center;
+  }
+
+  &-error {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    font-size: 13px;
+  }
+
+  &-list {
+    display: grid;
+    gap: 12px;
+  }
+}
+
+.BarterProposalCard {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+
+  &--completed {
+    border-color: fade(#10B981, 36%);
+  }
+
+  &--rejected,
+  &--cancelled,
+  &--failed {
+    opacity: 0.82;
+  }
+
+  &-header,
+  &-heading,
+  &-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-    input {
-      width: 100px;
+  &-meta {
+    font-size: 12px;
+    color: #64748B;
+  }
+
+  &-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #E2E8F0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+
+    &--proposed,
+    &--accepted,
+    &--settling {
+      background: fade(#F59E0B, 18%);
+      color: #B45309;
+    }
+
+    &--completed {
+      background: fade(#10B981, 16%);
+      color: #047857;
+    }
+
+    &--rejected,
+    &--cancelled,
+    &--superseded,
+    &--failed {
+      background: fade(#94A3B8, 18%);
+      color: #475569;
     }
   }
 
-  &-balance {
-    font-size: 13px;
-    color: #6B7280;
+  &-revision {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+  }
 
-    i {
-      color: @rarity-legendary;
-    }
+  &-message {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #334155;
+  }
+
+  &-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  &-column {
+    display: grid;
+    gap: 8px;
+  }
+
+  &-columnTitle {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  &-assets {
+    display: grid;
+    gap: 8px;
   }
 
   &-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    margin-top: 20px;
+  }
+}
+
+.BarterAssetCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+
+  &-header,
+  &-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &-kind,
+  &-mine {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  &-kind {
+    background: fade(#0F172A, 8%);
+    color: #334155;
+  }
+
+  &-mine {
+    background: fade(#3B82F6, 14%);
+    color: #1D4ED8;
+  }
+
+  &-body {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 10px;
+
+    &--blindBox {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &-image {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    display: block;
+  }
+
+  &-copy {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  &-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F172A;
+    word-break: break-word;
+  }
+
+  &-meta {
+    font-size: 12px;
+    color: #64748B;
+
+    &--stacked {
+      display: grid;
+      gap: 4px;
+    }
+  }
+
+  &-token,
+  &-seed {
+    font-family: monospace;
+  }
+
+  &-links {
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+.ComposerBody-header {
+  .item-donk-aigc-collectibles-barter-composer {
+    flex: 0 0 100%;
+    width: 100%;
+  }
+}
+
+.BarterComposerPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #D9E2EC;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #FFFFFF, #F8FAFC);
+
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  &-headerActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748B;
+  }
+
+  &-title {
+    margin-top: 4px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0F172A;
+  }
+
+  &-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  &-column,
+  &-group {
+    display: grid;
+    gap: 10px;
+  }
+
+  &-column {
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+  }
+
+  &-columnTitle,
+  &-groupLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &-options {
+    display: grid;
+    gap: 8px;
+    max-height: 190px;
+    overflow: auto;
+  }
+
+  &-option {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
+
+    &:hover,
+    &.is-selected {
+      border-color: fade(#2563EB, 38%);
+      background: fade(#DBEAFE, 42%);
+    }
+
+    input {
+      margin-top: 2px;
+    }
+  }
+
+  &-optionCopy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+  }
+
+  &-optionTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F172A;
+    word-break: break-word;
+  }
+
+  &-optionMeta {
+    font-size: 12px;
+    color: #64748B;
+    word-break: break-word;
+  }
+
+  &-empty,
+  &-loading {
+    padding: 12px;
+    border-radius: 10px;
+    background: #F8FAFC;
+    color: #64748B;
+    font-size: 13px;
+  }
+
+  &-error {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    color: #B91C1C;
+    font-size: 13px;
   }
 }
 
@@ -1372,6 +1620,18 @@
 // ============================================
 
 @media (max-width: 768px) {
+  .DialogSection-streamWrap {
+    grid-template-columns: 1fr;
+  }
+
+  .BarterThreadPanel {
+    max-height: none;
+  }
+
+  .BarterComposerPanel-grid {
+    grid-template-columns: 1fr;
+  }
+
   .CollectibleShowcasePost {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -1409,16 +1669,6 @@
   .CollectibleGallery-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .TradePanel-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .TradePanel-itemActions {
-    width: 100%;
-    justify-content: flex-end;
   }
 
   .WalletConnector-bound {

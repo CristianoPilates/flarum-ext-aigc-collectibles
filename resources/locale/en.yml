@@ -244,6 +244,50 @@ donk-aigc-collectibles:
       permission_denied: Your account can't send private messages right now.
       self_not_allowed: You can't message yourself.
 
+    barter:
+      thread_title: Proposal Thread
+      thread_subtitle: Chat first, then draft, revise, and confirm exchange proposals inside this private thread.
+      create_button: New Proposal
+      counter_button: Counteroffer
+      composer_kicker: Proposal Draft
+      composer_title: "Draft a proposal for {username}"
+      enable_button: Add Proposal
+      disable_button: Remove Proposal
+      summary_yours: "You selected {count}"
+      summary_theirs: "They selected {count}"
+      your_offer: Your Side
+      their_offer: Their Side
+      collectibles_label: Collectibles
+      blind_boxes_label: Blind Boxes
+      refresh: Refresh
+      loading: Loading...
+      empty: No proposals in this thread yet.
+      load_failed: Failed to load proposals.
+      action_failed: Failed to update the proposal.
+      proposer: "Proposed by {username}"
+      offer_from: "{username} offers"
+      revision: "Revision {number}"
+      accept: Accept
+      reject: Reject
+      cancel: Cancel
+      your_asset: Yours
+      collectible_link: View collectibles
+      no_assets: No available assets.
+      validation_assets_required: Select at least one asset.
+      validation_both_sides_required: The proposal must include assets from both sides.
+      validation_message_required: Write your message in the private message box before sending the proposal.
+      status_proposed: Proposed
+      status_accepted: Accepted
+      status_settling: Settling
+      status_completed: Settled
+      status_rejected: Rejected
+      status_cancelled: Cancelled
+      status_superseded: Superseded
+      status_failed: Failed
+      asset_type_collectible: Collectible
+      asset_type_blind_box: Blind Box
+      asset_type_unknown: Asset
+
     wallet:
       title: Web3 Wallet
       connect_button: Connect Wallet
