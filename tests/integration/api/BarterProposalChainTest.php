@@ -312,6 +312,9 @@ class BarterProposalChainTest extends TestCase
 
         $this->assertContains($response->getStatusCode(), [200, 201]);
 
+        $body = json_decode((string) $response->getBody(), true);
+        $this->assertSame((string) $proposalId, $body['data']['relationships']['replacesProposal']['data']['id']);
+
         $original = $this->database()->table('barter_proposals')->where('id', $proposalId)->first();
         $replacement = $this->database()->table('barter_proposals')->where('replaces_proposal_id', $proposalId)->first();
 
@@ -319,6 +322,21 @@ class BarterProposalChainTest extends TestCase
         $this->assertNotNull($replacement);
         $this->assertSame(2, (int) $replacement->revision_number);
         $this->assertSame(self::BOB_ID, (int) $replacement->proposer_user_id);
+
+        $listResponse = $this->send(
+            $this->request('GET', '/api/barter-proposals?threadType=dialog&threadId=' . $threadId . '&include=replacesProposal', [
+                'authenticatedAs' => self::ALICE_ID,
+            ])
+        );
+
+        $this->assertSame(200, $listResponse->getStatusCode(), (string) $listResponse->getBody());
+
+        $listBody = json_decode((string) $listResponse->getBody(), true);
+        $replacementResource = collect($listBody['data'])
+            ->first(fn (array $item): bool => (int) $item['id'] === (int) $replacement->id);
+
+        $this->assertNotNull($replacementResource);
+        $this->assertSame((string) $proposalId, $replacementResource['relationships']['replacesProposal']['data']['id']);
     }
 
     /** @test */

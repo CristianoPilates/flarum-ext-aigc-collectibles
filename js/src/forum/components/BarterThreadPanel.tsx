@@ -98,11 +98,15 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
     const currentUserId = app.session.user?.id?.();
     const proposer = proposal.proposer();
     const counterparty = proposal.counterparty();
+    const acceptedBy = proposal.acceptedBy?.();
     const proposerId = (proposer as any)?.id?.() || null;
     const counterpartyId = (counterparty as any)?.id?.() || null;
     const fromItems = items.filter((item: any) => String(item.ownerUserId?.()) === String(proposerId));
     const toItems = items.filter((item: any) => String(item.ownerUserId?.()) === String(counterpartyId));
     const isActing = this.actingProposalId === proposal.id();
+    const previousRevision = this.findPreviousRevision(proposal);
+    const replacementRevision = this.findReplacementRevision(proposal);
+    const notes = this.buildProposalNotes(proposal, previousRevision, replacementRevision, acceptedBy);
 
     return (
       <article
@@ -133,6 +137,8 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
             </span>
           </div>
         </div>
+
+        {notes.length > 0 ? <div className="BarterProposalCard-notes">{notes}</div> : null}
 
         {proposal.message?.() ? <p className="BarterProposalCard-message">{proposal.message()}</p> : null}
 
@@ -289,7 +295,7 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
         method: 'GET',
         url: app.forum.attribute('apiUrl') + '/barter-proposals',
         params: {
-          include: 'items.ownerUser,proposer,counterparty,acceptedBy',
+          include: 'items.ownerUser,proposer,counterparty,acceptedBy,replacesProposal',
           threadType: 'dialog',
           threadId: dialogId,
           sort: '-createdAt',
@@ -369,5 +375,64 @@ export default class BarterThreadPanel extends Component<BarterThreadPanelAttrs>
 
   async openComposer(proposal?: BarterProposal | null) {
     await openBarterComposer(this.attrs.dialog, this as any, proposal || null);
+  }
+
+  findPreviousRevision(proposal: BarterProposal): BarterProposal | null {
+    return proposal.replacesProposal?.() || null;
+  }
+
+  findReplacementRevision(proposal: BarterProposal): BarterProposal | null {
+    return (
+      this.proposals.find((candidate) => {
+        const replaced = candidate.replacesProposal?.();
+
+        return replaced && String(replaced.id?.()) === String(proposal.id?.());
+      }) || null
+    );
+  }
+
+  buildProposalNotes(proposal: BarterProposal, previousRevision: BarterProposal | null, replacementRevision: BarterProposal | null, acceptedBy: any) {
+    const notes: JSX.Element[] = [];
+    const previousRevisionNumber =
+      previousRevision?.revisionNumber?.() ||
+      ((proposal.revisionNumber?.() || 1) > 1 ? (proposal.revisionNumber?.() || 1) - 1 : null);
+
+    if (previousRevisionNumber) {
+      notes.push(
+        <span className="BarterProposalCard-note BarterProposalCard-note--lineage">
+          {this.trans('donk-aigc-collectibles.forum.barter.replaces_revision', {
+            number: previousRevisionNumber,
+          })}
+        </span>
+      );
+    }
+
+    if (replacementRevision?.revisionNumber?.()) {
+      notes.push(
+        <span className="BarterProposalCard-note BarterProposalCard-note--lineage">
+          {this.trans('donk-aigc-collectibles.forum.barter.replaced_by_revision', {
+            number: replacementRevision.revisionNumber?.(),
+          })}
+        </span>
+      );
+    } else if (proposal.status?.() === 'superseded') {
+      notes.push(
+        <span className="BarterProposalCard-note BarterProposalCard-note--lineage">
+          {this.trans('donk-aigc-collectibles.forum.barter.replaced_by_later_revision')}
+        </span>
+      );
+    }
+
+    if (acceptedBy && proposal.status?.() === 'completed') {
+      notes.push(
+        <span className="BarterProposalCard-note BarterProposalCard-note--resolution">
+          {this.trans('donk-aigc-collectibles.forum.barter.accepted_by', {
+            username: displayUserName(acceptedBy),
+          })}
+        </span>
+      );
+    }
+
+    return notes;
   }
 }

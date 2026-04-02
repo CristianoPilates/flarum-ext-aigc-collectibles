@@ -64,11 +64,11 @@ class BarterProposalResource extends AbstractDatabaseResource
         return [
             Endpoint\Index::make()
                 ->authenticated()
-                ->defaultInclude(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']),
+                ->defaultInclude(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy', 'replacesProposal']),
 
             Endpoint\Show::make()
                 ->authenticated()
-                ->defaultInclude(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']),
+                ->defaultInclude(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy', 'replacesProposal']),
 
             Endpoint\Create::make()
                 ->authenticated()

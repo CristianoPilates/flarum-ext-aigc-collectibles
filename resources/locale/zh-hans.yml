@@ -284,6 +284,10 @@ donk-aigc-collectibles:
       accept: 接受
       reject: 拒绝
       cancel: 取消
+      replaces_revision: "替代第 {number} 版"
+      replaced_by_revision: "已被第 {number} 版替代"
+      replaced_by_later_revision: 已被后续版本替代
+      accepted_by: "{username} 接受"
       your_asset: 你的资产
       collectible_link: 查看藏品页
       no_assets: 当前没有可选资产。

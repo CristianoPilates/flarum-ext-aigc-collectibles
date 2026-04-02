@@ -270,6 +270,10 @@ donk-aigc-collectibles:
       accept: Accept
       reject: Reject
       cancel: Cancel
+      replaces_revision: "Replaces revision {number}"
+      replaced_by_revision: "Replaced by revision {number}"
+      replaced_by_later_revision: Replaced by a later revision
+      accepted_by: "Accepted by {username}"
       your_asset: Yours
       collectible_link: View collectibles
       no_assets: No available assets.

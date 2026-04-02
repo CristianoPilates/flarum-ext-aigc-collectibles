@@ -1072,6 +1072,31 @@
     color: #334155;
   }
 
+  &-notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &-note {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+
+    &--lineage {
+      background: #F1F5F9;
+      color: #475569;
+    }
+
+    &--resolution {
+      background: fade(#10B981, 14%);
+      color: #047857;
+    }
+  }
+
   &-grid {
     display: grid;
     gap: 10px;

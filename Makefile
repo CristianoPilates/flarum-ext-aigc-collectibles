@@ -33,7 +33,7 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile prepare-playwright-mcp-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter mcp-barter-validation locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
+        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter mcp-barter-validation mcp-barter-history locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         enable-messages publish-site-runtime \
@@ -223,6 +223,9 @@ mcp-barter:
 mcp-barter-validation:
 	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-composer-validation.cjs"
 
+mcp-barter-history:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-history.cjs"
+
 up-mysql: assert-runtime-clean
 	devenv up mysql
 
@@ -358,6 +361,7 @@ help:
 	@echo "  make mcp-barter-inspect - 通过 MCP 检查私信线程内 barter composer 是否成功挂载"
 	@echo "  make mcp-barter     - 通过 MCP 验证 proposal-in-PM 主链路（buyer 发起，seller 接受）"
 	@echo "  make mcp-barter-validation - 通过 MCP 验证 barter composer 的前端校验分支"
+	@echo "  make mcp-barter-history - 通过 MCP 验证线程内协商 revision 历史呈现"
 	@echo "  PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual - 加载 unpacked 扩展"
 	@echo "  playwright test     - 直接运行 Playwright"
 	@echo "  playwright test --headed - 直接运行 headed Playwright"

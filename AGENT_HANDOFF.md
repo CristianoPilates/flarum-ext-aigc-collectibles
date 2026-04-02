@@ -919,6 +919,11 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - `empty-assets -> 至少选择一项资产。`
   - `missing-counterparty-assets -> 协商必须同时包含双方资产。`
   - `missing-message -> 请先在私信输入框里写下你要发送的话，再发送协商。`
+- `mcp-validate-barter-history.cjs` 最新实测已通过：
+  - 在真实私信线程里连续创建两版协商
+  - 前一版卡片会显示“已被第 N 版替代”
+  - 新一版卡片会显示“替代第 N 版”
+  - 成交后当前版卡片会显示“buyer 接受”
 - 2026-04-02 当前测试基线：
   - 目标 unit tests：
     `BlindBoxServiceTest|CollectibleProofServiceTest`
