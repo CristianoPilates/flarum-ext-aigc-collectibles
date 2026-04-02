@@ -21,7 +21,6 @@ return [
     new Extend\ApiResource(Api\Resource\BarterProposalResource::class),
     new Extend\ApiResource(Api\Resource\BarterProposalItemResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleResource::class),
-    new Extend\ApiResource(Api\Resource\TradeResource::class),
     new Extend\ApiResource(Api\Resource\CheckinRecordResource::class),
     new Extend\ApiResource(Api\Resource\Web3AccountResource::class),
     new Extend\ApiResource(Api\Resource\CollectibleEventResource::class),
@@ -36,8 +35,6 @@ return [
 
     (new Extend\Model(User::class))
         ->hasMany('collectibles', Model\Collectible::class, 'owner_id')
-        ->hasMany('tradesInitiated', Model\Trade::class, 'from_user_id')
-        ->hasMany('tradesReceived', Model\Trade::class, 'to_user_id')
         ->hasMany('checkinRecords', Model\CheckinRecord::class, 'user_id')
         ->hasMany('web3Accounts', Model\Web3Account::class, 'user_id')
         ->hasMany('barterProposalsCreated', Model\BarterProposal::class, 'proposer_user_id')
@@ -51,8 +48,7 @@ return [
 
     (new Extend\Policy)
         ->modelPolicy(Model\Collectible::class, Access\CollectiblePolicy::class)
-        ->modelPolicy(Model\BarterProposal::class, Access\BarterProposalPolicy::class)
-        ->modelPolicy(Model\Trade::class, Access\TradePolicy::class),
+        ->modelPolicy(Model\BarterProposal::class, Access\BarterProposalPolicy::class),
 
     (new Extend\Settings)
         ->default('donk-aigc-collectibles.checkin-reward', 1)

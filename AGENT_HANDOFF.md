@@ -28,16 +28,13 @@
 - 当前工作分支：
   `main`
 - 已落在 `HEAD` 的最近提交：
-  `17754c9`
-- 当前工作树是 dirty 的
-- dirty 内容主要包括：
-  - 一条尚未提交的“静态质量/LSP 清理 + MCP 验收稳定化”候选：
-    前端 TS typings 收敛
-    一批 PHP 低风险 docblock / 泛型 / 返回类型修复
-    `mcp-headed` 改为每次从 seed profile 复制 fresh runtime profile
-  - 少量与本轮任务无关的既有脏文件，例如：
-    `contracts/CollectibleNFT.sol`
-    `.codex`
+  `fae0a87`
+- 当前正在准备的新提交：
+  `refactor: retire legacy trade runtime path`
+- 当前工作树内容只应包含这一条提交相关改动：
+  - 删除旧 `Trade` 的运行时入口
+  - 删除旧 `Trade` 对应测试
+  - 保留历史数据库表与 `trade_id` 字段，不在本条提交物理删表
 
 ## 3. 已确认的事实
 
@@ -179,22 +176,68 @@ headed MCP 真实验收结论：
 
 - 用户已同意不要继续把旧 `Trade` 模型硬补成 barter
 - Phase 1 / Phase 2 已经绕开旧 `Trade`，把 CTA 先接到私信并附带藏品上下文
-- Phase 3 也已经开始，方向已从旧 modal 改成“proposal 挂在私信线程里”
+- Phase 3 已提交第一阶段，方向已从旧 modal 改成“proposal 挂在私信线程里”
 
 现状：
 
-- 旧 `TradeRequestModal` 还在代码里
-- 旧 `Trade` 仍然是“盲盒数量换单个 collectible”的窄模型
-- 用户后续报告的旧 bug
-  `set offer` 后 modal 无法正常关闭
-  已在 `c9474da` 修复并提交
+- 前端主路径已经不再使用旧 `Trade`
+- 当前 barter 主路径是：
+  私信线程内 `BarterProposal` / `BarterProposalItem`
+- 已提交：
+  `410d5c6`
+  `feat: move barter proposals into PM threads`
+- 已真实验收通过：
+  - buyer 在私信线程内发起 proposal
+  - seller 接受 proposal
+  - 双方资产完成交换
+  - seller 若失去正在展示的藏品，其 showcase 会被自动清空
 
-这说明：
+本次新变化：
 
-- 旧 Trade 路径还要做最小 bugfix
-- 但真正的 barter 重做不能继续依附旧 `Trade`
-- 当前新方向是单独的 `BarterProposal` / `BarterProposalItem`
-  挂在私信线程里做持续协商
+- 旧 `Trade` 的运行时后端链路正在被退役
+- 本条提交只删“仍然活着的运行时代码”，不碰历史表结构
+
+已删除或正在删除的运行时入口：
+
+- `extend.php`
+  - `TradeResource`
+  - `User` 上的 `tradesInitiated` / `tradesReceived`
+  - `TradePolicy` 注册
+- `CollectibleServiceProvider`
+  - `TradeServiceInterface -> TradeService`
+  - `StateMachineConfig::trade()`
+- `StateMachineConfig::trade()`
+- `CollectibleResource` 的 `canTrade` / `trades`
+- `CollectibleEventResource` 的 `trade`
+- `Collectible` 的 `trades()`
+- `CollectibleEvent` 的 `trade()`
+- 整套旧文件：
+  - `TradeResource`
+  - `TradePolicy`
+  - `TradeService`
+  - `TradeServiceInterface`
+  - `TradeRepository`
+  - `TradeValidator`
+  - `AcceptTrade*`
+  - `RejectTrade*`
+  - `CancelTrade*`
+  - `CreateTrade*`
+  - `TradeCreated`
+  - `TradeCompleted`
+  - `Model\Trade`
+  - 3 个旧 `Trade` 测试文件
+
+刻意保留的历史兼容层：
+
+- `trades` 表迁移仍保留
+- `collectible_events.trade_id` 字段仍保留
+- `trade_reward` blind box 类型仍保留
+
+结论：
+
+- 当前产品语义已经是：
+  `proposal -> 接受 -> 资产结算`
+- 旧 `Trade` 只剩历史数据语义，不再是运行时业务主路径
 
 ### 3.6 Blind box / rarity / phrase pool
 
@@ -216,7 +259,7 @@ headed MCP 真实验收结论：
 - 未鉴定前 budget 显示 `???`
 - 还要展示该 type 可抽取的 phrase pool categories
 
-截至当前会话结束前，第四条提交候选已基本做完，但尚未 commit：
+Blind box 资产化与两段式开盒已经提交并落地：
 
 - 新增前端 BlindBox model：
   [BlindBox.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/models/BlindBox.ts)
@@ -269,16 +312,21 @@ headed MCP 真实验收结论：
     `Collectible #48`
   - 库存从 `3` 变成 `2`
 
-因此，第 4 条 blind box 提交已经完成。当前下一步不再是提交 blind box，而是先收口一条“静态质量提升”提交。
+因此，第 4 条 blind box 提交已经完成，当前不需要再把它当成待提交候选。
 
 2026-04-02 更新：
 
 - Phase 2 已提交：
   `17754c9`
   `Add collectible context to private messages`
-- 当前真正的下一步是：
-  先提交“静态质量 / LSP 清理 + MCP 运行 profile 稳定化”
-  然后再进入 `Phase 3` 的 barter 模型重做
+- 静态质量 / MCP runtime 稳定化也已提交：
+  `c62495e`
+  `Stabilize MCP runtime profile and clean static typing`
+- 之后的环境入口结构化修复已提交：
+  `fae0a87`
+  `chore: make MCP commands enter devenv explicitly`
+- 当前真正的下一步已经不是这些历史提交，
+  而是退役旧 `Trade` 运行时路径
 
 ### 3.7 i18n / 语言
 
@@ -372,7 +420,7 @@ headed MCP 真实验收结论：
 - 实际可用的 PHP 静态分析入口是：
   `phpactor worse:analyse src --format=json`
 
-2026-03-31 当前已完成一轮较大但低风险的静态质量清理，尚未提交：
+2026-03-31 发起的一轮较大但低风险静态质量清理已经提交：
 
 - 前端：
   `npm run check-typings` 已通过
@@ -402,7 +450,7 @@ headed MCP 真实验收结论：
 
 结论：
 
-- 这一轮静态质量已经收敛到合理边界
+- 这一轮静态质量已经收敛到合理边界，并已提交
 - 不应再为追求“分析器全绿”而改 Flarum 运行时用法
 
 2026-04-02 新增确认：
@@ -420,65 +468,20 @@ headed MCP 真实验收结论：
 
 ## 4. 当前 dirty 文件
 
-当前可见 dirty 文件大致分两类：
+当前这条未提交改动只应包含旧 `Trade` 运行时退役：
 
-应该进入下一条“质量 / MCP 稳定化”提交的文件：
-
-- `Makefile`
-- `devenv.nix`
-- `e2e/app.e2e.spec.cjs`
-- `js/src/global.d.ts`
-- `js/src/forum/components/BlindBoxOpener.tsx`
-- `js/src/forum/components/CollectibleDetailModal.tsx`
-- `js/src/forum/components/CollectibleProofModal.tsx`
-- `js/src/forum/components/PostCollectibleBadge.tsx`
-- `js/src/forum/components/TradePanel.tsx`
-- `js/src/forum/components/TradeRequestModal.tsx`
-- `js/src/forum/components/UserCollectiblesPage.tsx`
-- `js/src/forum/components/WalletConnector.tsx`
-- `js/src/forum/utils/ipfs.ts`
-- `js/src/forum/utils/notifications.ts`
-- `js/tsconfig.json`
-- `resources/less/forum.less`
-- `scripts/playwright/mcp-cli/README.md`
-- `scripts/playwright/mcp-cli/mcp-validate-proof.cjs`
-- `scripts/playwright/mcp-cli/mcp-validate-showcase.cjs`
-- `scripts/playwright/mcp.config.json`
-- `src/Access/CheckinPolicy.php`
+- `extend.php`
+- `js/src/forum/models/Collectible.ts`
 - `src/Access/CollectiblePolicy.php`
-- `src/Access/TradePolicy.php`
-- `src/Api/Resource/BlindBoxResource.php`
-- `src/Api/UserResourceFields.php`
-- `src/Command/BindWallet.php`
-- `src/Command/CreateTrade.php`
-- `src/Model/BlindBox.php`
+- `src/Api/Resource/CollectibleEventResource.php`
+- `src/Api/Resource/CollectibleResource.php`
 - `src/Model/Collectible.php`
 - `src/Model/CollectibleEvent.php`
-- `src/Model/Trade.php`
-- `src/Model/Web3Account.php`
-- `src/Repository/CheckinRepository.php`
-- `src/Repository/CollectibleRepository.php`
-- `src/Repository/TradeRepository.php`
-- `src/Search/CollectibleSearcher.php`
-- `src/Service/CollectibleProofService.php`
-- `src/Service/Contracts/CollectibleProofServiceInterface.php`
-- `src/Service/Contracts/IPFSServiceInterface.php`
-- `src/Service/Contracts/WalletVerificationServiceInterface.php`
-- `src/Service/NftMintingService.php`
+- `src/Provider/CollectibleServiceProvider.php`
 - `src/StateMachine/StateMachineConfig.php`
-- `tests/integration/api/BlindBoxLifecycleTest.php`
+- 被删除的旧 `Trade` 后端文件与测试文件
 
-明确不要进这条提交的文件：
-
-- `contracts/CollectibleNFT.sol`
-- `.codex`
-- `scripts/playwright/mcp-cli/debug-cta-state.cjs`
-- `scripts/playwright/mcp-cli/validate-showcase-context.cjs`
-
-说明：
-
-- `contracts/CollectibleNFT.sol` 不是本轮主任务改动，应避免误回滚
-- 其余 keep 文件主要属于“前端 TS + PHP 类型注释清理 + MCP 验收稳定化”这一条尚未提交的质量改动
+如果接手时看到别的脏文件，先确认是否为用户手工改动，不要顺手回滚。
 
 ## 5. 已跑过的验证
 
@@ -520,22 +523,42 @@ headed MCP 真实验收结论：
 - 论坛 API 当前健康：
   `curl -fsS http://127.0.0.1:8080/api`
   可正常返回
-- 旧的共享长寿命 MCP 运行态是导致验收不稳定的主要来源：
-  - 旧 tab 残留
-  - beforeunload dialog 残留
-  - session restore 残留
-- 当前稳定方案已经落地：
-  - `pw-manual` 使用 seed profile
-  - `mcp-headed` / `make mcp` 每次先复制 fresh runtime profile
-- 实测最稳的真实 GUI 验收路径是：
-  使用隔离端口启动单次 MCP 运行，例如 `8932`
-- 已通过的隔离 headed 验收包括：
-  - showcase 展柜可见且详情可打开
-  - proof modal 可打开并显示预期 section
-  - `/u/admin/collectibles` 页面基础渲染正常
-- 因此：
-  不能再把 `8931` 共享态偶发失败直接理解为业务功能回归
-  提交前应优先使用 fresh runtime profile 的实际 GUI 验收
+- 环境抖动的结构性修复已提交：
+  `fae0a87`
+  `chore: make MCP commands enter devenv explicitly`
+- 修复点：
+  - `.env` 只放项目配置
+  - `devenv` 才提供 Playwright / MCP / mysql / `NODE_PATH`
+  - 所有关键 `make mcp-*` / `verify` 入口显式通过
+    `scripts/runtime/with-devenv.sh`
+    进入环境
+- 已真实通过：
+  - `make mcp-headed`
+  - `make mcp-barter-inspect`
+  - `make mcp-barter`
+- 最近一次真实验收结果：
+  - `BarterThreadPanel = true`
+  - 点击 `发起提案` 后，私信 composer 内联 panel 正常出现
+  - buyer 视角 proposal 状态为 `已提案`
+  - seller 接受后状态为 `已成交`
+
+本条“旧 Trade 运行时退役”提交在 handoff 写入后已重新完成验证：
+
+- `npm run check-typings`
+  通过
+- `npm run build`
+  通过
+- `vendor/bin/phpunit -c tests/phpunit.integration.xml`
+  通过
+
+- `make publish-site-runtime`
+  通过
+- `make mcp-headed`
+  通过
+- `make mcp-barter-inspect`
+  通过
+- `make mcp-barter`
+  通过
 
 注意：
 
@@ -557,18 +580,23 @@ headed MCP 真实验收结论：
    已提交
 4. 然后把 BlindBox 从余额重构为一等资产并做独立页面
    已提交
-5. 然后先做一条静态质量 / LSP 清理提交
-   当前进行中，尚未提交
-6. 这条提交同时收口 MCP fresh runtime profile 稳定化
-7. 然后进入 `Phase 3`：
-   重做 barter / proposal 模型并挂入私信线程
-8. 当前已经进入 `Phase 3`，但尚未提交
+5. 然后进入 `Phase 3`：
+   把 barter proposal 挂进私信线程
+   已提交
+6. 然后做环境抖动的结构性修复：
+   让 MCP / verify 命令显式进入 `devenv`
+   已提交
+7. 当前正在做：
+   退役旧 `Trade` 运行时路径
+8. 这条提交之后，才考虑：
+   历史数据层清理 / Phase 3 后续能力扩展
 
 关键提醒：
 
 - `展柜 CTA` 已完成并提交，不要回退到旧 trade CTA 路径
 - `Trade 模型重做` 不是取消，而是已经转向 `BarterProposal` 方案
 - 不要再恢复 modal barter 路线
+- 不要再把旧 `Trade` 当成主业务模型继续补功能
 
 ## 7. commit 规则
 
@@ -590,6 +618,7 @@ headed MCP 真实验收结论：
 - `8931` 共享态仍可能偶发不稳
 - 提交前优先使用 fresh runtime profile 的真实 GUI 验收
 - `/tmp/*.cjs` 只作为临时排障辅助，不要把它们提交进仓库
+- 优先使用仓库里现成的 `make mcp-*` 入口，不要绕过 `with-devenv`
 
 ## 8. 已经明确不要再做的事
 
@@ -599,6 +628,8 @@ headed MCP 真实验收结论：
 - 不要接管用户日常 Chrome
 - 不要把旧 `Trade` 硬补成目标 barter 模型
 - 不要让 `mcp-headed` 直接复用 seed profile
+- 不要为“环境兜底”继续堆复杂 fallback
+- 不要假设“在仓库目录里”就等于“已经进入 devenv shell”
 
 ## 9. 接手时先看哪些文件
 
@@ -610,7 +641,8 @@ headed MCP 真实验收结论：
 - [js/src/forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
 - [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
 - [js/src/forum/components/CollectibleProofModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleProofModal.tsx)
-- [js/src/forum/components/TradeRequestModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/TradeRequestModal.tsx)
+- [js/src/forum/components/BarterThreadPanel.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BarterThreadPanel.tsx)
+- [js/src/forum/components/BarterComposerPanel.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/BarterComposerPanel.tsx)
 - [scripts/forum/locale-status.php](/home/donk/development/flarum-ext-aigc-collectibles/scripts/forum/locale-status.php)
 - [scripts/forum/set-default-locale.php](/home/donk/development/flarum-ext-aigc-collectibles/scripts/forum/set-default-locale.php)
 - [resources/locale/zh-Hans.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/zh-Hans.yml)
@@ -618,17 +650,19 @@ headed MCP 真实验收结论：
 - [js/src/global.d.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/global.d.ts)
 - [src/Api/Resource/BlindBoxResource.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Resource/BlindBoxResource.php)
 - [src/Model/BlindBox.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/BlindBox.php)
-- [src/Model/Trade.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/Trade.php)
+- [src/Api/Resource/BarterProposalResource.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Api/Resource/BarterProposalResource.php)
+- [src/Model/BarterProposal.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Model/BarterProposal.php)
+- [src/Service/BarterService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/BarterService.php)
 - [src/Service/BlindBoxService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/BlindBoxService.php)
 - [src/Access/CollectiblePolicy.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Access/CollectiblePolicy.php)
-- [src/Access/TradePolicy.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Access/TradePolicy.php)
 - [src/Service/CollectibleProofService.php](/home/donk/development/flarum-ext-aigc-collectibles/src/Service/CollectibleProofService.php)
+- [scripts/runtime/with-devenv.sh](/home/donk/development/flarum-ext-aigc-collectibles/scripts/runtime/with-devenv.sh)
 - [scripts/playwright/mcp.config.json](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp.config.json)
 - [scripts/playwright/mcp-cli/mcp-client.cjs](/home/donk/development/flarum-ext-aigc-collectibles/scripts/playwright/mcp-cli/mcp-client.cjs)
 
 ## 10. 一句话总结
 
-项目当前不是“所有东西都没做”，而是已经进入一个明确但未收口的过渡态：
+项目当前不是“功能没做”，而是已经从旧 `Trade` 过渡到私信线程内 proposal，并正在把旧运行时残留退役：
 
 - proof 已落地
 - showcase 已落地
@@ -637,127 +671,13 @@ headed MCP 真实验收结论：
 - 第三条 locale 已提交
 - 第四条 BlindBox 资产化与两段式开盒已提交
 - Phase 2 的私信藏品上下文也已提交
-- 当前进行中的不是新业务功能，而是一条静态质量 / LSP 清理 + MCP 稳定化提交
-- 当前最大的未收口业务任务是 `Phase 3` 的 barter proposal-in-PM 收口
-- 旧 `Trade` 不再是目标模型
-- 2026-04-02 当前前台主路径已进一步收口：
-  - [UserCollectiblesPage.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/UserCollectiblesPage.tsx)
-    不再挂旧 `TradePanel`
-  - 前端旧 `TradePanel` / `TradeRequestModal` / `forum` 侧 `Trade` model 注册已移除
-  - 私信线程文案已从“交易”切成“协商 / 提案”
-  - 后端旧 `Trade` 兼容层暂时还在，但已退出主 UX
+- Phase 3 的 proposal-in-PM 主链也已提交
+- MCP / verify 的环境抖动已做结构性修复
+- 当前进行中的是：
+  退役旧 `Trade` 运行时路径
+- 旧 `Trade` 不再是目标模型，也不再应出现在运行时主链路
 
 下一位 agent 不要偏航。先看清当前 dirty tree 里哪些属于质量提交、哪些属于 Phase 3，然后在每条 commit 前都先做 headed MCP 实测。
-
-## 11. 2026-04-01 本次恢复记录
-
-### 11.1 MCP 验收链路
-
-- `.env` 里的 `PLAYWRIGHT_MCP_URL` 之前写成了 `http://127.0.0.1:8931/mcp`
-- 当前 `@playwright/mcp` 运行时实际要求客户端通过 `http://localhost:8931/mcp` 接入
-- 现已修正为：
-  `PLAYWRIGHT_MCP_URL=http://localhost:8931/mcp`
-- 同时保留服务端绑定：
-  `scripts/playwright/mcp.config.json` / `devenv.nix`
-  仍使用 `127.0.0.1` 监听
-- 结论：
-  当前可用组合是：
-  - 服务监听：`127.0.0.1:8931`
-  - 客户端 URL：`http://localhost:8931/mcp`
-
-2026-04-02 补充：
-
-- 仅修正 `localhost` / `127.0.0.1` 还不够
-- 真正稳定下来的关键是：
-  `Makefile` / `devenv.nix` / `scripts/playwright/mcp.config.json`
-  现在统一使用：
-  - seed profile：
-    `.devenv/state/playwright-profile`
-  - runtime profile：
-    `.devenv/state/playwright-mcp-profile`
-- `mcp-headed` 每次启动前都会重建 runtime profile，
-  并删除 `Singleton*`、`Current Session`、`Last Session`、`Sessions/`
-  等残留状态文件
-- 实际上，当前最可靠的验收方式是单次隔离端口运行，例如：
-  `8932`
-
-### 11.2 私信 composer 崩溃根因与修复
-
-- 真实 headed 验收先复现到：
-  - 官方 `/messages` 新建私信也失败
-  - `.Composer normal visible` 已存在，但 `.TextEditor-editor` 没建出来
-  - 报错：
-    `Cannot read properties of undefined (reading 'append')`
-- 这说明问题不是展柜 CTA 独有，而是 `TextEditor.onbuild()` 执行时
-  `.TextEditor-editorContainer` 偶发还没准备好
-- 已在
-  [js/src/forum.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum.tsx)
-  加入一个非常窄的前端防御：
-  - override `flarum/common/components/TextEditor.onbuild`
-  - 容器缺失时最多重试 20 次
-  - 容器就绪后再执行原始 `onbuild`
-  - 不改 vendor，不改消息业务逻辑
-
-### 11.3 本次真实 headed 验收结果
-
-- 官方消息页：
-  `node scripts/playwright/mcp-cli/mcp-validate-messages.cjs`
-  已通过
-- 验收结论：
-  - buyer 可在 `/messages` 新建私信
-  - composer 输入框可见
-  - 消息可发送
-  - seller 可看到新消息
-- 展柜 CTA：
-  `node scripts/playwright/mcp-cli/validate-showcase-cta-click.cjs`
-  已通过
-- 验收结论：
-  - discussion / reply 里的展柜 CTA 可点击
-  - composer 正常显示
-  - `.TextEditor-editor` 可见
-  - `composerDisplay` 为 `block`
-
-### 11.4 当前残余注意事项
-
-- `debug-cta-state.cjs` 这类脚本比验收脚本更脆，
-  在 shared MCP / shared browser context 下偶发 `fetch failed`
-- 不要并行跑多个 MCP CLI 脚本
-- 必须串行
-- 推荐顺序：
-  1. `make mcp-headed`
-  2. 等待 `playwright-mcp ready`
-  3. 串行运行单个 `node scripts/playwright/mcp-cli/*.cjs`
-- 目前前台 `make mcp-headed` 比后台 `devenv` 进程更稳定，提交前验收优先用前台模式
-
-### 11.5 Phase 2 已实现：私信附带藏品上下文
-
-用户已明确同意直接进入 Phase 2：
-
-- 目标不是重做旧 `Trade`
-- 而是在 Phase 1 的“展柜 -> 私信主人”基础上，
-  让私信 composer 自动附带当前藏品上下文
-
-本次已完成实现：
-
-- 在
-  [js/src/forum/utils/privateMessages.ts](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/utils/privateMessages.ts)
-  新增：
-  - `PrivateMessageCollectibleContext`
-  - `buildCollectibleMessageContent(...)`
-  - `currentDiscussionTitle()`
-  - 更稳的 `waitForComposerReady()`
-  - `applyInitialContent(...)`
-- `applyInitialContent(...)` 不只写
-  `app.composer.fields.content(...)`
-  也会同步把内容写入底层 editor DOM，
-  避免 composer 已显示但 textarea 没更新
-- 在
-  [js/src/forum/components/PostCollectibleShowcase.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/PostCollectibleShowcase.tsx)
-  接入展柜 CTA 的上下文预填
-- 在
-  [js/src/forum/components/CollectibleDetailModal.tsx](/home/donk/development/flarum-ext-aigc-collectibles/js/src/forum/components/CollectibleDetailModal.tsx)
-  接入详情弹窗 CTA 的上下文预填
-- 在 locale 中补齐上下文字段：
   - [resources/locale/en.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/en.yml)
   - [resources/locale/zh-Hans.yml](/home/donk/development/flarum-ext-aigc-collectibles/resources/locale/zh-Hans.yml)
 
@@ -844,7 +764,7 @@ headed MCP 真实验收结论：
 - 当前完成这条提交后，下一阶段就是 `Phase 3`：
   重新设计挂在私信线程里的 barter 模型
 
-## 13. 2026-04-02 Phase 3 方向已变更
+## 13. 2026-04-02 Phase 3 已落地
 
 这一条非常关键，下一位 agent 不要继续沿用旧思路：
 
@@ -865,9 +785,9 @@ headed MCP 真实验收结论：
 - 真正想说的话就直接发在私信正文里
 - proposal 作为附带的协商对象创建
 
-### 13.1 当前未提交实现状态
+### 13.1 已提交实现状态
 
-已落地但尚未提交的 Phase 3 代码包括：
+已落地并已提交的 Phase 3 代码包括：
 
 - 后端 barter 生命周期骨架：
   - `BarterProposal`
@@ -993,15 +913,13 @@ headed MCP 真实验收结论：
 
 ### 13.4 当前还没做的事
 
-- 这轮 Phase 3 主链虽然已经通过过 headed MCP，
-  但提交前仍应再跑一次：
-  1. `make publish-site-runtime`
-  2. 确认 `mcp-headed` 正常
-  3. 串行执行：
-     - `node scripts/playwright/mcp-cli/mcp-inspect-barter-composer.cjs`
-     - `node scripts/playwright/mcp-cli/mcp-validate-barter-composer.cjs`
-- 还没有按提交边界整理当前 dirty tree
-- 还没有决定这一轮是先提交 Phase 3，还是先继续拆分质量提交
+- 当前不再需要决定“是否先提交 Phase 3”，因为它已经提交
+- 当前真正未做的是：
+  - 退役旧 `Trade` 运行时路径后的 headed MCP 重新验收
+  - 后续是否继续清理历史数据层：
+    `trades` 表 / `collectible_events.trade_id` 的最终去留
+  - Phase 3 的后续能力扩展：
+    更细粒度提案修订、历史呈现、语义清理
 
 ### 13.5 脚本现状提醒
 

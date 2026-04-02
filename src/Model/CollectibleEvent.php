@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Collectible $collectible
  * @property-read User|null $fromUser
  * @property-read User|null $toUser
- * @property-read Trade|null $trade
  */
 class CollectibleEvent extends AbstractModel
 {
@@ -54,14 +53,6 @@ class CollectibleEvent extends AbstractModel
     public function toUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
-    }
-
-    /**
-     * @return BelongsTo<Trade, self>
-     */
-    public function trade(): BelongsTo
-    {
-        return $this->belongsTo(Trade::class, 'trade_id');
     }
 
     public static function log(

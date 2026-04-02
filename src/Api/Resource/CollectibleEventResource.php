@@ -53,9 +53,6 @@ class CollectibleEventResource extends AbstractDatabaseResource
             Schema\Relationship\ToOne::make('toUser')
                 ->type('users')
                 ->includable(),
-            Schema\Relationship\ToOne::make('trade')
-                ->type('trades')
-                ->includable(),
         ];
     }
 

@@ -23,9 +23,6 @@ export default class Collectible extends Model {
   canMint() {
     return Model.attribute<boolean>('canMint').call(this);
   }
-  canTrade() {
-    return Model.attribute<boolean>('canTrade').call(this);
-  }
   isShowcase() {
     return Model.attribute<boolean>('isShowcase').call(this);
   }

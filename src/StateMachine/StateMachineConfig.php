@@ -5,7 +5,6 @@ namespace Donk\AigcCollectibles\StateMachine;
 use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\BarterProposal;
 use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Model\Trade;
 
 class StateMachineConfig
 {
@@ -76,66 +75,6 @@ class StateMachineConfig
                 ],
             ],
             'callbacks' => [],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public static function trade(): array
-    {
-        return [
-            'class' => Trade::class,
-            'graph' => 'trade',
-            'property_path' => 'status',
-            'states' => [
-                Trade::STATUS_PENDING,
-                Trade::STATUS_ACCEPTED,
-                Trade::STATUS_SETTLING,
-                Trade::STATUS_COMPLETED,
-                Trade::STATUS_REJECTED,
-                Trade::STATUS_CANCELLED,
-                Trade::STATUS_FAILED,
-            ],
-            'transitions' => [
-                'accept' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_ACCEPTED,
-                ],
-                'settle' => [
-                    'from' => [Trade::STATUS_ACCEPTED],
-                    'to' => Trade::STATUS_SETTLING,
-                ],
-                'complete' => [
-                    'from' => [Trade::STATUS_SETTLING],
-                    'to' => Trade::STATUS_COMPLETED,
-                ],
-                'reject' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_REJECTED,
-                ],
-                'cancel' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_CANCELLED,
-                ],
-                'fail' => [
-                    'from' => [Trade::STATUS_SETTLING],
-                    'to' => Trade::STATUS_FAILED,
-                ],
-            ],
-            'callbacks' => [
-                'after' => [
-                    'mark_terminal_completion' => [
-                        'to' => [
-                            Trade::STATUS_COMPLETED,
-                            Trade::STATUS_REJECTED,
-                            Trade::STATUS_CANCELLED,
-                            Trade::STATUS_FAILED,
-                        ],
-                        'do' => ['object', 'markCompletedAt'],
-                    ],
-                ],
-            ],
         ];
     }
 

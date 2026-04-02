@@ -116,9 +116,6 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->nullable(),
             Schema\Integer::make('timesTraded')
                 ->property('times_traded'),
-            Schema\Boolean::make('canTrade')
-                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
-                ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('trade', $model)),
             Schema\Boolean::make('canMint')
                 ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
                 ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('mint', $model)),
@@ -136,9 +133,6 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->includable(),
             Schema\Relationship\ToMany::make('events')
                 ->type('collectible-events')
-                ->includable(),
-            Schema\Relationship\ToMany::make('trades')
-                ->type('trades')
                 ->includable(),
         ];
     }

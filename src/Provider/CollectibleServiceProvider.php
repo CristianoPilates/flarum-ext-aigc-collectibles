@@ -15,11 +15,9 @@ use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CollectibleProofServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\NftMintingServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\TradeServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\WalletVerificationServiceInterface;
 use Donk\AigcCollectibles\Service\IPFSService;
 use Donk\AigcCollectibles\Service\NftMintingService;
-use Donk\AigcCollectibles\Service\TradeService;
 use Donk\AigcCollectibles\Service\WalletVerificationService;
 use Donk\AigcCollectibles\StateMachine\StateMachineConfig;
 use Flarum\Api\Resource\UserResource;
@@ -35,7 +33,6 @@ class CollectibleServiceProvider extends AbstractServiceProvider
             return new Factory([
                 StateMachineConfig::collectible(),
                 StateMachineConfig::blindBox(),
-                StateMachineConfig::trade(),
                 StateMachineConfig::barterProposal(),
             ]);
         });
@@ -48,7 +45,6 @@ class CollectibleServiceProvider extends AbstractServiceProvider
         $this->container->singleton(IPFSServiceInterface::class, IPFSService::class);
         $this->container->singleton(WalletVerificationServiceInterface::class, WalletVerificationService::class);
         $this->container->singleton(NftMintingServiceInterface::class, NftMintingService::class);
-        $this->container->singleton(TradeServiceInterface::class, TradeService::class);
     }
 
     public function boot(): void

@@ -26,15 +26,6 @@ class CollectiblePolicy extends AbstractPolicy
         }
     }
 
-    public function trade(User $actor, Collectible $collectible): ?string
-    {
-        if ($actor->id === $collectible->owner_id && $collectible->status === Collectible::STATUS_COMPLETED) {
-            return $this->allow();
-        }
-
-        return $this->deny();
-    }
-
     public function mint(User $actor, Collectible $collectible): ?string
     {
         if ($actor->id === $collectible->owner_id

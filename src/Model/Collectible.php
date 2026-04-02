@@ -25,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon $updated_at
  * @property-read User $owner
  * @property-read CollectibleEvent[] $events
- * @property-read Trade[] $trades
  */
 class Collectible extends AbstractModel
 {
@@ -65,14 +64,6 @@ class Collectible extends AbstractModel
     public function events(): HasMany
     {
         return $this->hasMany(CollectibleEvent::class, 'collectible_id');
-    }
-
-    /**
-     * @return HasMany<Trade, self>
-     */
-    public function trades(): HasMany
-    {
-        return $this->hasMany(Trade::class, 'collectible_id');
     }
 
     public function getNameAttribute(): string
