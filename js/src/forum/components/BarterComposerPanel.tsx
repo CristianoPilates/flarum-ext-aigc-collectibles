@@ -4,12 +4,16 @@ import Button from 'flarum/common/components/Button';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { transText } from '../utils/i18n';
 import { displayUserName } from '../utils/users';
-import type { BarterAsset } from '../utils/barterComposer';
+import type { BarterAsset, BarterSelectionSide } from '../utils/barterComposer';
 import {
+  barterSelections,
   barterSelectionCounts,
+  enableBarterComposer,
   ensureBarterComposerFields,
   loadBarterAssets,
   optionToken,
+  resetBarterSelections,
+  toggleBarterSelection,
 } from '../utils/barterComposer';
 
 interface BarterComposerPanelAttrs {
@@ -97,12 +101,14 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
           </div>
           {this.assetGroup(
             payload.yours?.collectibles || [],
-            fields.barterMySelections(),
+            barterSelections(this.attrs.composer, 'yours'),
+            'yours',
             'collectibles_label'
           )}
           {this.assetGroup(
             payload.yours?.blindBoxes || [],
-            fields.barterMySelections(),
+            barterSelections(this.attrs.composer, 'yours'),
+            'yours',
             'blind_boxes_label'
           )}
         </div>
@@ -113,12 +119,14 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
           </div>
           {this.assetGroup(
             payload.theirs?.collectibles || [],
-            fields.barterTheirSelections(),
+            barterSelections(this.attrs.composer, 'theirs'),
+            'theirs',
             'collectibles_label'
           )}
           {this.assetGroup(
             payload.theirs?.blindBoxes || [],
-            fields.barterTheirSelections(),
+            barterSelections(this.attrs.composer, 'theirs'),
+            'theirs',
             'blind_boxes_label'
           )}
         </div>
@@ -126,7 +134,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
     );
   }
 
-  assetGroup(assets: BarterAsset[], selections: string[], labelKey: string) {
+  assetGroup(assets: BarterAsset[], selections: string[], side: BarterSelectionSide, labelKey: string) {
     return (
       <div className="BarterComposerPanel-group">
         <div className="BarterComposerPanel-groupLabel">
@@ -148,7 +156,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
                     type="checkbox"
                     checked={checked}
                     onchange={(event: InputEvent) => {
-                      this.toggleSelection(selections, token, (event.target as HTMLInputElement).checked);
+                      this.toggleSelection(side, token, (event.target as HTMLInputElement).checked);
                     }}
                   />
                   <div className="BarterComposerPanel-optionCopy">
@@ -193,42 +201,23 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
     const fields = ensureBarterComposerFields(this.attrs.composer);
     const nextEnabled = !fields.barterEnabled();
 
-    fields.barterEnabled(nextEnabled);
-    fields.barterExpanded(nextEnabled);
-    fields.barterError(null);
-    fields.barterValidationError(null);
-
     if (!nextEnabled) {
-      fields.barterMySelections([]);
-      fields.barterTheirSelections([]);
+      fields.barterEnabled(false);
+      fields.barterExpanded(false);
+      fields.barterError(null);
+      fields.barterValidationError(null);
+      resetBarterSelections(this.attrs.composer);
       fields.barterReplacesProposalId(null);
       m.redraw();
       return;
     }
 
+    enableBarterComposer(this.attrs.composer);
     await loadBarterAssets(this.attrs.composer, this.attrs.dialog, true);
   }
 
-  toggleSelection(selections: string[], token: string, checked: boolean) {
-    const fields = ensureBarterComposerFields(this.attrs.composer);
-    const current = [...selections];
-    const index = current.indexOf(token);
-
-    if (checked && index === -1) {
-      current.push(token);
-    }
-
-    if (!checked && index !== -1) {
-      current.splice(index, 1);
-    }
-
-    if (selections === fields.barterMySelections()) {
-      fields.barterMySelections(current);
-    } else {
-      fields.barterTheirSelections(current);
-    }
-
-    fields.barterValidationError(null);
+  toggleSelection(side: BarterSelectionSide, token: string, checked: boolean) {
+    toggleBarterSelection(this.attrs.composer, side, token, checked);
   }
 
   trans(key: string, parameters: Record<string, unknown> = {}) {

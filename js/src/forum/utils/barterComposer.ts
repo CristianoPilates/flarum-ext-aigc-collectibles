@@ -36,6 +36,8 @@ export interface BarterAssetsPayload {
   theirs: BarterAssetBucket;
 }
 
+export type BarterSelectionSide = 'yours' | 'theirs';
+
 interface BarterComposerFields {
   barterEnabled: Stream<boolean>;
   barterExpanded: Stream<boolean>;
@@ -53,6 +55,19 @@ export function optionToken(asset: Pick<BarterAsset, 'assetType' | 'id'>): strin
   return `${asset.assetType}:${asset.id}`;
 }
 
+function selectionStreamForSide(fields: BarterComposerFields, side: BarterSelectionSide): Stream<string[]> {
+  return side === 'yours' ? fields.barterMySelections : fields.barterTheirSelections;
+}
+
+function selectionsForSide(fields: BarterComposerFields, side: BarterSelectionSide): string[] {
+  return selectionStreamForSide(fields, side)();
+}
+
+function resetBarterSelectionsForFields(fields: BarterComposerFields): void {
+  fields.barterMySelections([]);
+  fields.barterTheirSelections([]);
+}
+
 export function ensureBarterComposerFields(composer: any): BarterComposerFields {
   composer.fields.barterEnabled = composer.fields.barterEnabled || Stream(false);
   composer.fields.barterExpanded = composer.fields.barterExpanded || Stream(false);
@@ -68,6 +83,45 @@ export function ensureBarterComposerFields(composer: any): BarterComposerFields 
   return composer.fields as BarterComposerFields;
 }
 
+export function enableBarterComposer(composer: any): void {
+  const fields = ensureBarterComposerFields(composer);
+
+  fields.barterEnabled(true);
+  fields.barterExpanded(true);
+  fields.barterError(null);
+  fields.barterValidationError(null);
+}
+
+export function barterSelections(composer: any, side: BarterSelectionSide): string[] {
+  return selectionsForSide(ensureBarterComposerFields(composer), side);
+}
+
+export function resetBarterSelections(composer: any): void {
+  resetBarterSelectionsForFields(ensureBarterComposerFields(composer));
+}
+
+export function toggleBarterSelection(
+  composer: any,
+  side: BarterSelectionSide,
+  token: string,
+  checked: boolean
+): void {
+  const fields = ensureBarterComposerFields(composer);
+  const current = [...selectionsForSide(fields, side)];
+  const index = current.indexOf(token);
+
+  if (checked && index === -1) {
+    current.push(token);
+  }
+
+  if (!checked && index !== -1) {
+    current.splice(index, 1);
+  }
+
+  selectionStreamForSide(fields, side)(current);
+  fields.barterValidationError(null);
+}
+
 export function clearBarterComposer(composer: any, keepAssets: boolean = false): void {
   const fields = ensureBarterComposerFields(composer);
 
@@ -75,8 +129,7 @@ export function clearBarterComposer(composer: any, keepAssets: boolean = false):
   fields.barterExpanded(false);
   fields.barterError(null);
   fields.barterValidationError(null);
-  fields.barterMySelections([]);
-  fields.barterTheirSelections([]);
+  resetBarterSelectionsForFields(fields);
   fields.barterReplacesProposalId(null);
 
   if (!keepAssets) {
@@ -90,8 +143,8 @@ export function hasBarterDraft(composer: any): boolean {
 
   return (
     fields.barterEnabled() ||
-    fields.barterMySelections().length > 0 ||
-    fields.barterTheirSelections().length > 0 ||
+    selectionsForSide(fields, 'yours').length > 0 ||
+    selectionsForSide(fields, 'theirs').length > 0 ||
     fields.barterReplacesProposalId() !== null
   );
 }
@@ -100,8 +153,8 @@ export function barterSelectionCounts(composer: any): { yours: number; theirs: n
   const fields = ensureBarterComposerFields(composer);
 
   return {
-    yours: fields.barterMySelections().length,
-    theirs: fields.barterTheirSelections().length,
+    yours: selectionsForSide(fields, 'yours').length,
+    theirs: selectionsForSide(fields, 'theirs').length,
   };
 }
 
@@ -159,10 +212,7 @@ export function primeBarterComposerFromProposal(composer: any, proposal: BarterP
   const fields = ensureBarterComposerFields(composer);
   const actorId = String(app.session.user?.id?.() || '');
 
-  fields.barterEnabled(true);
-  fields.barterExpanded(true);
-  fields.barterError(null);
-  fields.barterValidationError(null);
+  enableBarterComposer(composer);
   fields.barterReplacesProposalId(Number(proposal.id()));
 
   const mySelections: string[] = [];
@@ -180,8 +230,8 @@ export function primeBarterComposerFromProposal(composer: any, proposal: BarterP
     }
   }
 
-  fields.barterMySelections(mySelections);
-  fields.barterTheirSelections(theirSelections);
+  selectionStreamForSide(fields, 'yours')(mySelections);
+  selectionStreamForSide(fields, 'theirs')(theirSelections);
 }
 
 export function validateBarterComposer(composer: any): string | null {
@@ -198,13 +248,13 @@ export function validateBarterComposer(composer: any): string | null {
     return message;
   }
 
-  if (fields.barterMySelections().length === 0 && fields.barterTheirSelections().length === 0) {
+  if (selectionsForSide(fields, 'yours').length === 0 && selectionsForSide(fields, 'theirs').length === 0) {
     const message = transText('donk-aigc-collectibles.forum.barter.validation_assets_required');
     fields.barterValidationError(message);
     return message;
   }
 
-  if (fields.barterMySelections().length === 0 || fields.barterTheirSelections().length === 0) {
+  if (selectionsForSide(fields, 'yours').length === 0 || selectionsForSide(fields, 'theirs').length === 0) {
     const message = transText('donk-aigc-collectibles.forum.barter.validation_both_sides_required');
     fields.barterValidationError(message);
     return message;
@@ -239,8 +289,8 @@ export function buildBarterItems(composer: any): Array<{ ownerUserId: number; as
     return [];
   }
 
-  const mySelections: string[] = fields.barterMySelections();
-  const theirSelections: string[] = fields.barterTheirSelections();
+  const mySelections = selectionsForSide(fields, 'yours');
+  const theirSelections = selectionsForSide(fields, 'theirs');
 
   const items = [
     ...mySelections
@@ -381,14 +431,10 @@ export async function openBarterComposer(dialog: any, dialogSection?: any, propo
   }
 
   const fields = ensureBarterComposerFields(composer);
-  fields.barterEnabled(true);
-  fields.barterExpanded(true);
-  fields.barterError(null);
-  fields.barterValidationError(null);
+  enableBarterComposer(composer);
 
   if (!sameDialog) {
-    fields.barterMySelections([]);
-    fields.barterTheirSelections([]);
+    resetBarterSelectionsForFields(fields);
     fields.barterReplacesProposalId(null);
   }
 
