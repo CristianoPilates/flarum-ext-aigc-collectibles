@@ -245,14 +245,14 @@ donk-aigc-collectibles:
       self_not_allowed: You can't message yourself.
 
     barter:
-      thread_title: Proposal Thread
-      thread_subtitle: Chat first, then draft, revise, and confirm exchange proposals inside this private thread.
-      create_button: New Proposal
+      thread_title: Negotiation Thread
+      thread_subtitle: Chat first, then draft, revise, and confirm negotiation terms inside this private thread.
+      create_button: Start Negotiation
       counter_button: Counteroffer
-      composer_kicker: Proposal Draft
-      composer_title: "Draft a proposal for {username}"
-      enable_button: Add Proposal
-      disable_button: Remove Proposal
+      composer_kicker: Negotiation Draft
+      composer_title: "Configure negotiation terms for {username}"
+      enable_button: Add Negotiation
+      disable_button: Cancel Negotiation
       summary_yours: "You selected {count}"
       summary_theirs: "They selected {count}"
       your_offer: Your Side
@@ -261,9 +261,9 @@ donk-aigc-collectibles:
       blind_boxes_label: Blind Boxes
       refresh: Refresh
       loading: Loading...
-      empty: No proposals in this thread yet.
-      load_failed: Failed to load proposals.
-      action_failed: Failed to update the proposal.
+      empty: No negotiations in this thread yet.
+      load_failed: Failed to load negotiations.
+      action_failed: Failed to update the negotiation.
       proposer: "Proposed by {username}"
       offer_from: "{username} offers"
       revision: "Revision {number}"
@@ -274,16 +274,16 @@ donk-aigc-collectibles:
       collectible_link: View collectibles
       no_assets: No available assets.
       validation_assets_required: Select at least one asset.
-      validation_both_sides_required: The proposal must include assets from both sides.
-      validation_message_required: Write your message in the private message box before sending the proposal.
-      status_proposed: Proposed
-      status_accepted: Accepted
-      status_settling: Settling
-      status_completed: Settled
+      validation_both_sides_required: The negotiation must include assets from both sides.
+      validation_message_required: Write your message in the private message box before sending the negotiation.
+      status_proposed: Negotiating
+      status_accepted: Agreed
+      status_settling: Trade Settling
+      status_completed: Traded
       status_rejected: Rejected
       status_cancelled: Cancelled
       status_superseded: Superseded
-      status_failed: Failed
+      status_failed: Trade Failed
       asset_type_collectible: Collectible
       asset_type_blind_box: Blind Box
       asset_type_unknown: Asset

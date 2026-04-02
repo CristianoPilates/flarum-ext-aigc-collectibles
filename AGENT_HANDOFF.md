@@ -238,6 +238,10 @@ headed MCP 真实验收结论：
 - 当前产品语义已经是：
   `proposal -> 接受 -> 资产结算`
 - 旧 `Trade` 只剩历史数据语义，不再是运行时业务主路径
+- 用户可见文案应严格区分：
+  - 协商中对象、草稿、还价、修订：用“协商”
+  - 达成、结算、完成结果：用“交易”
+  - 内部模型名当前仍保留 `BarterProposal`
 
 ### 3.6 Blind box / rarity / phrase pool
 
@@ -538,8 +542,8 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - `make mcp-barter`
 - 最近一次真实验收结果：
   - `BarterThreadPanel = true`
-  - 点击 `发起提案` 后，私信 composer 内联 panel 正常出现
-  - buyer 视角 proposal 状态为 `已提案`
+  - 点击 `发起协商` 后，私信 composer 内联 panel 正常出现
+  - buyer 视角 proposal 状态为 `协商中`
   - seller 接受后状态为 `已成交`
 
 本条“旧 Trade 运行时退役”提交在 handoff 写入后已重新完成验证：
@@ -776,7 +780,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
 当前已确认的新方向：
 
 - 不做独立 barter modal
-- 提案配置直接放进 PM composer
+- 协商配置直接放进 PM composer
 - 用户在同一个 composer 里：
   - 正常输入私信正文
   - 选择“我愿意给什么资产”
@@ -816,10 +820,10 @@ Blind box 资产化与两段式开盒已经提交并落地：
 
 - 右侧：
   `BarterThreadPanel`
-  展示提案历史、接受/拒绝/取消
+  展示协商历史、接受/拒绝/取消
 - 底部 composer：
   `BarterComposerPanel`
-  负责开启/关闭 barter 草稿、勾选双方资产、随消息一起发 proposal
+  负责开启/关闭协商草稿、勾选双方资产、随消息一起发 proposal
 
 当前实现逻辑：
 
@@ -829,7 +833,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - 仍然先发送 PM 正文
   - 然后立即创建 `barter-proposal`
   - proposal 不再带单独 `message`
-  - 提案文本以 PM 正文为准
+  - 协商文本以 PM 正文为准
 
 这与用户的意图一致：
 
@@ -882,7 +886,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
 - `mcp-inspect-barter-composer.cjs` 最新实测结果：
   - `DialogSection-streamWrap = true`
   - `BarterThreadPanel = true`
-  - 点击“发起提案”后：
+  - 点击“发起协商”后：
     - `composerVisible = true`
     - `editorExists = true`
     - `barterPanelExists = true`
@@ -906,7 +910,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
     - `buyerView.myCount = 9`
     - `buyerView.theirCount = 4`
     - `buyerView.composerVisible = false`
-    - `buyerView.proposalStatus = 已提案`
+    - `buyerView.proposalStatus = 协商中`
     - `buyerView.proposalActions = ["发起还价","取消"]`
     - `sellerView.status = 已完成`
     - `sellerView.actionTexts = []`
@@ -919,7 +923,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - 后续是否继续清理历史数据层：
     `trades` 表 / `collectible_events.trade_id` 的最终去留
   - Phase 3 的后续能力扩展：
-    更细粒度提案修订、历史呈现、语义清理
+    更细粒度协商修订、历史呈现、语义清理
 
 ### 13.5 脚本现状提醒
 
