@@ -67,6 +67,13 @@ class BlindBoxServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_resolves_draw_rule_type_via_single_compatibility_map(): void
+    {
+        $this->assertSame('checkin_reward', $this->service->resolveDrawRuleType('trade_reward'));
+        $this->assertSame('checkin_reward', $this->service->resolveDrawRuleType('checkin_reward'));
+    }
+
+    #[Test]
     public function it_transfers_blind_boxes_between_users(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 10);

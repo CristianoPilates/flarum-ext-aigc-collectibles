@@ -4,6 +4,7 @@ namespace Donk\AigcCollectibles\Tests\unit\Service;
 
 use Donk\AigcCollectibles\Model\CheckinRecord;
 use Donk\AigcCollectibles\Service\CheckinService;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Illuminate\Support\Carbon;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -26,6 +27,9 @@ class CheckinServiceTest extends TestCase
     /** @var Dispatcher|MockInterface */
     protected $events;
 
+    /** @var BlindBoxServiceInterface|MockInterface */
+    protected $blindBoxService;
+
     protected CheckinService $service;
 
     protected function setUp(): void
@@ -35,11 +39,13 @@ class CheckinServiceTest extends TestCase
         $this->settings = Mockery::mock(SettingsRepositoryInterface::class);
         $this->db = Mockery::mock(ConnectionInterface::class);
         $this->events = Mockery::mock(Dispatcher::class);
+        $this->blindBoxService = Mockery::mock(BlindBoxServiceInterface::class);
 
         $this->service = new CheckinService(
             $this->db,
             $this->events,
-            $this->settings
+            $this->settings,
+            $this->blindBoxService
         );
     }
 
@@ -53,6 +59,7 @@ class CheckinServiceTest extends TestCase
             $this->db,
             $this->events,
             $this->settings,
+            $this->blindBoxService,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')
@@ -81,6 +88,7 @@ class CheckinServiceTest extends TestCase
             $this->db,
             $this->events,
             $this->settings,
+            $this->blindBoxService,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')

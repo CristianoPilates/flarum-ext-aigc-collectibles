@@ -6,12 +6,10 @@ use Donk\AigcCollectibles\Model\BarterProposal;
 use Donk\AigcCollectibles\Model\BarterProposalItem;
 use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Model\CollectibleEvent;
 use Donk\AigcCollectibles\Service\Contracts\BarterServiceInterface;
-use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Donk\AigcCollectibles\Support\DirectDialogParticipants;
 use Flarum\Foundation\ValidationException;
 use Flarum\User\User;
-use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Arr;
 use SM\Factory\FactoryInterface;
@@ -20,8 +18,9 @@ class BarterService implements BarterServiceInterface
 {
     public function __construct(
         private readonly ConnectionInterface $db,
-        private readonly BlindBoxServiceInterface $blindBoxService,
         private readonly FactoryInterface $stateMachines,
+        private readonly DirectDialogParticipants $dialogs,
+        private readonly BarterSettlementService $settlements,
     ) {}
 
     /**
@@ -64,7 +63,7 @@ class BarterService implements BarterServiceInterface
 
             if ($participants !== []) {
                 if (! in_array($actor->id, $participants, true) || ! in_array($counterparty->id, $participants, true)) {
-                    throw new ValidationException(['thread' => 'Both users must belong to the target private message thread.']);
+                    throw new ValidationException(['thread' => 'Both users must belong to the same direct private message dialog.']);
                 }
             }
 
@@ -90,8 +89,8 @@ class BarterService implements BarterServiceInterface
                 }
 
                 if (
-                    ! $this->proposalInvolvesUser($replaced, $actor->id)
-                    || ! $this->proposalInvolvesUser($replaced, $counterparty->id)
+                    ! $replaced->involvesUser($actor->id)
+                    || ! $replaced->involvesUser($counterparty->id)
                 ) {
                     throw new ValidationException(['replaces_proposal_id' => 'Replacement proposal participants do not match this thread.']);
                 }
@@ -138,7 +137,7 @@ class BarterService implements BarterServiceInterface
         $participants = $this->resolveThreadParticipants($threadType, $threadId);
 
         if (! in_array($actor->id, $participants, true) || ! in_array($counterpartyUserId, $participants, true)) {
-            throw new ValidationException(['thread' => 'Both users must belong to the target private message thread.']);
+            throw new ValidationException(['thread' => 'Both users must belong to the same direct private message dialog.']);
         }
 
         return [
@@ -213,54 +212,7 @@ class BarterService implements BarterServiceInterface
 
         try {
             $proposal = $this->db->transaction(function () use ($proposal) {
-                /** @var BarterProposal $proposal */
-                $proposal = BarterProposal::query()
-                    ->where('id', $proposal->id)
-                    ->lockForUpdate()
-                    ->firstOrFail()
-                    ->load('items');
-
-                if ($proposal->status !== BarterProposal::STATUS_SETTLING) {
-                    throw new ValidationException(['proposal' => 'This barter proposal is no longer settling.']);
-                }
-
-                $proposer = User::query()->where('id', $proposal->proposer_user_id)->lockForUpdate()->firstOrFail();
-                $counterparty = User::query()->where('id', $proposal->counterparty_user_id)->lockForUpdate()->firstOrFail();
-
-                $transferBlindBoxIds = [
-                    $proposer->id => [],
-                    $counterparty->id => [],
-                ];
-
-                foreach ($proposal->items as $item) {
-                    $targetUserId = $item->owner_user_id === $proposer->id ? $counterparty->id : $proposer->id;
-
-                    if ($item->asset_type === BarterProposal::ASSET_COLLECTIBLE) {
-                        $this->transferCollectible(
-                            collectibleId: $item->asset_id,
-                            fromUserId: $item->owner_user_id,
-                            toUserId: $targetUserId,
-                            proposal: $proposal,
-                        );
-                        continue;
-                    }
-
-                    if ($item->asset_type === BarterProposal::ASSET_BLIND_BOX) {
-                        $transferBlindBoxIds[$item->owner_user_id][] = $item->asset_id;
-                        continue;
-                    }
-
-                    throw new ValidationException(['items' => 'Unsupported asset type: ' . $item->asset_type]);
-                }
-
-                if ($transferBlindBoxIds[$proposer->id] !== []) {
-                    $this->blindBoxService->transferSpecific($proposer, $counterparty, $transferBlindBoxIds[$proposer->id]);
-                }
-
-                if ($transferBlindBoxIds[$counterparty->id] !== []) {
-                    $this->blindBoxService->transferSpecific($counterparty, $proposer, $transferBlindBoxIds[$counterparty->id]);
-                }
-
+                $proposal = $this->settlements->settle($proposal, $this->db);
                 $this->stateMachines->get($proposal, 'barterProposal')->apply('complete');
                 $proposal->save();
 
@@ -378,38 +330,7 @@ class BarterService implements BarterServiceInterface
             return [];
         }
 
-        if (! $this->db instanceof Connection) {
-            return [];
-        }
-
-        $schema = $this->db->getSchemaBuilder();
-        if (! $schema->hasTable('dialogs') || ! $schema->hasTable('dialog_user')) {
-            return [];
-        }
-
-        $dialog = $this->db->table('dialogs')->where('id', $threadId)->first();
-
-        if (! $dialog) {
-            throw new ValidationException(['thread' => 'Private message thread not found.']);
-        }
-
-        if (($dialog->type ?? null) !== 'direct') {
-            throw new ValidationException(['thread' => 'Only direct private message dialogs are supported for barter.']);
-        }
-
-        $userIds = $this->db->table('dialog_user')
-            ->where('dialog_id', $threadId)
-            ->pluck('user_id')
-            ->map(static fn ($userId) => (int) $userId)
-            ->all();
-
-        $userIds = array_values(array_unique($userIds));
-
-        if (count($userIds) !== 2) {
-            throw new ValidationException(['thread' => 'Barter currently requires a two-user private message dialog.']);
-        }
-
-        return $userIds;
+        return $this->dialogs->resolve($threadId);
     }
 
     private function nextRevisionNumber(string $threadType, int $threadId): int
@@ -418,11 +339,6 @@ class BarterService implements BarterServiceInterface
             ->where('thread_type', $threadType)
             ->where('thread_id', $threadId)
             ->max('revision_number') + 1;
-    }
-
-    private function proposalInvolvesUser(BarterProposal $proposal, int $userId): bool
-    {
-        return $proposal->proposer_user_id === $userId || $proposal->counterparty_user_id === $userId;
     }
 
     /**
@@ -455,41 +371,4 @@ class BarterService implements BarterServiceInterface
         return BarterAssetFormatter::blindBox($box);
     }
 
-    private function transferCollectible(int $collectibleId, int $fromUserId, int $toUserId, BarterProposal $proposal): void
-    {
-        /** @var Collectible $collectible */
-        $collectible = Collectible::query()
-            ->where('id', $collectibleId)
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        if ($collectible->owner_id !== $fromUserId) {
-            throw new ValidationException(['items' => 'A collectible in this barter proposal no longer belongs to its recorded owner.']);
-        }
-
-        $fromUser = User::query()->where('id', $fromUserId)->lockForUpdate()->firstOrFail();
-
-        if ((int) $fromUser->showcase_collectible_id === (int) $collectible->id) {
-            $fromUser->showcase_collectible_id = null;
-            $fromUser->save();
-        }
-
-        $collectible->owner_id = $toUserId;
-        $collectible->times_traded += 1;
-        $collectible->save();
-
-        $event = CollectibleEvent::log(
-            collectible: $collectible,
-            eventType: 'traded',
-            fromUserId: $fromUserId,
-            toUserId: $toUserId,
-            tradeId: null,
-            metadata: [
-                'barterProposalId' => $proposal->id,
-                'threadType' => $proposal->thread_type,
-                'threadId' => $proposal->thread_id,
-            ],
-        );
-        $event->save();
-    }
 }

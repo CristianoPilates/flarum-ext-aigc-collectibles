@@ -3,9 +3,9 @@
 namespace Donk\AigcCollectibles\Job;
 
 use Donk\AigcCollectibles\Event\CollectibleGenerated;
-use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\Collectible;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
@@ -37,7 +37,8 @@ class GenerateCollectibleJob implements ShouldQueue
         SettingsRepositoryInterface $settings,
         ConnectionInterface $db,
         Dispatcher $events,
-        FactoryInterface $stateMachines
+        FactoryInterface $stateMachines,
+        BlindBoxServiceInterface $blindBoxService
     ): void {
         $collectible = Collectible::query()->find($this->collectibleId);
 
@@ -59,7 +60,7 @@ class GenerateCollectibleJob implements ShouldQueue
         $user = User::query()->find($collectible->owner_id);
 
         if (!$user) {
-            $this->markFailed($collectible, $db, $stateMachines);
+            $this->markFailed($collectible, $db, $stateMachines, $blindBoxService);
             return;
         }
 
@@ -92,7 +93,7 @@ class GenerateCollectibleJob implements ShouldQueue
 
         } catch (\Throwable $e) {
             if ($this->shouldFailPermanently()) {
-                $this->markFailed($collectible, $db, $stateMachines);
+                $this->markFailed($collectible, $db, $stateMachines, $blindBoxService);
             } else {
                 throw $e;
             }
@@ -121,9 +122,14 @@ class GenerateCollectibleJob implements ShouldQueue
         return implode(', ', $segments);
     }
 
-    protected function markFailed(Collectible $collectible, ConnectionInterface $db, FactoryInterface $stateMachines): void
+    protected function markFailed(
+        Collectible $collectible,
+        ConnectionInterface $db,
+        FactoryInterface $stateMachines,
+        BlindBoxServiceInterface $blindBoxService
+    ): void
     {
-        $db->transaction(function () use ($collectible, $db, $stateMachines) {
+        $db->transaction(function () use ($collectible, $db, $stateMachines, $blindBoxService) {
             /** @var Collectible|null $lockedCollectible */
             $lockedCollectible = Collectible::query()
                 ->lockForUpdate()
@@ -145,11 +151,7 @@ class GenerateCollectibleJob implements ShouldQueue
                 ->where('collectible_id', $lockedCollectible->id)
                 ->value('type') ?: 'checkin_reward';
 
-            BlindBox::createForUser($user, (string) $replacementBoxType);
-
-            $db->table('users')
-                ->where('id', $lockedCollectible->owner_id)
-                ->increment('blind_box_count', 1);
+            $blindBoxService->createForUser($user, (string) $replacementBoxType);
         });
     }
 

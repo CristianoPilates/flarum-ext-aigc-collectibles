@@ -4,6 +4,7 @@ namespace Donk\AigcCollectibles\Tests\integration\job;
 
 use Donk\AigcCollectibles\Job\GenerateCollectibleJob;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Donk\AigcCollectibles\Tests\Fake\FakeAIGCService;
 use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
@@ -81,6 +82,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
@@ -109,6 +111,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
@@ -150,6 +153,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();

@@ -9,10 +9,12 @@ use Flarum\User\User;
 return [
     (new Extend\Frontend('forum'))
         ->js(__DIR__.'/js/dist/forum.js')
-        ->css(__DIR__.'/resources/less/forum.less'),
+        ->css(__DIR__.'/resources/less/forum.less')
+        ->content(Frontend\DefaultFavicon::class),
 
     (new Extend\Frontend('admin'))
-        ->js(__DIR__.'/js/dist/admin.js'),
+        ->js(__DIR__.'/js/dist/admin.js')
+        ->content(Frontend\DefaultFavicon::class),
 
     new Extend\Locales(__DIR__.'/resources/locale'),
 
@@ -37,6 +39,7 @@ return [
         ->hasMany('collectibles', Model\Collectible::class, 'owner_id')
         ->hasMany('checkinRecords', Model\CheckinRecord::class, 'user_id')
         ->hasMany('web3Accounts', Model\Web3Account::class, 'user_id')
+        ->hasOne('web3Account', Model\Web3Account::class, 'user_id')
         ->hasMany('barterProposalsCreated', Model\BarterProposal::class, 'proposer_user_id')
         ->hasMany('barterProposalsReceived', Model\BarterProposal::class, 'counterparty_user_id')
         ->hasOne('showcaseCollectible', Model\Collectible::class, 'id', 'showcase_collectible_id')

@@ -5,7 +5,6 @@ namespace Donk\AigcCollectibles\Model;
 use Carbon\Carbon;
 use Donk\AigcCollectibles\StateMachine\HasStateMachine;
 use Flarum\Database\AbstractModel;
-use Flarum\User\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -32,18 +31,6 @@ class BlindBox extends AbstractModel
     const STATUS_APPRAISED = 'appraised';
 
     const STATUS_OPENED = 'opened';
-
-    public static function createForUser(User $user, string $type): self
-    {
-        $box = new self();
-        $box->user_id = $user->id;
-        $box->type = $type;
-        $box->seed = bin2hex(random_bytes(32));
-        $box->status = self::STATUS_UNAPPRAISED;
-        $box->save();
-
-        return $box;
-    }
 
     /**
      * @return BelongsTo<User, BlindBox>

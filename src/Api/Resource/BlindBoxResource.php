@@ -5,13 +5,13 @@ namespace Donk\AigcCollectibles\Api\Resource;
 use Donk\AigcCollectibles\Command\AppraiseBlindBox;
 use Donk\AigcCollectibles\Command\OpenBlindBox;
 use Donk\AigcCollectibles\Model\BlindBox;
-use Donk\AigcCollectibles\Model\BlindBoxDrawRule;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
+use Donk\AigcCollectibles\Support\DirectDialogParticipants;
 use Flarum\Api\Endpoint;
 use Flarum\Api\Resource\AbstractDatabaseResource;
 use Flarum\Api\Schema;
 use Flarum\Api\Sort\SortColumn;
 use Flarum\Foundation\ValidationException;
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Contracts\Bus\Dispatcher as BusDispatcher;
 use Illuminate\Support\Arr;
 use Tobyz\JsonApiServer\Context;
@@ -21,13 +21,10 @@ use Tobyz\JsonApiServer\Context;
  */
 class BlindBoxResource extends AbstractDatabaseResource
 {
-    private const DRAW_RULE_FALLBACKS = [
-        'trade_reward' => 'checkin_reward',
-    ];
-
     public function __construct(
         private readonly BusDispatcher $bus,
-        private readonly ConnectionInterface $db,
+        private readonly BlindBoxServiceInterface $blindBoxService,
+        private readonly DirectDialogParticipants $dialogs,
     ) {}
 
     public function type(): string
@@ -60,45 +57,10 @@ class BlindBoxResource extends AbstractDatabaseResource
                 throw new ValidationException(['dialog' => 'A direct private message dialog is required when loading another user\'s blind boxes.']);
             }
 
-            $this->assertDialogParticipants((int) $dialogId, (int) $context->getActor()->id, $ownerUserId);
+            $this->dialogs->assertContainsUsers((int) $dialogId, (int) $context->getActor()->id, $ownerUserId, 'dialog');
         }
 
         return $query->where('user_id', $ownerUserId);
-    }
-
-    private function assertDialogParticipants(int $dialogId, int $actorUserId, int $ownerUserId): void
-    {
-        $schema = $this->db->getSchemaBuilder();
-
-        if (! $schema->hasTable('dialogs') || ! $schema->hasTable('dialog_user')) {
-            throw new ValidationException(['dialog' => 'Private messages are not available in this environment.']);
-        }
-
-        $dialog = $this->db->table('dialogs')->where('id', $dialogId)->first();
-
-        if (! $dialog) {
-            throw new ValidationException(['dialog' => 'Private message dialog not found.']);
-        }
-
-        if (($dialog->type ?? null) !== 'direct') {
-            throw new ValidationException(['dialog' => 'Only direct private message dialogs can expose barter blind boxes.']);
-        }
-
-        $participantIds = $this->db->table('dialog_user')
-            ->where('dialog_id', $dialogId)
-            ->pluck('user_id')
-            ->map(static fn ($userId) => (int) $userId)
-            ->all();
-
-        $participantIds = array_values(array_unique($participantIds));
-
-        if (
-            count($participantIds) !== 2
-            || ! in_array($actorUserId, $participantIds, true)
-            || ! in_array($ownerUserId, $participantIds, true)
-        ) {
-            throw new ValidationException(['dialog' => 'Both users must belong to the same direct private message dialog.']);
-        }
     }
 
     public function endpoints(): array
@@ -150,26 +112,7 @@ class BlindBoxResource extends AbstractDatabaseResource
             Schema\Str::make('status'),
             Schema\Integer::make('budget'),
             Schema\Arr::make('drawRules')
-                ->get(function (BlindBox $model) {
-                    static $ruleCache = [];
-                    $ruleType = self::DRAW_RULE_FALLBACKS[$model->type] ?? $model->type;
-
-                    if (! array_key_exists($ruleType, $ruleCache)) {
-                        $ruleCache[$ruleType] = BlindBoxDrawRule::query()
-                            ->where('blindbox_type', $ruleType)
-                            ->orderByDesc('required')
-                            ->orderBy('pool_category')
-                            ->get(['pool_category', 'required'])
-                            ->map(fn (BlindBoxDrawRule $rule) => [
-                                'category' => $rule->pool_category,
-                                'required' => (bool) $rule->required,
-                            ])
-                            ->values()
-                            ->all();
-                    }
-
-                    return $ruleCache[$ruleType];
-                }),
+                ->get(fn (BlindBox $model) => $this->blindBoxService->describeDrawRules($model->type)),
             Schema\DateTime::make('createdAt'),
             Schema\DateTime::make('updatedAt'),
 

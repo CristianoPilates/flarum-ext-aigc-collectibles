@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Provider;
 use Donk\AigcCollectibles\Api\UserResourceFields;
 use Donk\AigcCollectibles\Service\AIGCService;
 use Donk\AigcCollectibles\Service\BarterService;
+use Donk\AigcCollectibles\Service\BarterSettlementService;
 use Donk\AigcCollectibles\Service\BlindBoxService;
 use Donk\AigcCollectibles\Service\CheckinService;
 use Donk\AigcCollectibles\Service\CollectibleProofService;
@@ -19,7 +20,9 @@ use Donk\AigcCollectibles\Service\Contracts\WalletVerificationServiceInterface;
 use Donk\AigcCollectibles\Service\IPFSService;
 use Donk\AigcCollectibles\Service\NftMintingService;
 use Donk\AigcCollectibles\Service\WalletVerificationService;
+use Donk\AigcCollectibles\Support\DirectDialogParticipants;
 use Donk\AigcCollectibles\StateMachine\StateMachineConfig;
+use Flarum\Api\Resource\ForumResource;
 use Flarum\Api\Resource\UserResource;
 use Flarum\Foundation\AbstractServiceProvider;
 use SM\Factory\Factory;
@@ -39,6 +42,8 @@ class CollectibleServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(BlindBoxServiceInterface::class, BlindBoxService::class);
         $this->container->singleton(BarterServiceInterface::class, BarterService::class);
+        $this->container->singleton(BarterSettlementService::class);
+        $this->container->singleton(DirectDialogParticipants::class);
         $this->container->singleton(CheckinServiceInterface::class, CheckinService::class);
         $this->container->singleton(CollectibleProofServiceInterface::class, CollectibleProofService::class);
         $this->container->singleton(AIGCServiceInterface::class, AIGCService::class);
@@ -53,6 +58,26 @@ class CollectibleServiceProvider extends AbstractServiceProvider
             $userResourceFields = $this->container->make(UserResourceFields::class);
 
             return array_merge($fields, $userResourceFields());
+        });
+
+        UserResource::mutateEndpoints(function (array $endpoints) {
+            foreach ($endpoints as $endpoint) {
+                if (in_array($endpoint->name, ['show', 'index'], true)) {
+                    $endpoint->eagerLoad(['showcaseCollectible', 'web3Account']);
+                }
+            }
+
+            return $endpoints;
+        });
+
+        ForumResource::mutateEndpoints(function (array $endpoints) {
+            foreach ($endpoints as $endpoint) {
+                if ($endpoint->name === 'show') {
+                    $endpoint->eagerLoad(['actor.showcaseCollectible', 'actor.web3Account']);
+                }
+            }
+
+            return $endpoints;
         });
     }
 }

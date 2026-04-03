@@ -7,6 +7,8 @@ use Donk\AigcCollectibles\Model\BlindBox;
 
 interface BlindBoxServiceInterface
 {
+    public function createForUser(User $user, string $type): BlindBox;
+
     /**
      * Verify PoW result, quantify budget, transition to appraised.
      */
@@ -21,6 +23,15 @@ interface BlindBoxServiceInterface
      * Get user's blind box balance.
      */
     public function balanceOf(User $user): int;
+
+    public function syncUserBalance(int $userId): void;
+
+    public function resolveDrawRuleType(string $boxType): string;
+
+    /**
+     * @return array<int, array{category: string, required: bool}>
+     */
+    public function describeDrawRules(string $boxType): array;
 
     /**
      * Transfer blind boxes from one user to another atomically.
