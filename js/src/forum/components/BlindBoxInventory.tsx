@@ -3,6 +3,7 @@ import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import BlindBoxOpener from './BlindBoxOpener';
+import { blindBoxBudget, blindBoxDrawRules, blindBoxSeed, blindBoxStatus, blindBoxType } from '../utils/blindBoxes';
 
 interface BlindBoxInventoryAttrs {
   user: any;
@@ -71,14 +72,14 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
   }
 
   activeBlindBoxes() {
-    return this.blindBoxes.filter((blindBox: any) => ACTIVE_STATUSES.includes(blindBox.status?.() || ''));
+    return this.blindBoxes.filter((blindBox: any) => ACTIVE_STATUSES.includes(blindBoxStatus(blindBox)));
   }
 
   viewBlindBox(blindBox: any) {
-    const type = blindBox.type?.() || 'unknown';
-    const status = blindBox.status?.() || 'unknown';
-    const budget = blindBox.budget?.();
-    const drawRules = Array.isArray(blindBox.drawRules?.()) ? blindBox.drawRules() : [];
+    const type = blindBoxType(blindBox);
+    const status = blindBoxStatus(blindBox);
+    const budget = blindBoxBudget(blindBox);
+    const drawRules = blindBoxDrawRules(blindBox);
     const canAppraise = status === 'unappraised';
     const canOpen = status === 'appraised';
 
@@ -103,7 +104,7 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
             <span className="BlindBoxCard-label">
               {app.translator.trans('donk-aigc-collectibles.forum.blind_box.seed_label')}
             </span>
-            <code className="BlindBoxCard-seed">{blindBox.seed?.() || '-'}</code>
+            <code className="BlindBoxCard-seed">{blindBoxSeed(blindBox) || '-'}</code>
           </div>
 
           <div className="BlindBoxCard-row">
@@ -122,7 +123,7 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
               {app.translator.trans('donk-aigc-collectibles.forum.blind_box.draw_categories_label')}
             </span>
             <div className="BlindBoxCard-categories">
-              {drawRules.map((rule: { category: string; required: boolean }) => (
+              {drawRules.map((rule) => (
                 <span
                   className={`BlindBoxCard-category${rule.required ? ' BlindBoxCard-category--required' : ''}`}
                   key={`${blindBox.id()}-${rule.category}-${rule.required ? 'required' : 'optional'}`}

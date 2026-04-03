@@ -1,3 +1,8 @@
+export interface BlindBoxDrawRule {
+  category: string;
+  required: boolean;
+}
+
 export interface BlindBoxPowResult {
   nonce: string;
   hash: string;
@@ -27,6 +32,19 @@ export function blindBoxSeed(box: any): string | null {
 export function blindBoxBudget(box: any): number | null {
   const value = box?.budget?.() ?? box?.attributes?.budget ?? null;
   return typeof value === 'number' ? value : null;
+}
+
+export function blindBoxStatus(box: any): string {
+  return box?.status?.() || box?.attributes?.status || 'unknown';
+}
+
+export function blindBoxType(box: any): string {
+  return box?.type?.() || box?.attributes?.type || 'unknown';
+}
+
+export function blindBoxDrawRules(box: any): BlindBoxDrawRule[] {
+  const value = box?.drawRules?.() ?? box?.attributes?.drawRules ?? [];
+  return Array.isArray(value) ? value : [];
 }
 
 export function rarityFromZeros(zeros: number): string {

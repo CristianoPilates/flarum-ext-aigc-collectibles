@@ -7,8 +7,11 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import {
   blindBoxBudget,
+  blindBoxDrawRules,
   blindBoxId,
   blindBoxSeed,
+  blindBoxStatus,
+  blindBoxType,
   computeBlindBoxPow,
   rarityFromBudget,
   rarityFromZeros,
@@ -36,16 +39,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
 
   oninit(vnode: any) {
     super.oninit(vnode);
-    this.blindBox = this.attrs.blindBox || null;
-    this.appraising = false;
-    this.generating = false;
-    this.generatedCollectible = null;
-    this.error = null;
-    this.pendingCollectibleId = null;
-    this.pendingRarity = null;
-    this.pendingPowZeros = 0;
-    this.pendingPowAttempts = 0;
-    this.pendingPowSecondsLeft = 10;
+    this.reset();
   }
 
   className() {
@@ -109,12 +103,10 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
       );
     }
 
-    const status = blindBox.status?.() || blindBox.attributes?.status || 'unappraised';
+    const status = blindBoxStatus(blindBox) || 'unappraised';
     const budget = blindBoxBudget(blindBox);
-    const type = blindBox.type?.() || blindBox.attributes?.type || 'unknown';
-    const drawRules = Array.isArray(blindBox.drawRules?.())
-      ? blindBox.drawRules()
-      : blindBox.attributes?.drawRules || [];
+    const type = blindBoxType(blindBox);
+    const drawRules = blindBoxDrawRules(blindBox);
 
     return (
       <div className="Modal-body BlindBoxOpener-body">
@@ -143,11 +135,11 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
           </p>
           <p className="BlindBoxOpener-summaryRow BlindBoxOpener-summaryRow--seed">
             <strong>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.seed_label')}</strong>{' '}
-            <code>{blindBox.seed?.() || blindBox.attributes?.seed || '-'}</code>
+            <code>{blindBoxSeed(blindBox) || '-'}</code>
           </p>
 
           <div className="BlindBoxOpener-summaryRules">
-            {drawRules.map((rule: { category: string; required: boolean }) => (
+            {drawRules.map((rule) => (
               <span
                 className={`BlindBoxCard-category${rule.required ? ' BlindBoxCard-category--required' : ''}`}
                 key={`${rule.category}-${rule.required ? 'required' : 'optional'}`}
@@ -289,14 +281,8 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     if (this.appraising || this.generating) return;
     if (!this.blindBox) return;
 
+    this.resetPendingState();
     this.appraising = true;
-    this.generating = false;
-    this.error = null;
-    this.generatedCollectible = null;
-    this.pendingCollectibleId = null;
-    this.pendingPowZeros = 0;
-    this.pendingPowAttempts = 0;
-    this.pendingPowSecondsLeft = 10;
     this.pendingRarity = 'common';
     m.redraw();
 
@@ -307,14 +293,8 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     if (this.appraising || this.generating) return;
     if (!this.blindBox) return;
 
-    this.appraising = false;
+    this.resetPendingState();
     this.generating = true;
-    this.error = null;
-    this.generatedCollectible = null;
-    this.pendingCollectibleId = null;
-    this.pendingPowZeros = 0;
-    this.pendingPowAttempts = 0;
-    this.pendingPowSecondsLeft = 10;
     m.redraw();
 
     void this.runOpenFlow();
@@ -505,8 +485,7 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     }
   }
 
-  reset() {
-    this.blindBox = this.attrs.blindBox || null;
+  resetPendingState() {
     this.appraising = false;
     this.generating = false;
     this.generatedCollectible = null;
@@ -516,6 +495,11 @@ export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
     this.pendingPowZeros = 0;
     this.pendingPowAttempts = 0;
     this.pendingPowSecondsLeft = 10;
+  }
+
+  reset() {
+    this.blindBox = this.attrs.blindBox || null;
+    this.resetPendingState();
     this.stopPolling();
   }
 }
