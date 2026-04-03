@@ -3,8 +3,12 @@ import Stream from 'flarum/common/utils/Stream';
 import type BarterProposal from '../models/BarterProposal';
 import { emitBarterThreadUpdated } from './barterEvents';
 import { transText } from './i18n';
-
-const MESSAGE_COMPOSER_PATH = 'ext:flarum/messages/forum/components/MessageComposer';
+import {
+  applyComposerContent,
+  MESSAGE_COMPOSER_PATH,
+  messageComposerMatchesDialog,
+  waitForVisibleMessageComposer,
+} from './messageComposer';
 
 export interface BarterAsset {
   id: number;
@@ -346,46 +350,9 @@ export async function createBarterProposalFromComposer(dialog: any, composer: an
   emitBarterThreadUpdated(dialogId);
 }
 
-function applyInitialContent(initialContent: string) {
-  app.composer.fields.content(initialContent);
-
-  const editor = app.composer.editor as any;
-  if (editor?.el) {
-    editor.el.value = initialContent;
-    editor.moveCursorTo?.(initialContent.length);
-    editor.focus?.();
-  }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-async function waitForMessageComposer(dialog: any, timeoutMs: number = 3000): Promise<boolean> {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    const composer: any = app.composer;
-    const sameDialog =
-      composer?.bodyMatches?.(MESSAGE_COMPOSER_PATH, { replyingTo: dialog }) ||
-      composer?.body?.attrs?.replyingTo === dialog ||
-      composer?.composingMessageTo?.(dialog);
-
-    if (sameDialog && composer?.isVisible?.()) {
-      return true;
-    }
-
-    await delay(50);
-  }
-
-  return false;
-}
-
 export async function openBarterComposer(dialog: any, dialogSection?: any, proposal?: BarterProposal | null): Promise<void> {
   const composer: any = app.composer;
-  const sameDialog =
-    composer?.bodyMatches?.(MESSAGE_COMPOSER_PATH, { replyingTo: dialog }) ||
-    composer?.body?.attrs?.replyingTo === dialog;
+  const sameDialog = messageComposerMatchesDialog(dialog, composer);
 
   if (!sameDialog) {
     const replyTrigger =
@@ -395,14 +362,11 @@ export async function openBarterComposer(dialog: any, dialogSection?: any, propo
 
     if (replyTrigger) {
       replyTrigger.click();
-      await waitForMessageComposer(dialog);
+      await waitForVisibleMessageComposer(dialog);
     }
   }
 
-  const openedComposer =
-    composer?.bodyMatches?.(MESSAGE_COMPOSER_PATH, { replyingTo: dialog }) ||
-    composer?.body?.attrs?.replyingTo === dialog ||
-    composer?.composingMessageTo?.(dialog);
+  const openedComposer = messageComposerMatchesDialog(dialog, composer);
 
   if (!openedComposer) {
     await flarum.reg.asyncModuleImport('flarum/forum/components/ComposerBody');
@@ -443,5 +407,5 @@ export async function openBarterComposer(dialog: any, dialogSection?: any, propo
   }
 
   await loadBarterAssets(composer, dialog, true);
-  applyInitialContent(String(composer.fields.content?.() || ''));
+  applyComposerContent(String(composer.fields.content?.() || ''), composer);
 }

@@ -1,6 +1,7 @@
 import app from 'flarum/forum/app';
 import extractText from 'flarum/common/utils/extractText';
 import { displayCollectibleName } from './collectibles';
+import { applyComposerContent, waitForComposerEditor } from './messageComposer';
 
 interface StartPrivateMessageOptions {
   initialContent?: string;
@@ -81,42 +82,6 @@ export function shouldShowPrivateMessageButton(targetUser: any): boolean {
   return !currentUser || currentUser.id() !== targetUser.id();
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForComposerReady(timeoutMs: number = 3000): Promise<boolean> {
-  const composer = app.composer as any;
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (composer?.isVisible?.() && composer?.editor) {
-      return true;
-    }
-
-    await delay(50);
-  }
-
-  if (!composer?.isVisible?.() || typeof composer?.editorReady !== 'function') {
-    return Boolean(composer?.isVisible?.() && composer?.editor);
-  }
-
-  let timedOut = false;
-  const timeoutHandle = window.setTimeout(() => {
-    timedOut = true;
-  }, timeoutMs);
-
-  try {
-    while (!timedOut && !composer?.editor) {
-      await Promise.race([composer.editorReady(), delay(50)]);
-    }
-  } finally {
-    window.clearTimeout(timeoutHandle);
-  }
-
-  return Boolean(composer?.isVisible?.() && composer?.editor);
-}
-
 async function loadMessageComposer() {
   const userControlsModule = await import('flarum/forum/utils/UserControls');
   return userControlsModule.default ?? userControlsModule;
@@ -178,17 +143,6 @@ export function buildCollectibleMessageContent(context: PrivateMessageCollectibl
   return lines.join('\n');
 }
 
-function applyInitialContent(initialContent: string) {
-  app.composer.fields.content(initialContent);
-
-  const editor = app.composer.editor as any;
-  if (editor?.el) {
-    editor.el.value = initialContent;
-    editor.moveCursorTo?.(initialContent.length);
-    editor.focus?.();
-  }
-}
-
 export async function startPrivateMessage(targetUser: any, options: StartPrivateMessageOptions = {}): Promise<boolean> {
   if (!targetUser) {
     return false;
@@ -246,8 +200,8 @@ export async function startPrivateMessage(targetUser: any, options: StartPrivate
 
     await Promise.resolve(onClick());
 
-    if (options.initialContent && (await waitForComposerReady())) {
-      applyInitialContent(options.initialContent);
+    if (options.initialContent && (await waitForComposerEditor())) {
+      applyComposerContent(options.initialContent);
     }
 
     return true;
