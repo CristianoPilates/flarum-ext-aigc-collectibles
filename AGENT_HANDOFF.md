@@ -183,7 +183,7 @@ headed MCP 真实验收结论：
   `Fix trade modal close and owner profile links`
 - 第三条 locale 已提交：
   `83c8ab4`
-  `Add locale management scripts and zh-Hans alias`
+  `Add locale management scripts for zh-Hans`
 - 第四条 blind box 已提交：
   `4ae5cf3`
   `Add blind box inventory and staged opening flow`
@@ -306,7 +306,6 @@ Blind box 资产化与两段式开盒已经提交并落地：
   - `trade_reward -> checkin_reward` fallback
 - `resources/less/forum.less` 已新增独立 blind box 页面与卡片样式
 - `resources/locale/en.yml`
-  `resources/locale/zh-hans.yml`
   `resources/locale/zh-Hans.yml`
   已补 blind box 页面文案
 
@@ -364,7 +363,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
 这意味着：
 
 - `resources/locale/en.yml`
-- `resources/locale/zh-hans.yml`
+- `resources/locale/zh-Hans.yml`
 
 已经是“实装状态”。
 
@@ -385,14 +384,12 @@ Blind box 资产化与两段式开盒已经提交并落地：
 
 - 新增：
   `resources/locale/zh-Hans.yml`
-  作为 `zh-hans.yml` 的兼容别名版本
 - 新增：
   `scripts/forum/locale-status.php`
   `scripts/forum/set-default-locale.php`
 - 新增 Makefile 入口：
   - `make locale-status`
   - `make locale-set-en`
-  - `make locale-set-zh-hans`
   - `make locale-set-zh-Hans`
 
 当前 headed 实验结论：
@@ -413,7 +410,7 @@ Blind box 资产化与两段式开盒已经提交并落地：
 
 结论：
 
-- 本扩展 `resources/locale/zh-hans.yml`
+- 本扩展 `resources/locale/zh-Hans.yml`
   现在已经是“实装并可被站点消费”的
 - 真正缺的是“兼容 Flarum 2 的完整站点简中语言包”
 
@@ -958,10 +955,25 @@ Blind box 资产化与两段式开盒已经提交并落地：
     - `CollectibleProofService` lines `88.83%`
 - 2026-04-02 后续噪声清理结果：
   - unit test 中遗留的 `PHPUnit Deprecations: 26` 已清零
-  - 当前 `tests/phpunit.unit.xml` 运行结果为：
-    - `33 tests`
-    - `155 assertions`
-    - `OK`
+- 当前 `tests/phpunit.unit.xml` 运行结果为：
+  - `33 tests`
+  - `155 assertions`
+  - `OK`
+- 2026-04-03 locale 收缩已完成：
+  - 仓库内中文 locale 已统一为：
+    `resources/locale/zh-Hans.yml`
+  - 已删除分叉文件：
+    `resources/locale/zh-hans.yml`
+  - `Makefile` 只保留：
+    `make locale-set-zh-Hans`
+  - `scripts/forum/set-default-locale.php`
+    只接受：
+    `en`
+    `zh-Hans`
+  - `make locale-status` 最新实测结果：
+    `extensionLocaleFiles = ["en", "zh-Hans"]`
+  - 结论：
+    以后不要再把 `zh-hans` 当作仍然存在的 locale code
 
 ### 13.4 当前还没做的事
 

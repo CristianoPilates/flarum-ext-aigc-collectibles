@@ -271,9 +271,50 @@ donk-aigc-collectibles:
       disconnect_button: 断开钱包
       unbind: 断开钱包
       connected_label: 钱包已连接
-      install_metamask: 请先安装 MetaMask 再使用此功能。
-      connection_denied: 钱包连接请求已被拒绝。
+      install_metamask: 请安装 MetaMask 以使用此功能。
+      connection_denied: 钱包连接请求被拒绝。
+      signing_message: 请在 MetaMask 中签名以验证钱包所有权。
+      signing_cancelled: 签名已取消。
+      verify_success: 钱包已成功绑定到你的账户！
+      verify_failed: 签名验证失败，请重试。
+      address_label: 钱包：{address}
+      already_bound: 此钱包地址已绑定到其他账户。
+      confirm_disconnect: 确定要解绑钱包吗？
+      disconnect_success: 钱包已解绑。
+      step_connecting: 正在连接 MetaMask...
+      step_signing: 请在 MetaMask 中签名...
+      step_verifying: 正在验证签名...
+      bind_failed: 钱包绑定失败，请重试。
+      unbind_failed: 钱包解绑失败，请重试。
+
+    post_badge:
+      showcase_alt: "{username} 的展示藏品"
+      showcase_tooltip: "{name}（{rarity}）"
+
+    post_showcase:
+      kicker: 展柜
+
+    nav:
+      collectibles: 藏品
 
     user:
       blindboxes_link: 盲盒
       collectibles_link: 藏品
+
+    gallery:
+      title: 藏品
+      filter_all: 全部
+      filter_common: 普通
+      filter_rare: 稀有
+      filter_epic: 史诗
+      filter_legendary: 传说
+      empty: 暂无藏品。
+      load_more: 加载更多
+
+    notification:
+      collectible_ready_title: 藏品已就绪
+      collectible_ready_body: 你的新藏品已生成完毕！
+      collectible_failed_title: 生成失败
+      collectible_failed_body: 藏品生成失败。你的盲盒已退还。
+      nft_minted_title: NFT 已铸造
+      nft_minted_body: 你的藏品已铸造为 NFT #{tokenId}。

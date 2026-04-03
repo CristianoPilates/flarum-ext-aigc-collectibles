@@ -33,7 +33,7 @@ endif
 
 .PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile prepare-playwright-mcp-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter mcp-barter-validation mcp-barter-history locale-status locale-set-en locale-set-zh-hans locale-set-zh-Hans \
+        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter mcp-barter-validation mcp-barter-history locale-status locale-set-en locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         enable-messages publish-site-runtime \
@@ -284,10 +284,6 @@ locale-set-en:
 	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php en
 	cd $(SITE_DIR) && php flarum cache:clear
 
-locale-set-zh-hans:
-	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php zh-hans
-	cd $(SITE_DIR) && php flarum cache:clear
-
 locale-set-zh-Hans:
 	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php zh-Hans
 	cd $(SITE_DIR) && php flarum cache:clear
@@ -374,7 +370,6 @@ help:
 	@echo "  make migrate        - 运行新增迁移"
 	@echo "  make locale-status  - 查看站点 default_locale 与扩展 locale 文件"
 	@echo "  make locale-set-en  - 将站点默认语言切回 English"
-	@echo "  make locale-set-zh-hans - 将站点默认语言切到 zh-hans（扩展中文可用）"
-	@echo "  make locale-set-zh-Hans - 将站点默认语言切到 zh-Hans（兼容完整语言包）"
+	@echo "  make locale-set-zh-Hans - 将站点默认语言切到 zh-Hans"
 	@echo "  make test           - 运行 PHPUnit"
 	@echo ""

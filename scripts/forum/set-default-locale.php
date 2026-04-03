@@ -13,7 +13,7 @@ if ($locale === '') {
     exit(1);
 }
 
-$allowed = ['en', 'zh-hans', 'zh-Hans'];
+$allowed = ['en', 'zh-Hans'];
 if (!in_array($locale, $allowed, true)) {
     fwrite(STDERR, 'Unsupported locale: '.$locale."\n");
     fwrite(STDERR, 'Allowed locales: '.implode(', ', $allowed)."\n");
@@ -47,6 +47,6 @@ echo json_encode([
     'clearedCacheRequired' => true,
     'notes' => [
         'Core strings without a matching language pack will fall back to English.',
-        'This extension ships both zh-hans and zh-Hans locale files.',
+        'This extension ships Chinese strings as zh-Hans.',
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), PHP_EOL;
