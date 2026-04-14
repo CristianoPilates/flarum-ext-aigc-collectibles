@@ -139,7 +139,7 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
   assetCard(asset: BarterAsset, checked: boolean, side: BarterSelectionSide) {
     const token = optionToken(asset);
     const isCollectible = asset.assetType === 'collectible';
-    const svgUrl = blindBoxSvgUrl(app.forum.attribute('baseUrl'), asset.type || '', asset.status || 'unappraised');
+    const svgUrl = blindBoxSvgUrl(app.forum.attribute('baseUrl'), asset.status || 'unappraised');
     const imageUrl = isCollectible && asset.ipfsCid ? gatewayUrl(asset.ipfsCid) : '';
     const label = this.assetLabel(asset);
     const meta = this.assetMeta(asset);

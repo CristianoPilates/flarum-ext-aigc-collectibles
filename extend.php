@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles;
 use Flarum\Extend;
 use Flarum\Search\Database\DatabaseSearchDriver;
 use Flarum\User\User;
+use Illuminate\Foundation\Application;
 
 return [
     (new Extend\Frontend('forum'))

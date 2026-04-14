@@ -17,7 +17,7 @@ export interface BlindBoxPowProgress {
   rarity: string;
 }
 
-export function blindBoxSvgUrl(baseUrl: string, type: string, status: string): string {
+export function blindBoxSvgUrl(baseUrl: string, status: string): string {
   if (status === 'unappraised') {
     return `${baseUrl}/assets/extensions/donk-aigc-collectibles/images/blindbox-unappraised.svg`;
   }

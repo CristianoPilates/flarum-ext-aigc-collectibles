@@ -114,7 +114,7 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
                   <div className="BlindBoxBalanceEntry-summary">
                     <span className="BlindBoxBalanceEntry-icon">
                       <img
-                        src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), entry.type, 'unappraised')}
+                        src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), 'unappraised')}
                         alt="blind box"
                         className="BlindBoxBalanceEntry-svg"
                       />
@@ -163,16 +163,10 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
               {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_unappraised')}
             </div>
           )}
-          {/* Opened indicator */}
-          {status === 'opened' && (
-            <div className="BlindBoxCard-opened">
-              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_opened')}
-            </div>
-          )}
           {/* Blind box SVG illustration */}
           <img
             className="BlindBoxCard-svg"
-            src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), type, status)}
+            src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), status)}
             alt={app.translator.trans('donk-aigc-collectibles.forum.blind_box.type_label')}
           />
           {/* Budget glow effect based on rarity */}
