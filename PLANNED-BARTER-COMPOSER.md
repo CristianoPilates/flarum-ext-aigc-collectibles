@@ -16,16 +16,17 @@ The composer should feel like opening a physical trade binder, not filling out a
 
 The composer is a flat two-column grid. Every section (your collectibles, your blind boxes, their collectibles, their blind boxes) competes for equal visual weight. A user with 3 collectibles and 20 blind boxes sees the same grid density as someone with the reverse.
 
-### 1.2 Design decisions needed
+### 1.2 ~~Design decisions needed~~ — LOCKED
 
-- **Sort order within each column**: By rarity (legendary first) or by recency? Currently API returns in unspecified order.
-- **Grouping strategy**: Keep collectibles and blind boxes separate within each column, or merge into a single pool per side?
-- **Empty side treatment**: "No assets" is shown as gray placeholder text. What does the user do when they have nothing to offer?
-- **Max visible items**: If a user has 50 collectibles, does the grid scroll? Truncate? Paginate?
+- **Sort order**: `rarity first, legendary on top`. API stays unmodified; frontend sorts by rarity tier before rendering.
+- **Grouping strategy**: Keep collectibles and blind boxes separate within each column. No change to current structure.
+- **Empty side**: Add CTA in empty state. Show placeholder text with guidance (e.g., "每日签到可获得盲盒，开始交换吧").
+- **Max visible items**: No pagination for v1. Grid scrolls naturally with `auto-fill`.
+- **Equal vs exact display**: Each side shows exactly what it has. No equalization.
 
 ### 1.3 Decision needed
 
-Should the two sides always show equal total items, or each show exactly what they have? (Current: unequal, which makes comparison harder.)
+~~Should the two sides always show equal total items, or each show exactly what they have?~~ **LOCKED: Each side shows exactly what it has.**
 
 ---
 
@@ -35,16 +36,12 @@ Should the two sides always show equal total items, or each show exactly what th
 
 The header (kicker + title + enable button) uses the same visual weight as the asset grid. The column headers ("YOUR OFFER" / "THEIR OFFER") are tiny uppercase labels. The asset thumbnails are 100px squares — too small to appreciate an image, too large to show many.
 
-### 2.2 Design decisions needed
+### 2.2 ~~Design decisions needed~~ — LOCKED
 
-- **Primary anchor**: What does the user see first when the panel opens? The header or the asset grid? Currently equal weight.
-- **"Give / Get" contrast**: The asymmetry is labeled but not visually emphasized. A user should immediately sense "what I put in vs what I get out."
-- **Rarity as visual signal**: Rarity badges exist (Common/Rare/Epic/Legendary) but are small text. Should legendary items get larger cards, glow effects, or special positioning?
-- **"YOUR OFFER" vs "THEIR OFFER" labels**: Currently uppercase small text. Should these be redesigned as section headers with more personality?
-
-### 2.3 Reference: The BlindBoxCard
-
-The existing `BlindBoxCard` has strong visual hierarchy (shell, seal overlay, glow effects, kicker, type name, budget). The `BarterAssetCard` in the composer is flat by comparison. **Recommendation**: Align the composer card's visual language with the `BlindBoxCard` pattern — use the same spacing scale, the same type of glow for legendary items.
+- **Primary anchor**: Header + enable button. No change. Asset grid appears after user opts in.
+- **Give/Get contrast**: Keep current two-column layout. Add running summary above grid (see Section 3).
+- **Rarity as visual signal**: Keep flat cards with border-color distinction only. No glow effects in composer. Glow stays in `BlindBoxCard` / detail / showcase context.
+- **Section labels**: Keep "YOUR OFFER" / "THEIR OFFER" uppercase labels. Minor styling polish (slightly larger font, more letter-spacing).
 
 ---
 
@@ -54,19 +51,17 @@ The existing `BlindBoxCard` has strong visual hierarchy (shell, seal overlay, gl
 
 Thumbnail grid (100px minmax) with IPFS image or blind box SVG. Check badge in top-right corner. Name + meta line below. Hover: border darkens + shadow.
 
-### 3.2 Design decisions needed
+### 3.2 ~~Design decisions needed~~ — LOCKED
 
-- **Card size**: 100px is too small for IPFS images to be recognizable. Should be 120-140px minimum for collectibles to show meaningful detail.
-- **Selected state**: Blue border + light blue background. Does this adequately communicate "selected"? Consider a checkmark with count summary ("3 selected") rather than per-card checks for better UX with many items.
-- **Collectible vs blind box visual distinction**: Currently both use the same card shell. Should blind box cards retain the SVG + glow treatment from `BlindBoxCard`?
-- **"No assets" empty state**: Gray text placeholder. Should this guide the user (e.g., "Get blind boxes by daily check-in")?
-- **Long names / 47-char names**: The name truncates with ellipsis. Is there room to show the full name on hover?
+- **Card size**: Keep 100px. Trade-off accepted: density wins over image detail at this stage.
+- **Selected state**: Per-card checkmark stays. Add running summary above the asset grid: "已选：3 藏品，2 盲盒".
+- **Collectible vs blind box distinction**: Same card shell. Collectibles show IPFS image, blind boxes show SVG. No additional visual differentiation.
+- **"No assets" empty state**: Add CTA text guiding user to check-in. e.g., "每日签到可获得盲盒，开始交换吧".
+- **Long names**: Truncate with ellipsis at 12px/2 lines. Tooltip on hover for full name (native `title` attribute).
 
-### 3.3 Recommendation
+### 3.3 Recommendation (implementation note)
 
-Use a two-tier selection UX:
-1. Tap/click to select (current per-card check)
-2. Show a running summary above the grid: "3 collectibles, 2 blind boxes selected" so the user doesn't have to scan every card.
+Add a `<BarterSelectionSummary>` component above the asset grid, visible only when `counts.yours > 0 || counts.theirs > 0`. Shows: "已选：{N} 藏品，{N} 盲盒".
 
 ---
 
@@ -79,16 +74,12 @@ Use a two-tier selection UX:
 - Enable/disable toggle collapses/expands the panel
 - Submit sends the message + creates the proposal
 
-### 4.2 Design decisions needed
+### 4.2 ~~Design decisions needed~~ — LOCKED
 
-- **Confirmation before sending**: When the user clicks send with assets selected, is there a confirmation step? Currently it goes straight to submission.
-- **Counteroffer UX**: When revising a proposal (counter), the current selections are pre-filled. Should there be a visual diff showing "I removed X, added Y"?
-- **Loading state**: Spinner while assets load. Is there a skeleton/shimmer state?
-- **Undo/reset**: Can the user clear all selections at once? Currently not obvious (has to disable + re-enable).
-
-### 4.3 Recommendation
-
-Add a "Clear selections" button that appears only when selections exist. Add a confirmation summary: "You'll give 2 collectibles for 1 blind box" before send.
+- **Confirmation before send**: Add pre-send summary row in the composer header. Shows: "你将给出 {N} 藏品，换取 {N} 盲盒". User sees this before submitting. No modal.
+- **Counteroffer UX**: When revising a proposal, show change diff in composer header: "原：2 藏品 1 盲盒 → 现在：3 藏品 1 盲盒". Show added items in green, removed in red.
+- **Loading state**: Keep current spinner text. No skeleton/shimmer for v1.
+- **Reset/Clear selections**: Add a "清除选择" text button, visible only when selections exist. Replaces the current enable/disable toggle as the way to clear.
 
 ---
 
@@ -98,16 +89,12 @@ Add a "Clear selections" button that appears only when selections exist. Add a c
 
 Horizontal scrolling card list in the message stream. Cards show: status badge, revision number, proposer meta, two-column asset preview, action buttons.
 
-### 5.2 Design decisions needed
+### 5.2 ~~Design decisions needed~~ — LOCKED
 
-- **Panel position**: Currently in the stream alongside messages. Should it be in a sidebar (like Flarum tags) instead? This would give it more visual prominence.
-- **Horizontal scroll**: Standard for this pattern, but on mobile it can be disorienting. Is there a better layout for mobile?
-- **Completed vs active proposals**: Completed proposals get a green border. Should active proposals (negotiating) get a different treatment to draw attention?
-- **"发起协商" button**: This button opens the composer. Is it clear this creates a proposal, not a message? The label might confuse users into thinking they're just chatting.
-
-### 5.3 Recommendation
-
-Rename "发起协商" (Start Negotiation) to something clearer like "发起交换" (Start Exchange) or "我要交换" (I want to exchange). "协商" (negotiate) sounds adversarial.
+- **Panel position**: Keep in message stream, horizontal scroll. This is the established pattern. No sidebar for v1.
+- **Mobile horizontal scroll**: Stack to 1 column on mobile. Current breakpoint approach is sufficient.
+- **Completed vs active proposals**: Keep current green border treatment for completed. No additional visual emphasis for v1.
+- **"发起协商" button label**: Keep. Description is accurate enough.
 
 ---
 
@@ -117,16 +104,11 @@ Rename "发起协商" (Start Negotiation) to something clearer like "发起交�
 
 Compact card with: status badge, revision, proposer, two-column asset list, action buttons (Accept / Reject / Counter / Cancel).
 
-### 6.2 Design decisions needed
+### 6.2 ~~Design decisions needed~~ — LOCKED
 
-- **"Accept" is the primary action**: It should be visually dominant. Currently all actions are equal-weight buttons.
-- **"Counter" (还价)**: This is a key interaction. Should it be more prominent? Currently same size as Cancel.
-- **Completed proposal display**: After acceptance, does the card stay in the panel? Currently yes, with reduced opacity.
-- **What if a proposal is superseded**: The card shows "已被第 N 版替代" (superseded by revision N). Should superseded cards be collapsible or visually demoted further?
-
-### 6.3 Recommendation
-
-Use button hierarchy: "Accept" = primary (filled blue), "Counter" = secondary (outlined), "Cancel / Reject" = tertiary (text only).
+- **Action button hierarchy**: Accept = blue filled (primary), Counter = blue outlined (secondary), Cancel/Reject = text-only (tertiary). Use existing `.Button--primary` for Accept, `.Button` outlined for Counter, `Button--text` for Cancel/Reject.
+- **Superseded proposals**: Keep current "已被第 N 版替代" note. Collapsing is out of scope for v1.
+- **Counter button prominence**: Same visual treatment as Accept at the card level. Hierarchy is enough.
 
 ---
 
@@ -140,53 +122,65 @@ Use button hierarchy: "Accept" = primary (filled blue), "Counter" = secondary (o
 - No focus trap within the expanded panel.
 - Color contrast on status badges: check background `#DBEAFE` on `#F8FAFC` — should verify.
 
-### 7.2 Design decisions needed
+### 7.2 ~~Design decisions needed~~ — LOCKED
 
-- Should the panel trap focus when expanded, or allow natural tab flow?
-- Is there a screen reader announcement when selection count changes?
+- **Focus trap**: Implement focus trap when panel is expanded. Trap Tab navigation within the panel.
+- **aria-live**: Add `aria-live="polite"` region that announces selection count changes: "{N} 件已选".
+- **Error announcements**: Use `role="alert"` for validation error messages.
+- **Focus management**: When panel expands, focus moves to the first asset card.
 
 ---
 
 ## 8. Mobile / Responsive
 
-### 8.1 Current state
+### 8.1 ~~Design decisions needed~~ — LOCKED
 
-Mobile breakpoint exists at 768px: grid goes to 1 column, thread panel cards go to 78vw. But the composer is inside Flarum's MessageComposer which may not be mobile-optimized.
-
-### 8.2 Design decisions needed
-
-- Does the composer panel push the text editor off-screen on mobile?
-- Should the two-column layout stack on mobile (yours on top, theirs below)?
-- Are tap targets (44px minimum) met on mobile?
+- **Mobile layout**: Stack to 1 column (your on top, theirs below). Current approach is sufficient for v1.
+- **Tap targets**: Ensure 44px minimum touch target for all interactive elements.
+- **Composer on mobile**: Accept that the composer is compressed on mobile. No special panel treatment.
 
 ---
 
 ## 9. Edge Cases
 
-### 9.1 Design decisions needed
+### 9.1 ~~Design decisions needed~~ — LOCKED
 
-- **47-char collectible name**: Truncates with ellipsis. Where does the full name appear? Tooltip? Expand?
-- **Zero collectibles, many blind boxes**: The "YOUR OFFER" column could be all blind boxes. Is the visual variety sufficient?
-- **Network failure during load**: Shows error text. Should there be a retry button inline?
-- **Rapid toggle**: User clicks rapidly. No debounce. Could cause race conditions.
-- **Proposal with no items on one side**: Should this be prevented at the UI level before submit? Currently only backend validation.
+- **Rapid toggle**: Add debounce (100ms) to selection toggle to prevent race conditions.
+- **Backend-only validation as guard**: Keep backend validation for "no items on one side" — no UI-level blocking beyond guidance.
+- **Network failure on load**: Keep current error text. Retry via refresh button. No inline retry for v1.
 
 ---
 
-## 10. Summary of Design Decisions Needed
+## 10. Summary of Design Decisions — LOCKED
 
-From the review above, here are the concrete decisions to lock down before implementation:
+| # | Decision | Choice |
+|---|----------|--------|
+| 1 | Card size | Keep 100px |
+| 2 | Selection UX | Per-card check + running summary |
+| 3 | Rarity glow | Flat, border-color only |
+| 4 | Panel placement | Message stream, horizontal scroll |
+| 5 | Button hierarchy | Primary / Secondary / Tertiary |
+| 6 | "发起协商" label | Keep |
+| 7 | Sort order | Rarity first, legendary on top |
+| 8 | Mobile layout | Stack to 1 column |
+| 9 | Confirmation step | Pre-send summary row |
+| 10 | Accessibility | Focus trap + aria-live |
 
-1. **Card size**: 100px or 120-140px for composer asset thumbnails?
-2. **Selection UX**: Per-card checkmarks or running summary counter?
-3. **Visual richness**: Should composer cards match `BlindBoxCard` glow/seal treatment?
-4. **Panel placement**: Stay in stream or move to sidebar?
-5. **Button hierarchy**: Primary/secondary/tertiary for Accept/Counter/Cancel?
-6. **"发起协商" label**: Keep, or rename?
-7. **Sort order**: Rarity-first or recency-first?
-8. **Mobile layout**: Stack columns or keep current approach?
-9. **Confirmation step**: Show summary before send, or go straight?
-10. **Accessibility**: Focus trap + aria-live for selection changes?
+### Implementation checklist
+
+- [ ] Add `<BarterSelectionSummary>` component above asset grid
+- [ ] Sort assets by rarity before rendering in each column
+- [ ] Add "清除选择" text button (visible when selections > 0)
+- [ ] Add pre-send summary row in header ("你将给出 N 藏品，换取 N 盲盒")
+- [ ] Add counter diff display (added in green, removed in red)
+- [ ] Add CTA text in empty side placeholder
+- [ ] Add `aria-live="polite"` region for selection count announcements
+- [ ] Add `role="alert"` to validation error messages
+- [ ] Implement focus trap when panel expands
+- [ ] Add 100ms debounce to toggle selection
+- [ ] Apply button hierarchy to `BarterProposalCard` actions
+- [ ] Style polish: section labels slightly larger font
+- [ ] Update LESS variables for new components
 
 ---
 
@@ -201,3 +195,4 @@ Used in the design system:
 Composer container: 14px padding, 16px border-radius, gradient background `#FFFFFF` → `#F8FAFC`.
 
 Selected state: `#2563EB` border, `#DBEAFE` background.
+Selected check: `#2563EB` circle with white checkmark icon.
