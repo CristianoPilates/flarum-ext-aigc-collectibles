@@ -81,6 +81,18 @@ make mcp-proof
 make mcp-barter
 make mcp-barter-validation
 make mcp-barter-history
+make mcp-barter-inspect
+make mcp-messages
+make mcp-minimal-nft
+make mcp-debug-mint
+make mcp-focus-metamask
+make mcp-storage
+
+make locale-status
+make locale-set-en
+make locale-set-zh-Hans
+
+make publish-site-runtime
 
 METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 ```
@@ -106,13 +118,33 @@ METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 - `make mcp-proof`
   验收四层 proof modal
 - `make mcp-barter`
-  验收私信线程中的 barter composer 和提案创建
+  验收私信线程中的 barter composer 和提案创建（完整验证）
 - `make mcp-barter-validation`
   验收 barter composer 的资产选择验证逻辑
 - `make mcp-barter-history`
-  验收私信线程中的协商历史展示
+  验收私信线程中的协商历史展示（多轮修订）
+- `make mcp-barter-inspect`
+  检查 barter composer 内部状态（诊断用）
+- `make mcp-messages`
+  验收私信基本功能
 - `make mcp-minimal-nft`
   跑登录 -> 生成 -> 绑定钱包 -> mint 的最小闭环
+- `make mcp-debug-mint`
+  调试 mint 流程
+- `make mcp-focus-metamask`
+  驱动 MetaMask focus 和确认
+- `make mcp-storage`
+  检查 Playwright browser storage 状态
+- `make locale-status`
+  检查当前 locale 配置
+- `make locale-set-en`
+  设置站点语言为 English
+- `make locale-set-zh-Hans`
+  设置站点语言为简体中文
+- `make publish-site-runtime`
+  发布前端资源和扩展资产
+- `METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft`
+  带钱包密码的最小 NFT 闭环验收
 
 ## 5. 标准启动顺序
 
