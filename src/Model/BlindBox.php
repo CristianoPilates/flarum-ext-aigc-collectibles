@@ -5,6 +5,7 @@ namespace Donk\AigcCollectibles\Model;
 use Carbon\Carbon;
 use Donk\AigcCollectibles\StateMachine\HasStateMachine;
 use Flarum\Database\AbstractModel;
+use Flarum\User\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
