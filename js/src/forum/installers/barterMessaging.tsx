@@ -1,6 +1,5 @@
 import app from 'flarum/forum/app';
 import { extend as flarumExtend, override } from 'flarum/common/extend';
-import ComposerBody from 'flarum/forum/components/ComposerBody';
 import BarterThreadPanel from '../components/BarterThreadPanel';
 import BarterComposerPanel from '../components/BarterComposerPanel';
 import {
