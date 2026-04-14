@@ -9,6 +9,7 @@ import {
   blindBoxId,
   blindBoxSeed,
   blindBoxStatus,
+  blindBoxSvgUrl,
   blindBoxType,
   rarityFromBudget,
 } from '../utils/blindBoxes';
@@ -112,7 +113,11 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
                 >
                   <div className="BlindBoxBalanceEntry-summary">
                     <span className="BlindBoxBalanceEntry-icon">
-                      <i className="fas fa-gift" />
+                      <img
+                        src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), entry.type, 'unappraised')}
+                        alt="blind box"
+                        className="BlindBoxBalanceEntry-svg"
+                      />
                     </span>
                     <span className="BlindBoxBalanceEntry-type">
                       {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.type_${entry.type}`) || entry.type}
@@ -152,32 +157,39 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
         data-id={boxId}
       >
         <div className="BlindBoxCard-shell">
-          <div className="BlindBoxCard-face">
-            {/* Status seal for unappraised */}
-            {canAppraise && (
-              <div className="BlindBoxCard-seal">
-                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_unappraised')}
-              </div>
-            )}
-            {/* Opened indicator */}
-            {status === 'opened' && (
-              <div className="BlindBoxCard-opened">
-                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_opened')}
-              </div>
-            )}
-            <div className="BlindBoxCard-kicker">
-              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.type_label')}
+          {/* Status seal for unappraised */}
+          {canAppraise && (
+            <div className="BlindBoxCard-seal">
+              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_unappraised')}
             </div>
-            <h4 className="BlindBoxCard-type">
-              {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.type_${type}`)}
-            </h4>
-            <div className={`BlindBoxCard-status BlindBoxCard-status--${status}`}>
-              {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.status_${status}`)}
+          )}
+          {/* Opened indicator */}
+          {status === 'opened' && (
+            <div className="BlindBoxCard-opened">
+              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_opened')}
             </div>
-            {/* Budget glow effect based on rarity */}
-            {typeof budget === 'number' && (
-              <div className={`BlindBoxCard-glow BlindBoxCard-glow--${rarityFromBudget(budget)}`} />
-            )}
+          )}
+          {/* Blind box SVG illustration */}
+          <img
+            className="BlindBoxCard-svg"
+            src={blindBoxSvgUrl(app.forum.attribute('baseUrl'), type, status)}
+            alt={app.translator.trans('donk-aigc-collectibles.forum.blind_box.type_label')}
+          />
+          {/* Budget glow effect based on rarity */}
+          {typeof budget === 'number' && (
+            <div className={`BlindBoxCard-glow BlindBoxCard-glow--${rarityFromBudget(budget)}`} />
+          )}
+        </div>
+
+        <div className="BlindBoxCard-info">
+          <div className="BlindBoxCard-kicker">
+            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.type_label')}
+          </div>
+          <h4 className="BlindBoxCard-type">
+            {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.type_${type}`)}
+          </h4>
+          <div className={`BlindBoxCard-status BlindBoxCard-status--${status}`}>
+            {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.status_${status}`)}
           </div>
         </div>
 

@@ -2,8 +2,10 @@ import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
+import { gatewayUrl } from '../utils/ipfs';
 import { transText } from '../utils/i18n';
 import { displayUserName } from '../utils/users';
+import { blindBoxSvgUrl } from '../utils/blindBoxes';
 import type { BarterAsset, BarterSelectionSide } from '../utils/barterComposer';
 import {
   barterSelections,
@@ -134,6 +136,49 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
     );
   }
 
+  assetCard(asset: BarterAsset, checked: boolean, side: BarterSelectionSide) {
+    const token = optionToken(asset);
+    const isCollectible = asset.assetType === 'collectible';
+    const svgUrl = blindBoxSvgUrl(app.forum.attribute('baseUrl'), asset.type || '', asset.status || 'unappraised');
+    const imageUrl = isCollectible && asset.ipfsCid ? gatewayUrl(asset.ipfsCid) : '';
+    const label = this.assetLabel(asset);
+    const meta = this.assetMeta(asset);
+
+    return (
+      <div
+        className={`BarterAssetCard ${checked ? 'BarterAssetCard--selected' : ''}`}
+        key={token}
+        onclick={() => this.toggleSelection(side, token, !checked)}
+        role="checkbox"
+        aria-checked={checked}
+        tabIndex={0}
+        onkeydown={(e: KeyboardEvent) => {
+          if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            this.toggleSelection(side, token, !checked);
+          }
+        }}
+      >
+        <div className="BarterAssetCard-thumb">
+          {imageUrl ? (
+            <img src={imageUrl} alt={label} className="BarterAssetCard-img" loading="lazy" />
+          ) : (
+            <img src={svgUrl} alt={label} className="BarterAssetCard-img" loading="lazy" />
+          )}
+          {checked && (
+            <div className="BarterAssetCard-check">
+              <i className="fas fa-check" />
+            </div>
+          )}
+        </div>
+        <div className="BarterAssetCard-info">
+          <div className="BarterAssetCard-name">{label}</div>
+          <div className="BarterAssetCard-meta">{meta}</div>
+        </div>
+      </div>
+    );
+  }
+
   assetGroup(assets: BarterAsset[], selections: string[], side: BarterSelectionSide, labelKey: string) {
     return (
       <div className="BarterComposerPanel-group">
@@ -145,26 +190,11 @@ export default class BarterComposerPanel extends Component<BarterComposerPanelAt
             {this.trans('donk-aigc-collectibles.forum.barter.no_assets')}
           </div>
         ) : (
-          <div className="BarterComposerPanel-options">
+          <div className="BarterAssetCardGrid">
             {assets.map((asset) => {
               const token = optionToken(asset);
               const checked = selections.includes(token);
-
-              return (
-                <label className={`BarterComposerPanel-option ${checked ? 'is-selected' : ''}`} key={token}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onchange={(event: InputEvent) => {
-                      this.toggleSelection(side, token, (event.target as HTMLInputElement).checked);
-                    }}
-                  />
-                  <div className="BarterComposerPanel-optionCopy">
-                    <div className="BarterComposerPanel-optionTitle">{this.assetLabel(asset)}</div>
-                    <div className="BarterComposerPanel-optionMeta">{this.assetMeta(asset)}</div>
-                  </div>
-                </label>
-              );
+              return this.assetCard(asset, checked, side);
             })}
           </div>
         )}

@@ -23,9 +23,15 @@ class UserResourceFields
     public function __invoke(): array
     {
         $getShowcase = function (User $user): ?Collectible {
-            $collectible = $user->relationLoaded('showcaseCollectible')
-                ? $user->getRelation('showcaseCollectible')
-                : null;
+            if ($user->relationLoaded('showcaseCollectible')) {
+                $collectible = $user->getRelation('showcaseCollectible');
+            } else {
+                // Fallback: relation not eager-loaded (e.g. post author via PostResource).
+                // Fetch directly to ensure showcase panel renders in posts/replies.
+                $collectible = $user->showcase_collectible_id
+                    ? Collectible::query()->find($user->showcase_collectible_id)
+                    : null;
+            }
 
             if (! $collectible instanceof Collectible) {
                 return null;
