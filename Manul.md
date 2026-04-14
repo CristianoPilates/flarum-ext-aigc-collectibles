@@ -78,6 +78,9 @@ make mcp-headed
 make mcp-state
 make mcp-showcase
 make mcp-proof
+make mcp-barter
+make mcp-barter-validation
+make mcp-barter-history
 
 METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
 ```
@@ -102,6 +105,12 @@ METAMASK_PASSWORD='<wallet-password>' make mcp-minimal-nft
   验收 reply 右侧展柜
 - `make mcp-proof`
   验收四层 proof modal
+- `make mcp-barter`
+  验收私信线程中的 barter composer 和提案创建
+- `make mcp-barter-validation`
+  验收 barter composer 的资产选择验证逻辑
+- `make mcp-barter-history`
+  验收私信线程中的协商历史展示
 - `make mcp-minimal-nft`
   跑登录 -> 生成 -> 绑定钱包 -> mint 的最小闭环
 
