@@ -3,10 +3,25 @@ import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import BlindBoxOpener from './BlindBoxOpener';
-import { blindBoxBudget, blindBoxDrawRules, blindBoxSeed, blindBoxStatus, blindBoxType } from '../utils/blindBoxes';
+import {
+  blindBoxBudget,
+  blindBoxDrawRules,
+  blindBoxId,
+  blindBoxSeed,
+  blindBoxStatus,
+  blindBoxType,
+  rarityFromBudget,
+} from '../utils/blindBoxes';
 
 interface BlindBoxInventoryAttrs {
   user: any;
+}
+
+interface BalanceEntry {
+  type: string;
+  count: number;
+  expanded: boolean;
+  boxes: any[];
 }
 
 const ACTIVE_STATUSES = ['unappraised', 'appraised'];
@@ -15,6 +30,7 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
   loading: boolean = true;
   blindBoxes: any[] = [];
   lastLoadedUserId: string | null = null;
+  expandedType: string | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -30,49 +46,95 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
     if (userId !== this.lastLoadedUserId) {
       this.lastLoadedUserId = userId;
       this.blindBoxes = [];
+      this.expandedType = null;
       this.loadBlindBoxes();
     }
 
     return true;
   }
 
+  /**
+   * Build balance dictionary from loaded blind boxes.
+   * Groups boxes by type and counts active ones.
+   */
+  balanceDictionary(): BalanceEntry[] {
+    const byType = new Map<string, any[]>();
+
+    for (const box of this.blindBoxes) {
+      if (!ACTIVE_STATUSES.includes(blindBoxStatus(box))) continue;
+      const type = blindBoxType(box);
+      if (!byType.has(type)) byType.set(type, []);
+      byType.get(type)!.push(box);
+    }
+
+    return Array.from(byType.entries()).map(([type, boxes]) => ({
+      type,
+      count: boxes.length,
+      expanded: this.expandedType === type,
+      boxes,
+    }));
+  }
+
+  toggleType(type: string) {
+    this.expandedType = this.expandedType === type ? null : type;
+    m.redraw();
+  }
+
   view() {
-    const activeBoxes = this.activeBlindBoxes();
+    const balances = this.balanceDictionary();
+    const totalActive = balances.reduce((sum, e) => sum + e.count, 0);
 
     return (
       <div className="BlindBoxInventory">
         <div className="BlindBoxInventory-header">
-          <div>
-            <h3 className="BlindBoxInventory-title">
-              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.inventory_title')}
-            </h3>
-            <p className="BlindBoxInventory-subtitle">
-              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.inventory_subtitle', {
-                count: activeBoxes.length,
-              })}
-            </p>
-          </div>
+          <h3 className="BlindBoxInventory-title">
+            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.inventory_title')}
+          </h3>
         </div>
 
         {this.loading ? (
           <div className="BlindBoxInventory-loading">
             <LoadingIndicator />
           </div>
-        ) : activeBoxes.length === 0 ? (
+        ) : totalActive === 0 ? (
           <div className="BlindBoxInventory-empty">
             <p>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.inventory_empty')}</p>
           </div>
         ) : (
-          <div className="BlindBoxInventory-grid">
-            {activeBoxes.map((blindBox: any) => this.viewBlindBox(blindBox))}
-          </div>
+          <>
+            {/* Balance Dictionary */}
+            <div className="BlindBoxBalanceDictionary">
+              {balances.map((entry) => (
+                <div
+                  key={entry.type}
+                  className={`BlindBoxBalanceEntry BlindBoxBalanceEntry--${entry.type}${entry.expanded ? ' BlindBoxBalanceEntry--expanded' : ''}`}
+                  onclick={() => this.toggleType(entry.type)}
+                >
+                  <div className="BlindBoxBalanceEntry-summary">
+                    <span className="BlindBoxBalanceEntry-icon">
+                      <i className="fas fa-gift" />
+                    </span>
+                    <span className="BlindBoxBalanceEntry-type">
+                      {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.type_${entry.type}`) || entry.type}
+                    </span>
+                    <span className="BlindBoxBalanceEntry-count">{entry.count}</span>
+                    <span className="BlindBoxBalanceEntry-chevron">
+                      <i className={`fas fa-chevron-${entry.expanded ? 'up' : 'down'}`} />
+                    </span>
+                  </div>
+
+                  {entry.expanded && (
+                    <div className="BlindBoxBalanceEntry-cards">
+                      {entry.boxes.map((box) => this.viewBlindBox(box))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );
-  }
-
-  activeBlindBoxes() {
-    return this.blindBoxes.filter((blindBox: any) => ACTIVE_STATUSES.includes(blindBoxStatus(blindBox)));
   }
 
   viewBlindBox(blindBox: any) {
@@ -82,11 +144,27 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
     const drawRules = blindBoxDrawRules(blindBox);
     const canAppraise = status === 'unappraised';
     const canOpen = status === 'appraised';
+    const boxId = blindBoxId(blindBox);
 
     return (
-      <article className={`BlindBoxCard BlindBoxCard--${type} BlindBoxCard--${status}`} key={blindBox.id()}>
+      <article
+        className={`BlindBoxCard BlindBoxCard--${type} BlindBoxCard--${status}`}
+        data-id={boxId}
+      >
         <div className="BlindBoxCard-shell">
           <div className="BlindBoxCard-face">
+            {/* Status seal for unappraised */}
+            {canAppraise && (
+              <div className="BlindBoxCard-seal">
+                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_unappraised')}
+              </div>
+            )}
+            {/* Opened indicator */}
+            {status === 'opened' && (
+              <div className="BlindBoxCard-opened">
+                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_opened')}
+              </div>
+            )}
             <div className="BlindBoxCard-kicker">
               {app.translator.trans('donk-aigc-collectibles.forum.blind_box.type_label')}
             </div>
@@ -96,6 +174,10 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
             <div className={`BlindBoxCard-status BlindBoxCard-status--${status}`}>
               {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.status_${status}`)}
             </div>
+            {/* Budget glow effect based on rarity */}
+            {typeof budget === 'number' && (
+              <div className={`BlindBoxCard-glow BlindBoxCard-glow--${rarityFromBudget(budget)}`} />
+            )}
           </div>
         </div>
 
@@ -126,7 +208,7 @@ export default class BlindBoxInventory extends Component<BlindBoxInventoryAttrs>
               {drawRules.map((rule) => (
                 <span
                   className={`BlindBoxCard-category${rule.required ? ' BlindBoxCard-category--required' : ''}`}
-                  key={`${blindBox.id()}-${rule.category}-${rule.required ? 'required' : 'optional'}`}
+                  key={`${boxId}-${rule.category}-${rule.required ? 'required' : 'optional'}`}
                 >
                   {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.category_${rule.category}`)}
                   {rule.required
