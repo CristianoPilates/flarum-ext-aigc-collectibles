@@ -229,6 +229,13 @@ donk-aigc-collectibles:
       your_asset: Yours
       collectible_link: View collectibles
       no_assets: No available assets.
+      selection_summary: "Selected: {collectibles} collectible(s), {blindBoxes} blind box(es)"
+      pre_send_summary: "You'll give {collectibles} collectible(s) for {blindBoxes} blind box(es)"
+      clear_selections: Clear
+      empty_cta: "No assets here. Earn blind boxes by checking in daily!"
+      counter_diff: "Was {prev}, now {curr}"
+      counter_added: "Added"
+      counter_removed: "Removed"
       validation_assets_required: Select at least one asset.
       validation_both_sides_required: The negotiation must include assets from both sides.
       validation_message_required: Write your message in the private message box before sending the negotiation.

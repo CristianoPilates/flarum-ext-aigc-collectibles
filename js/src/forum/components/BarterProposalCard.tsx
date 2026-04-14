@@ -110,7 +110,7 @@ export default class BarterProposalCard extends Component<BarterProposalCardAttr
 
           {proposal.canReject?.() ? (
             <Button
-              className="Button"
+              className="Button Button--text"
               onclick={() => void this.attrs.onAction(proposal, 'reject')}
               loading={this.attrs.isActing}
               disabled={this.attrs.isActing}
@@ -121,7 +121,7 @@ export default class BarterProposalCard extends Component<BarterProposalCardAttr
 
           {proposal.canCancel?.() ? (
             <Button
-              className="Button"
+              className="Button Button--text"
               onclick={() => void this.attrs.onAction(proposal, 'cancel')}
               loading={this.attrs.isActing}
               disabled={this.attrs.isActing}

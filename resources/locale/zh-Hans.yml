@@ -249,6 +249,13 @@ donk-aigc-collectibles:
       your_asset: 你的资产
       collectible_link: 查看藏品页
       no_assets: 当前没有可选资产。
+      selection_summary: "已选：{collectibles} 藏品，{blindBoxes} 盲盒"
+      pre_send_summary: "你将给出 {collectibles} 藏品，换取 {blindBoxes} 盲盒"
+      clear_selections: 清除选择
+      empty_cta: "这里没有资产。每日签到可获得盲盒，开始交换吧！"
+      counter_diff: "原：{prev} → 现在：{curr}"
+      counter_added: 新增
+      counter_removed: 移除
       validation_assets_required: 至少选择一项资产。
       validation_both_sides_required: 协商必须同时包含双方资产。
       validation_message_required: 请先在私信输入框里写下你要发送的话，再发送协商。
