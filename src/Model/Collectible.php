@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $ipfs_cid
  * @property string|null $metadata_cid
  * @property string|null $aigc_prompt
- * @property string $name
+ * @property string|null $name
  * @property string $rarity
  * @property string $status
  * @property int|null $token_id
@@ -66,8 +66,12 @@ class Collectible extends AbstractModel
         return $this->hasMany(CollectibleEvent::class, 'collectible_id');
     }
 
-    public function getNameAttribute(): string
+    public function getNameAttribute(mixed $value): string
     {
+        if ($value !== null && $value !== '') {
+            return $value;
+        }
+
         return 'Collectible #' . ($this->id ?: 'Draft');
     }
 

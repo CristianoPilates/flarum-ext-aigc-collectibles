@@ -42,6 +42,80 @@ export interface BarterAssetsPayload {
 
 export type BarterSelectionSide = 'yours' | 'theirs';
 
+// ─── localStorage persistence ──────────────────────────────────────────────────
+
+const LS_KEY_PREFIX = 'aigc-barter-draft-';
+const LS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface BartersDraft {
+  yours: string[];
+  theirs: string[];
+  savedAt: string; // ISO timestamp
+}
+
+function saveDraftToStorage(dialogId: string, yours: string[], theirs: string[]): void {
+  try {
+    const key = LS_KEY_PREFIX + dialogId;
+    const draft: BartersDraft = {
+      yours,
+      theirs,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(key, JSON.stringify(draft));
+  } catch {
+    // localStorage may be unavailable (private browsing, quota exceeded)
+  }
+}
+
+function loadDraftFromStorage(dialogId: string): BartersDraft | null {
+  try {
+    const key = LS_KEY_PREFIX + dialogId;
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const draft: BartersDraft = JSON.parse(raw);
+    const age = Date.now() - new Date(draft.savedAt).getTime();
+    if (age > LS_TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+export function clearDraftFromStorage(dialogId: string): void {
+  try {
+    localStorage.removeItem(LS_KEY_PREFIX + dialogId);
+  } catch {
+    // ignore
+  }
+}
+
+// Debounced write — caller passes the raw setTimeout handle so we can cancel
+let draftSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleDraftSave(dialogId: string, yours: string[], theirs: string[]): void {
+  if (draftSaveTimer) {
+    clearTimeout(draftSaveTimer);
+  }
+  draftSaveTimer = setTimeout(() => {
+    draftSaveTimer = null;
+    saveDraftToStorage(dialogId, yours, theirs);
+  }, 500);
+}
+
+function restoreDraft(dialogId: string, fields: BarterComposerFields): boolean {
+  const draft = loadDraftFromStorage(dialogId);
+  if (!draft) return false;
+
+  fields.barterMySelections([...draft.yours]);
+  fields.barterTheirSelections([...draft.theirs]);
+  return true;
+}
+
 interface BarterComposerFields {
   barterEnabled: Stream<boolean>;
   barterExpanded: Stream<boolean>;
@@ -101,7 +175,12 @@ export function barterSelections(composer: any, side: BarterSelectionSide): stri
 }
 
 export function resetBarterSelections(composer: any): void {
-  resetBarterSelectionsForFields(ensureBarterComposerFields(composer));
+  const fields = ensureBarterComposerFields(composer);
+  resetBarterSelectionsForFields(fields);
+  const dialogId = fields.barterLoadedDialogId();
+  if (dialogId) {
+    clearDraftFromStorage(dialogId);
+  }
 }
 
 export function toggleBarterSelection(
@@ -124,10 +203,21 @@ export function toggleBarterSelection(
 
   selectionStreamForSide(fields, side)(current);
   fields.barterValidationError(null);
+
+  // Persist draft to localStorage
+  const dialogId = fields.barterLoadedDialogId();
+  if (dialogId) {
+    scheduleDraftSave(
+      dialogId,
+      selectionsForSide(fields, 'yours'),
+      selectionsForSide(fields, 'theirs')
+    );
+  }
 }
 
 export function clearBarterComposer(composer: any, keepAssets: boolean = false): void {
   const fields = ensureBarterComposerFields(composer);
+  const dialogId = fields.barterLoadedDialogId();
 
   fields.barterEnabled(false);
   fields.barterExpanded(false);
@@ -135,6 +225,10 @@ export function clearBarterComposer(composer: any, keepAssets: boolean = false):
   fields.barterValidationError(null);
   resetBarterSelectionsForFields(fields);
   fields.barterReplacesProposalId(null);
+
+  if (dialogId) {
+    clearDraftFromStorage(dialogId);
+  }
 
   if (!keepAssets) {
     fields.barterAssets(null);
@@ -199,6 +293,11 @@ export async function loadBarterAssets(composer: any, dialog: any, force: boolea
     const payload = response?.data || null;
     fields.barterAssets(payload);
     fields.barterLoadedDialogId(String(dialogId));
+
+    // Restore draft from localStorage if present
+    if (dialogId) {
+      restoreDraft(String(dialogId), fields);
+    }
 
     return payload;
   } catch (error: any) {
@@ -347,6 +446,7 @@ export async function createBarterProposalFromComposer(dialog: any, composer: an
   });
 
   clearBarterComposer(composer, true);
+  clearDraftFromStorage(dialogId);
   emitBarterThreadUpdated(dialogId);
 }
 

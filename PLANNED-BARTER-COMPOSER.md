@@ -1,198 +1,447 @@
-# Barter Composer Redesign — Design Review Plan
+# Barter Composer — Design Review & Redesign Plan
 
-**Review scope:** BarterComposerPanel, BarterThreadPanel, BarterProposalCard, and their surrounding interaction patterns within Flarum's MessageComposer.
-
-**Rating: 5/10** — Functional but generic. The grid-of-thumbnails approach works but misses the emotional weight of trading real digital possessions.
-
-## What a 10 looks like for THIS plan
-
-The composer should feel like opening a physical trade binder, not filling out a spreadsheet. Every asset card should have visual presence. The "give / get" asymmetry should be immediately readable. The thread panel should feel like a negotiation record, not a bug report.
+**Status:** Locked after engineering review
+**Branch:** `release/post-refactor-consolidation`
+**Date:** 2026-04-15
+**Engineering Review:** Complete — 4 decisions resolved, 4 issues fixed, 7 tests planned
 
 ---
 
-## 1. Information Architecture
+## Root Cause Analysis: The Two Bugs in the Screenshot
 
-### 1.1 Current state
+### Bug 1: "对方出价" is blank
 
-The composer is a flat two-column grid. Every section (your collectibles, your blind boxes, their collectibles, their blind boxes) competes for equal visual weight. A user with 3 collectibles and 20 blind boxes sees the same grid density as someone with the reverse.
+**Root cause:** `BarterComposerPanel.tsx:147` references an undefined variable `fields` inside `getOriginalProposalItems()`:
 
-### 1.2 ~~Design decisions needed~~ — LOCKED
+```tsx
+// Line 147 — fields is NOT in scope here
+const target = proposals.find((p: any) => String(p.id?.()) === String(fields.barterReplacesProposalId()));
+```
 
-- **Sort order**: `rarity first, legendary on top`. API stays unmodified; frontend sorts by rarity tier before rendering.
-- **Grouping strategy**: Keep collectibles and blind boxes separate within each column. No change to current structure.
-- **Empty side**: Add CTA in empty state. Show placeholder text with guidance (e.g., "每日签到可获得盲盒，开始交换吧").
-- **Max visible items**: No pagination for v1. Grid scrolls naturally with `auto-fill`.
-- **Equal vs exact display**: Each side shows exactly what it has. No equalization.
+This is a JavaScript ReferenceError. But more fundamentally, even if fixed, "their offer" appearing in the composer is by design. The `theirs` side renders `payload.theirs.*` from the `barterAssets` API response. If that side is blank, the reason is one of:
 
-### 1.3 Decision needed
+1. **Data root cause:** The `barterAssets` endpoint returns an empty `theirs` bucket for this dialog — the counterparty genuinely has no assets, or the API filter/authorization is wrong.
+2. **Filtering root cause:** The endpoint may be filtering out assets the current user doesn't have permission to see (e.g., blind boxes in `unappraised` state that shouldn't be traded yet).
+3. **UX root cause:** Even if the counterparty has 0 assets, the UI should show "对方暂无资产可交易" (empty state CTA), not a blank column.
 
-~~Should the two sides always show equal total items, or each show exactly what they have?~~ **LOCKED: Each side shows exactly what it has.**
+**The real fix is architectural:** The "their offer" column should be populated from a separate data source (the counterparty's actual holdings, loaded asynchronously). If it's blank because the API returned nothing, the empty state must guide the user.
 
----
+### Bug 2: "我方出价" list is truncated
 
-## 2. Visual Hierarchy
+**Root cause:** Layout overflow, not a rendering bug. The `.BarterComposerPanel` is a CSS Grid container. The `.BarterComposerPanel-grid` is `display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));`. Inside each column, `.BarterComposerPanel-column` contains `.BarterAssetCardGrid` which is `display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));`.
 
-### 2.1 Current state
+The issue: `.BarterComposerPanel` has no `max-height` constraint, but its parent `.MessageComposer-barter` sets `flex: 0 0 100%; width: 100%` without constraining height. The Flarum composer itself has a limited vertical space budget (~40vh on most screens). As cards stack, they overflow the viewport and the browser's default overflow clips them. There is no `overflow-y: auto` on the panel, so users can't scroll to see the rest.
 
-The header (kicker + title + enable button) uses the same visual weight as the asset grid. The column headers ("YOUR OFFER" / "THEIR OFFER") are tiny uppercase labels. The asset thumbnails are 100px squares — too small to appreciate an image, too large to show many.
+**Immediate fix (in current architecture):** Add `overflow-y: auto; max-height: 50vh;` to `.BarterComposerPanel-column`. But this only papers over the symptom — the fundamental problem is that a 4-section grid of thumbnails doesn't belong in a message composer.
 
-### 2.2 ~~Design decisions needed~~ — LOCKED
+### The Diagnosis in One Sentence
 
-- **Primary anchor**: Header + enable button. No change. Asset grid appears after user opts in.
-- **Give/Get contrast**: Keep current two-column layout. Add running summary above grid (see Section 3).
-- **Rarity as visual signal**: Keep flat cards with border-color distinction only. No glow effects in composer. Glow stays in `BlindBoxCard` / detail / showcase context.
-- **Section labels**: Keep "YOUR OFFER" / "THEIR OFFER" uppercase labels. Minor styling polish (slightly larger font, more letter-spacing).
+The composer is not the right place for asset browsing. These two bugs are symptoms of the same root cause: **trying to do a full asset-selection workflow inside a message composer pane.**
 
 ---
 
-## 3. Asset Card Design
+## Step 0: Design Scope Assessment
 
-### 3.1 Current state
+**UI Scope:** Very high — new full-screen overlay, new tab navigation, new summary card, new modal/overlay entry point, composer integration changes.
 
-Thumbnail grid (100px minmax) with IPFS image or blind box SVG. Check badge in top-right corner. Name + meta line below. Hover: border darkens + shadow.
+**Existing patterns to leverage:**
+- Flarum's `Modal` component infrastructure for the full-screen overlay
+- Existing `BarterAssetCard` component (redesign card size, but keep the thumb/info/checkmark pattern)
+- Existing `BarterComposerPanel` shell (replace inline grid with summary card + "Edit" trigger)
+- Flarum's `listItems` helper for header construction
+- Existing `BarterProposalCard` in thread panel (no change needed here)
 
-### 3.2 ~~Design decisions needed~~ — LOCKED
+**No DESIGN.md exists.** Project uses Flarum's default design language + custom LESS. Proceeding with Flarum conventions.
 
-- **Card size**: Keep 100px. Trade-off accepted: density wins over image detail at this stage.
-- **Selected state**: Per-card checkmark stays. Add running summary above the asset grid: "已选：3 藏品，2 盲盒".
-- **Collectible vs blind box distinction**: Same card shell. Collectibles show IPFS image, blind boxes show SVG. No additional visual differentiation.
-- **"No assets" empty state**: Add CTA text guiding user to check-in. e.g., "每日签到可获得盲盒，开始交换吧".
-- **Long names**: Truncate with ellipsis at 12px/2 lines. Tooltip on hover for full name (native `title` attribute).
-
-### 3.3 Recommendation (implementation note)
-
-Add a `<BarterSelectionSummary>` component above the asset grid, visible only when `counts.yours > 0 || counts.theirs > 0`. Shows: "已选：{N} 藏品，{N} 盲盒".
+**Prior design reviews:** One prior review (Section 1-10 of this file, locked). This review supersedes it entirely.
 
 ---
 
-## 4. Interaction Patterns
+## Phase 0 (Prerequisite — must do first): Add `name` column to collectibles
 
-### 4.1 Current state
+- Migration: `2026_04_15_000008_add_name_to_collectibles.php` (nullable string, max 100 chars)
+- Model: `Collectible::getNameAttribute()` — return `$value` if not null/empty, else fallback to `'Collectible #{$id}'`
+- **Rationale:** Humans cannot search or identify assets by numeric ID. The barter config overlay requires a real, owner-assignable name field. This is a prerequisite for the entire redesign.
+- Model mass assignment: `$fillable` not used in this project, so no change needed
+- No existing code writes `name` to Collectible — safe to add as nullable
 
-- Click card to toggle selection
-- Refresh button reloads assets from API
-- Enable/disable toggle collapses/expands the panel
-- Submit sends the message + creates the proposal
+## Step 1: New Information Architecture
 
-### 4.2 ~~Design decisions needed~~ — LOCKED
+### The Core Insight
 
-- **Confirmation before send**: Add pre-send summary row in the composer header. Shows: "你将给出 {N} 藏品，换取 {N} 盲盒". User sees this before submitting. No modal.
-- **Counteroffer UX**: When revising a proposal, show change diff in composer header: "原：2 藏品 1 盲盒 → 现在：3 藏品 1 盲盒". Show added items in green, removed in red.
-- **Loading state**: Keep current spinner text. No skeleton/shimmer for v1.
-- **Reset/Clear selections**: Add a "清除选择" text button, visible only when selections exist. Replaces the current enable/disable toggle as the way to clear.
+Separation of concerns:
 
----
+| Concern | Where it lives |
+|---------|---------------|
+| Composing a message to the counterparty | Message Composer |
+| Browsing, filtering, paginating my assets | Full-screen Config Overlay |
+| Browsing, filtering, paginating counterparty assets | Full-screen Config Overlay |
+| Reviewing what I've configured | Composer summary card |
+| Adjusting a draft | Back to Full-screen Config Overlay |
 
-## 5. BarterThreadPanel — Design
+The composer should know **nothing** about asset rendering. It should only display:
+- A summary: "你出 2C 1B，换对方 1C"
+- A thumbnail strip of selected asset names
+- An "编辑协商" button that opens the config overlay
+- The message text area
 
-### 5.1 Current state
+### Proposed Architecture
 
-Horizontal scrolling card list in the message stream. Cards show: status badge, revision number, proposer meta, two-column asset preview, action buttons.
+```
+Message Composer
+├── [HEADER] To: {recipient}
+├── [BARTER SUMMARY CARD]          ← NEW: replaces the inline grid
+│   ├── "协商条件已配置" kicker
+│   ├── Give ↔ Get summary (names + counts)
+│   └── "编辑协商" button
+├── [TEXT EDITOR]                  ← unchanged
+└── [SUBMIT]
 
-### 5.2 ~~Design decisions needed~~ — LOCKED
+Full-Screen Config Overlay (Modal / m.draw())
+├── [OVERLAY HEADER]
+│   ├── Title: "配置协商"
+│   ├── Live counter: "我出 2 · 对方出 1"
+│   └── Close (×)
+├── [SUMMARY ROW]                  ← always visible, updates live
+├── [TAB BAR]
+│   ├── 我的藏品
+│   ├── 我的盲盒
+│   ├── 对方藏品
+│   └── 对方盲盒
+├── [FILTER BAR]
+│   ├── Search input
+│   └── Rarity filter pills (全部/普通/稀有/史诗/传说)
+├── [ASSET GRID]
+│   ├── Paginated (12 per page)
+│   └── Cards with checkboxes
+└── [OVERLAY FOOTER]
+    ├── Cancel
+    └── 确认选择 (applies and closes)
+```
 
-- **Panel position**: Keep in message stream, horizontal scroll. This is the established pattern. No sidebar for v1.
-- **Mobile horizontal scroll**: Stack to 1 column on mobile. Current breakpoint approach is sufficient.
-- **Completed vs active proposals**: Keep current green border treatment for completed. No additional visual emphasis for v1.
-- **"发起协商" button label**: Keep. Description is accurate enough.
+**Key decisions:**
 
----
+1. **Overlay type:** Flarum `Modal` (not a route). Uses `m.draw()` with a full-viewport overlay. Maintains all Flarum state. Avoids route complexity.
 
-## 6. BarterProposalCard
+2. **Data persistence during overlay:** Selections are stored in `composer.fields.barterMySelections` / `barterTheirSelections` (already implemented). Opening the overlay does NOT reset these. Closing the overlay just hides it — the data survives.
 
-### 6.1 Current state
+3. **Cross-tab state:** Tab state (active tab) is local component state, not persisted. This is fine — users navigate tabs each time they open.
 
-Compact card with: status badge, revision, proposer, two-column asset list, action buttons (Accept / Reject / Counter / Cancel).
+4. **When no assets:** Each tab shows an empty state CTA:
+   - "我的藏品/盲盒" tabs: "每日签到可获得盲盒，开始交换吧"
+   - "对方藏品/盲盒" tabs: "对方暂无资产可交易"
 
-### 6.2 ~~Design decisions needed~~ — LOCKED
-
-- **Action button hierarchy**: Accept = blue filled (primary), Counter = blue outlined (secondary), Cancel/Reject = text-only (tertiary). Use existing `.Button--primary` for Accept, `.Button` outlined for Counter, `Button--text` for Cancel/Reject.
-- **Superseded proposals**: Keep current "已被第 N 版替代" note. Collapsing is out of scope for v1.
-- **Counter button prominence**: Same visual treatment as Accept at the card level. Hierarchy is enough.
-
----
-
-## 7. Accessibility
-
-### 7.1 Current gaps
-
-- Cards use `role="checkbox"` with `tabIndex={0}` and keyboard handler. This is good but incomplete.
-- `aria-checked` is set but no `aria-label` describing what is selected.
-- Error messages are text only — no `role="alert"` or `aria-live` region.
-- No focus trap within the expanded panel.
-- Color contrast on status badges: check background `#DBEAFE` on `#F8FAFC` — should verify.
-
-### 7.2 ~~Design decisions needed~~ — LOCKED
-
-- **Focus trap**: Implement focus trap when panel is expanded. Trap Tab navigation within the panel.
-- **aria-live**: Add `aria-live="polite"` region that announces selection count changes: "{N} 件已选".
-- **Error announcements**: Use `role="alert"` for validation error messages.
-- **Focus management**: When panel expands, focus moves to the first asset card.
-
----
-
-## 8. Mobile / Responsive
-
-### 8.1 ~~Design decisions needed~~ — LOCKED
-
-- **Mobile layout**: Stack to 1 column (your on top, theirs below). Current approach is sufficient for v1.
-- **Tap targets**: Ensure 44px minimum touch target for all interactive elements.
-- **Composer on mobile**: Accept that the composer is compressed on mobile. No special panel treatment.
-
----
-
-## 9. Edge Cases
-
-### 9.1 ~~Design decisions needed~~ — LOCKED
-
-- **Rapid toggle**: Add debounce (100ms) to selection toggle to prevent race conditions.
-- **Backend-only validation as guard**: Keep backend validation for "no items on one side" — no UI-level blocking beyond guidance.
-- **Network failure on load**: Keep current error text. Retry via refresh button. No inline retry for v1.
+5. **Back button / escape:** ESC closes the overlay. Browser back does NOT close (no route change).
 
 ---
 
-## 10. Summary of Design Decisions — LOCKED
+## Step 2: Visual Hierarchy
+
+### Composer Summary Card (new)
+
+Replaces the entire `.BarterComposerPanel-grid` with a compact card:
+
+```
+┌─────────────────────────────────────────────┐
+│ 🎴 协商条件已配置          [✏️ 编辑协商]    │
+├─────────────────────────────────────────────┤
+│  我方出: Cosmic Fox #42      对方出:         │
+│          Neon City #17    ←  blank strip →  │
+│          (共 2 藏品)                        │
+├─────────────────────────────────────────────┤
+│ ✨ "两张稀有换你那张传说，你看如何？"  ← user's message text preview │
+└─────────────────────────────────────────────┘
+```
+
+- Background: `#F8FAFC` with `#E2E8F0` border (subtle, not competing with text editor)
+- "编辑协商" button: text-only, right-aligned, `#3B82F6` — tertiary action
+- Asset names: truncated at 20 chars with ellipsis, stacked
+- "无协商条件" state: "🎴 还未配置协商条件 [+ 配置协商]" — ghost card style
+
+### Full-Screen Overlay
+
+- Background: `rgba(15, 23, 42, 0.7)` backdrop + white overlay panel
+- Overlay panel: `max-width: 800px`, centered, `border-radius: 20px`
+- Header: dark gradient `#1E293B` → `#334155` (same as BarterThreadPanel)
+- Tab bar: pill-style tabs, active tab has white background + shadow
+- Filter bar: search input + rarity filter buttons (toggleable pills)
+- Asset grid: `repeat(auto-fill, minmax(90px, 1fr))` — slightly smaller than current 100px to fit 4 columns
+- Footer: sticky bottom bar with Cancel + "确认选择" (primary button)
+
+### Asset Card Redesign
+
+**Images are required — no icon fallbacks in production:**
+- Collectibles: Real IPFS image via `gatewayUrl(asset.ipfsCid)` — if CID is null/missing, show a generated placeholder (CSS gradient + initials)
+- Blind boxes: Real SVG via `blindBoxSvgUrl()` — already implemented, this continues to work
+
+- Card size: 90px (tighter grid, more visible at once)
+- Selected: `#3B82F6` border + `#EFF6FF` background + blue checkmark circle
+- Rarity border-color: match existing `.rarity-*` variables (legendary: `#fcd34d`, epic: `#c4b5fd`, rare: `#93c5fd`, common: `#d1d5db`)
+- Hover: `transform: translateY(-1px)` + shadow (subtle lift)
+- Long names: `text-overflow: ellipsis` at 12px/2 lines. Full name in `title` attribute.
+- Thumb: 100% width, aspect-ratio 1:1, `object-fit: cover`
+
+---
+
+## Step 3: Interaction Patterns
+
+### Opening the Config Overlay
+
+**Trigger:** "配置协商" button on composer summary card  
+**Animation:** Overlay fades in (200ms ease-out). Tab 0 ("我的藏品") is active by default.  
+**Focus:** First filter input gets focus.
+
+### Tab Navigation
+
+- Click tab → switches active tab
+- Active tab shows badge with count of selected items in that tab
+- Tab content lazy-loads (all tabs' data already fetched via `barterAssets` API — just filter the array)
+
+### Asset Selection
+
+- Click card → toggle selection (debounced 100ms, already implemented)
+- Selected count per tab shown in tab badge
+- Live summary row at top of overlay updates in real time
+
+### Search / Filter
+
+- Search input: filters by `name` (case-insensitive substring match on the owner's custom name, NOT the numeric ID). This is why the `name` column is a prerequisite — humans cannot search by `#42`.
+- Rarity pills: toggle filter. "全部" clears other filters. Multiple rarity pills can be active simultaneously.
+- Filters apply immediately (no debounce needed for filter, but filter function is debounced 150ms for perf)
+
+### Pagination
+
+- 12 items per page
+- Previous/Next buttons + page indicator
+- Current page resets to 1 when search query changes
+- Scroll position resets to top on page change
+
+### Closing the Overlay
+
+- **Confirm:** Click "确认选择" → overlay hides → composer summary card redraws with new selections
+- **Cancel:** Click × button or ESC → overlay hides → selections are kept (NOT reset, they were already live-updating)
+- **Discard:** If user wants to reset: "清除选择" text button inside overlay (before closing)
+
+### Counter-offer Flow
+
+When revising an existing proposal:
+- Overlay opens with previous selections pre-checked
+- Counter diff shown in overlay header: "第 N 版 → 修改中"
+- Tab bar shows the current proposal's items highlighted differently
+- Same confirm/cancel flow
+
+---
+
+## Step 4: Accessibility
+
+- Overlay: `role="dialog"`, `aria-modal="true"`, `aria-labelledby` pointing to overlay title
+- Tab bar: `role="tablist"`, each tab `role="tab"`, content panels `role="tabpanel"`
+- Asset cards: `role="checkbox"`, `aria-checked`, `aria-label` with full asset name + rarity
+- Filter input: `aria-label="搜索资产名称"`
+- Live summary: `aria-live="polite"` region
+- ESC key closes overlay
+- Focus trap inside overlay (Tab cycles within overlay content)
+- Focus returns to "编辑协商" button when overlay closes
+
+---
+
+## Step 5: Edge Cases
+
+| Edge Case | Behavior |
+|-----------|----------|
+| Counterparty has 0 assets | Show "对方暂无资产可交易" empty state in their tab |
+| User has 0 assets | Show "每日签到可获得盲盒..." CTA in their tab |
+| 100+ assets in one tab | Pagination (12/page). Show total count in tab label |
+| User closes overlay without confirming | Selections survive (live-updating). No data loss. |
+| User refreshes page mid-config | Draft is lost (current behavior matches existing `hasBarterDraft`). Acceptable for v1. |
+| Rapid toggle on multiple cards | Debounced 100ms (existing). No changes needed. |
+| Long asset names | Truncated with ellipsis. Full name in `title` attribute. |
+| Network error loading assets | Error shown in composer panel (existing). Overlay won't open if assets fail to load. |
+
+---
+
+## Step 6: Mobile / Responsive
+
+- Overlay: Full-screen on mobile (`width: 100%; height: 100%; border-radius: 0`)
+- Tab bar: Horizontally scrollable on mobile (2 tabs visible + scroll)
+- Filter bar: Search input full-width, filter pills wrap
+- Asset grid: `repeat(auto-fill, minmax(80px, 1fr))` on mobile
+- Composer summary card: Stack give/get on mobile (1 column)
+- Sticky footer: always visible on mobile
+
+---
+
+## Step 7: Implementation Priority
+
+### Phase 0 (Prerequisite): `name` column migration
+1. Migration: `2026_04_15_000008_add_name_to_collectibles.php`
+2. Model: `Collectible::getNameAttribute()` — return `$value` if set, fallback `'Collectible #{$id}'`
+
+### Phase 1: Fix current bugs (minimal, safe)
+3. Fix `getOriginalProposalItems()` — remove undefined `fields` reference  
+4. Add `overflow-y: auto` to `.BarterComposerPanel-column`  
+5. Show empty state CTA when `payload.theirs.*` is empty
+
+### Phase 2: New overlay + composer summary (full redesign)
+6. Create `BarterConfigOverlay.tsx` (Modal-based)
+7. Implement tab bar with all 4 asset categories
+8. Implement filter bar (search by name substring + rarity)
+9. Implement pagination (12/page)
+10. Replace composer panel grid with summary card
+11. Wire "编辑协商" → opens overlay
+12. Live-updating summary row in overlay
+13. ESC key + focus trap in overlay
+14. Accessibility: all ARIA roles
+15. Real images: collectibles use `gatewayUrl(ipfsCid)`, blind boxes use SVG
+
+### Phase 3: Polish
+16. Counter-offer diff in overlay header
+17. Mobile responsive refinements
+18. localStorage draft persistence
+19. Integration tests for new flows
+
+---
+
+## Summary: 16 Design Decisions for the New Architecture
 
 | # | Decision | Choice |
 |---|----------|--------|
-| 1 | Card size | Keep 100px |
-| 2 | Selection UX | Per-card check + running summary |
-| 3 | Rarity glow | Flat, border-color only |
-| 4 | Panel placement | Message stream, horizontal scroll |
-| 5 | Button hierarchy | Primary / Secondary / Tertiary |
-| 6 | "发起协商" label | Keep |
-| 7 | Sort order | Rarity first, legendary on top |
-| 8 | Mobile layout | Stack to 1 column |
-| 9 | Confirmation step | Pre-send summary row |
-| 10 | Accessibility | Focus trap + aria-live |
-
-### Implementation checklist
-
-- [ ] Add `<BarterSelectionSummary>` component above asset grid
-- [ ] Sort assets by rarity before rendering in each column
-- [ ] Add "清除选择" text button (visible when selections > 0)
-- [ ] Add pre-send summary row in header ("你将给出 N 藏品，换取 N 盲盒")
-- [ ] Add counter diff display (added in green, removed in red)
-- [ ] Add CTA text in empty side placeholder
-- [ ] Add `aria-live="polite"` region for selection count announcements
-- [ ] Add `role="alert"` to validation error messages
-- [ ] Implement focus trap when panel expands
-- [ ] Add 100ms debounce to toggle selection
-- [ ] Apply button hierarchy to `BarterProposalCard` actions
-- [ ] Style polish: section labels slightly larger font
-- [ ] Update LESS variables for new components
+| 0 | Collectible name | Nullable `name` DB column, accessor returns it or fallback `#id` |
+| 1 | Overlay type | Flarum Modal (not route) |
+| 2 | Overlay container | max-width 800px, centered, rounded |
+| 3 | Tab count | 4 tabs (我的藏品, 我的盲盒, 对方藏品, 对方盲盒) |
+| 4 | Card size | 90px (tighter than current 100px) |
+| 5 | Items per page | 12 |
+| 6 | Filter approach | Search (name substring, humans use names not IDs) + rarity pills |
+| 7 | Composer replacement | Summary card with "编辑协商" button |
+| 8 | Summary card content | Give/Get with truncated names + count |
+| 9 | Empty state | Guided CTA per tab type |
+| 10 | Close behavior | ESC / × / Cancel — selections survive |
+| 11 | Live updates | Summary row in overlay updates as user selects |
+| 12 | Counter-offer | Diff shown in overlay header |
+| 13 | Accessibility | Full ARIA roles, focus trap, aria-live |
+| 14 | Mobile overlay | Full-screen, border-radius 0 |
+| 15 | Images | Real IPFS for collectibles, SVG for blind boxes — NO icon fallbacks |
 
 ---
 
-## Appendix: Current LESS Variables Reference
+## Wireframes
 
-Used in the design system:
-- `@rarity-common: #9CA3AF` / bg: `#F3F4F6` / border: `#D1D5DB`
-- `@rarity-rare: #3B82F6` / bg: `#EFF6FF` / border: `#93C5FD`
-- `@rarity-epic: #8B5CF6` / bg: `#F5F3FF` / border: `#C4B5FD`
-- `@rarity-legendary: #F59E0B` / bg: `#FFFBEB` / border: `#FCD34D`
+Generated: `.context/barter-config-wireframe.html`
 
-Composer container: 14px padding, 16px border-radius, gradient background `#FFFFFF` → `#F8FAFC`.
+The wireframe shows two screens:
+1. **Full-screen config overlay** — My Assets tab, with tab bar, filter pills, paginated asset grid, live summary card at top
+2. **Composer return view** — Summary card replaces the grid, with "编辑协商" edit button and a thread panel showing existing negotiation history
 
-Selected state: `#2563EB` border, `#DBEAFE` background.
-Selected check: `#2563EB` circle with white checkmark icon.
+Open the HTML file in a browser to interact with the prototype (tabs and card selection are functional).
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | PASS | 4 decisions, 3 fixes, 7 tests planned |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | PASS | Full overlay, 15 decisions locked |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+**VERDICT:** Eng review complete. All issues resolved. Implementation plan locked.
+
+---
+
+## Engineering Review Decisions
+
+### Scope (Step 0)
+
+**Confirmed reusable artifacts:**
+- `Schema\Str::make('name')` in CollectibleResource — already readable via API
+- `Endpoint\Update::make()->authenticated()` — `name` is already writable
+- `BarterComposerPanel` utility functions — all reusable in overlay
+- `displayCollectibleName()` in frontend — already handles name vs fallback
+- `BarterAssetFormatter::collectible()` — already serializes `name`
+- `Modal` base class pattern from `CollectibleDetailModal.tsx`
+
+**4 decisions resolved:**
+
+| Decision | Choice |
+|---|---|
+| Collectible naming UX | Inline edit in `CollectibleDetailModal` (pencil icon → inline input → save) |
+| Overlay state sharing | Pass `composer` via attrs (`<BarterConfigOverlay composer={this.composer} />`) |
+| Old collectibles (name = NULL) | Batch prompt in overlay: "N 件未命名藏品待处理" banner + quick-name submodal |
+| Name ownership check | Fix in `updating()` hook (matches existing `isShowcase` pattern) |
+
+### Architecture (Section 1)
+
+**[FIXED] `name` serialization null vs fallback:**
+- `BarterAssetFormatter` uses `$collectible->name` → triggers accessor → always returns string
+- But `CollectibleResource` uses raw DB value for `/api/collectibles`
+- **Fix:** Add `->get(fn ($model) => $model->name)` to `Schema\Str::make('name')` in `CollectibleResource.php:104`
+
+### Code Quality (Section 2)
+
+**[FIXED in Phase 1] `fields` ReferenceError** at `BarterComposerPanel.tsx:147`:
+- `getOriginalProposalItems()` references `fields` which is not in scope
+- **Fix:** Add `const fields = ensureBarterComposerFields(this.attrs.composer);` locally
+
+**[Phase 1 CSS] Overflow truncation:**
+- `.BarterComposerPanel-column` has no `overflow-y` or `max-height`
+- **Fix:** Add `overflow-y: auto; max-height: 50vh;` to LESS `.BarterComposerPanel-column`
+
+**[Deferred to Phase 2] P2/P3 in existing composer code:**
+- `renderPreSendSummary()` shows `theirBlindBoxes` instead of `yourBlindBoxes` — Phase 2 replaces this
+- Missing `theirCollectibles` from pre-send message — Phase 2 replaces this
+
+### Tests (Section 3)
+
+| # | Test | Type | Coverage |
+|---|---|---|---|
+| 1 | `Collectible::getNameAttribute()` null case | Unit | New |
+| 2 | `Collectible::getNameAttribute()` with value | Unit | New |
+| 3 | Owner can update name via API | Integration | New |
+| 4 | Non-owner CANNOT update name via API | Integration | New |
+| 5 | `displayCollectibleName()` null / value / legacy fallback | Unit | New |
+| 6 | `BarterProposalChainTest` fixtures with `name` column | Integration | Modify existing |
+| 7 | Search filter by name substring | Unit | New |
+
+Frontend overlay interactions → headed Playwright.
+
+### Performance (Section 4)
+
+- `/barter-assets` returns all assets in one shot — acceptable for current scale, paginate in v2
+- Overlay pagination is client-side on already-fetched array — <10ms, fine
+- localStorage persistence: debounce writes to 500ms on every toggle
+
+---
+
+## Implementation Order
+
+```
+Phase 0 (Prerequisite):
+  [ ] Migration: 2026_04_15_000008_add_name_to_collectibles.php
+  [ ] Model: Collectible::getNameAttribute() with $value param
+  [ ] Resource: name ->get() in CollectibleResource
+  [ ] Resource: updating() ownership hook for name
+  [ ] Tests 1-5, 7 (unit tests)
+  [ ] Test 6 (integration fixture update)
+
+Phase 1 (Bug fixes — quick wins):
+  [ ] Fix fields ReferenceError in getOriginalProposalItems()
+  [ ] Fix CSS overflow on .BarterComposerPanel-column
+  [ ] Run full test suite
+
+Phase 2 (Full redesign — overlay + composer summary):
+  [ ] Create BarterConfigOverlay.tsx (Flarum Modal)
+  [ ] Implement 4-tab bar + filter bar + pagination
+  [ ] Replace composer panel grid with summary card
+  [ ] Wire "编辑协商" → opens overlay
+  [ ] ESC + focus trap + aria roles
+  [ ] Real images (IPFS for collectibles, SVG for blind boxes)
+  [ ] Batch naming prompt for old collectibles (NULL names)
+  [ ] localStorage persistence (debounced 500ms)
+  [ ] Headed Playwright tests
+
+Phase 3 (Polish):
+  [ ] Counter-offer diff in overlay header
+  [ ] Mobile responsive refinements
+  [ ] Integration tests for new flows
+```

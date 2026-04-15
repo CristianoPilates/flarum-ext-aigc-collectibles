@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import { extend as flarumExtend, override } from 'flarum/common/extend';
 import BarterThreadPanel from '../components/BarterThreadPanel';
 import BarterComposerPanel from '../components/BarterComposerPanel';
+import BarterConfigOverlay from '../components/BarterConfigOverlay';
 import {
   createBarterProposalFromComposer,
   ensureBarterComposerFields,
@@ -15,6 +16,10 @@ import listItems from 'flarum/common/helpers/listItems';
 export function installBarterMessaging(): void {
   installDialogSectionPanel();
   installMessageComposerHooks();
+}
+
+export function openBarterConfigOverlay(composer: any, dialog: any): void {
+  app.modal.show(BarterConfigOverlay, { composer, dialog });
 }
 
 function installDialogSectionPanel(): void {

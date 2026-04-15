@@ -147,6 +147,11 @@ donk-aigc-collectibles:
       mint_nft_confirm: Mint this collectible as an on-chain NFT?
       minting: Minting NFT...
       minted: Minted on-chain
+      rename_button: Rename
+      rename_save: Save
+      rename_cancel: Cancel
+      rename_success: Name updated.
+      rename_error: Failed to update name.
       token_id_label: "Token ID: #{id}"
       ipfs_label: View on IPFS
       proof_button: View Proof
@@ -250,6 +255,25 @@ donk-aigc-collectibles:
       asset_type_collectible: Collectible
       asset_type_blind_box: Blind Box
       asset_type_unknown: Asset
+      config_overlay_title: Configure Negotiation
+      config_overlay_confirm: Confirm Selection
+      config_overlay_cancel: Cancel
+      config_tab_mine_collectibles: My Collectibles
+      config_tab_mine_blindboxes: My Blind Boxes
+      config_tab_theirs_collectibles: Their Collectibles
+      config_tab_theirs_blindboxes: Their Blind Boxes
+      config_overlay_search_placeholder: Search by name or #ID...
+      config_overlay_search_aria: Search assets by name
+      config_overlay_all: All
+      config_overlay_no_results: No matching assets found
+      config_overlay_earn_hint: Earn blind boxes by checking in daily!
+      config_overlay_them_empty_hint: They have no assets available yet
+      config_overlay_nothing_selected: Not selected
+      config_overlay_page: "Page {current} of {total}"
+      config_overlay_unnamed_count: "{count} unnamed collectibles — open a collectible to name it"
+      your_side: You give
+      their_side: They give
+      edit_negotiation: Edit Negotiation
 
     wallet:
       title: Web3 Wallet

@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-04-15
+
+### Added
+
+- **Barter composer redesign** — composer now shows selection summary card instead of full asset grid. "编辑协商" button opens full overlay for asset selection.
+- **Barter config overlay** — full-screen overlay with 4 tabs (mine collectibles, mine blind boxes, theirs collectibles, theirs blind boxes), search, rarity filters, pagination, and visual asset cards.
+- **Collectible inline rename** — users can rename collectibles directly in the detail modal with pencil icon, inline input, and save/cancel buttons.
+- **Barter draft persistence** — composer selections auto-save to localStorage every 500ms, restored on page reload or composer re-open.
+- **Unnamed collectibles banner** — overlay shows banner in "mine collectibles" tab when user has unnamed collectibles, prompting them to add names.
+
+### Changed
+
+- **Barter composer UX** — moved from inline dual-column asset grid to summary card + overlay pattern for cleaner composer UI.
+- **CollectibleDetailModal** — added inline rename capability with validation and error handling.
+
+### Fixed
+
+- **Transaction safety for barter state changes** — `rejectProposal()` and `cancelProposal()` now wrap state mutations in database transactions with row-level locking, matching the pattern used in `acceptProposal()`.
+
+### Tests Added
+
+- **CollectibleNameTest** — integration tests for PATCH `/collectibles/{id}` name updates with validation.
+- **CollectibleTest** — unit tests for `Collectible::setName()` validation logic.
+
 ## [1.0.0] — 2026-04-14
 
 ### Added
@@ -56,4 +80,5 @@ All notable changes to this project will be documented in this file.
 - `BlindBoxService::appraise()` PoW difficulty is client-supplied without a minimum threshold floor — tracked separately.
 
 [Unreleased]: https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/compare/main...release/post-refactor-consolidation
+[1.1.0]: https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/releases/tag/v1.0.0

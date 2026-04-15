@@ -167,6 +167,11 @@ donk-aigc-collectibles:
       mint_nft_confirm: 将此藏品铸造为链上 NFT？
       minting: 正在铸造 NFT...
       minted: 已上链
+      rename_button: 重命名
+      rename_save: 保存
+      rename_cancel: 取消
+      rename_success: 名称已更新。
+      rename_error: 更新名称失败。
       token_id_label: "Token ID: #{id}"
       ipfs_label: 在 IPFS 上查看
       proof_button: 查看证明
@@ -270,6 +275,25 @@ donk-aigc-collectibles:
       asset_type_collectible: 藏品
       asset_type_blind_box: 盲盒
       asset_type_unknown: 资产
+      config_overlay_title: 配置协商
+      config_overlay_confirm: 确认选择
+      config_overlay_cancel: 取消
+      config_tab_mine_collectibles: 我的藏品
+      config_tab_mine_blindboxes: 我的盲盒
+      config_tab_theirs_collectibles: 对方藏品
+      config_tab_theirs_blindboxes: 对方盲盒
+      config_overlay_search_placeholder: 按名称或 #ID 搜索...
+      config_overlay_search_aria: 按名称搜索资产
+      config_overlay_all: 全部
+      config_overlay_no_results: 没有匹配的资产
+      config_overlay_earn_hint: 每日签到可获得盲盒
+      config_overlay_them_empty_hint: 对方暂无资产可交易
+      config_overlay_nothing_selected: 未选择
+      config_overlay_page: "第 {current} 页 / 共 {total} 页"
+      config_overlay_unnamed_count: "{count} 件未命名藏品 — 打开藏品详情即可命名"
+      your_side: 我方出
+      their_side: 对方出
+      edit_negotiation: 编辑协商
 
     wallet:
       title: Web3 钱包

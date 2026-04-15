@@ -30,11 +30,17 @@ const STATUS_KEYS: Record<string, string> = {
 export default class CollectibleDetailModal extends Modal<CollectibleDetailModalAttrs> {
   loadingAction: boolean = false;
   error: string | null = null;
+  renaming: boolean = false;
+  renameValue: string = '';
+  renameError: string | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
     this.loadingAction = false;
     this.error = null;
+    this.renaming = false;
+    this.renameValue = '';
+    this.renameError = null;
   }
 
   className() {
@@ -51,7 +57,6 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
     if (!collectible) return null;
 
-    const currentUser = app.session?.user;
     const rarity = collectible.rarity();
     const status = collectible.status();
     const tokenId = collectible.tokenId();
@@ -80,7 +85,63 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
           </div>
 
           <div className="CollectibleDetailModal-content">
-            <h3 className="CollectibleDetailModal-name">{displayName}</h3>
+            <div className="CollectibleDetailModal-nameRow">
+              {isOwnProfile && !this.renaming && (
+                <button
+                  className="CollectibleDetailModal-renameBtn"
+                  onclick={() => {
+                    this.renaming = true;
+                    this.renameValue = collectible.name?.() || '';
+                    this.renameError = null;
+                    m.redraw();
+                  }}
+                  title={app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_button')}
+                >
+                  <i className="fas fa-pencil-alt" />
+                </button>
+              )}
+              <h3 className="CollectibleDetailModal-name">{displayName}</h3>
+            </div>
+
+            {this.renaming && (
+              <div className="CollectibleDetailModal-renameRow">
+                <input
+                  className="CollectibleDetailModal-renameInput"
+                  type="text"
+                  value={this.renameValue}
+                  oninput={(e: InputEvent) => {
+                    this.renameValue = (e.target as HTMLInputElement).value;
+                  }}
+                  onkeydown={(e: KeyboardEvent) => {
+                    if (e.key === 'Enter') void this.saveRename();
+                    if (e.key === 'Escape') { this.renaming = false; m.redraw(); }
+                  }}
+                  disabled={this.loadingAction}
+                  maxLength={100}
+                  placeholder={app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_button')}
+                />
+                {this.renameError && (
+                  <div className="CollectibleDetailModal-renameError">{this.renameError}</div>
+                )}
+                <div className="CollectibleDetailModal-renameActions">
+                  <Button
+                    className="Button Button--primary"
+                    onclick={() => void this.saveRename()}
+                    loading={this.loadingAction}
+                    disabled={this.loadingAction}
+                  >
+                    {app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_save')}
+                  </Button>
+                  <Button
+                    className="Button"
+                    onclick={() => { this.renaming = false; this.renameError = null; m.redraw(); }}
+                    disabled={this.loadingAction}
+                  >
+                    {app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="CollectibleDetailModal-meta">
               <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
@@ -170,6 +231,50 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
         </div>
       </div>
     );
+  }
+
+  async saveRename() {
+    const collectible = this.attrs.collectible;
+    if (!collectible || this.loadingAction) return;
+
+    const trimmed = this.renameValue.trim();
+    if (!trimmed) {
+      this.renameError = app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_error');
+      m.redraw();
+      return;
+    }
+
+    this.loadingAction = true;
+    this.renameError = null;
+    m.redraw();
+
+    try {
+      await app.request({
+        method: 'PATCH',
+        url: app.forum.attribute('apiUrl') + '/collectibles/' + collectible.id(),
+        body: {
+          data: {
+            type: 'collectibles',
+            id: collectible.id(),
+            attributes: { name: trimmed },
+          },
+        },
+      });
+
+      collectible.pushAttributes({ name: trimmed });
+      this.renaming = false;
+      app.alerts.show(
+        { type: 'success' },
+        app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_success')
+      );
+      this.attrs.onUpdated?.();
+    } catch (error: any) {
+      this.renameError = error.response?.errors?.[0]?.detail ||
+        app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_error');
+    } finally {
+      this.loadingAction = false;
+      m.redraw();
+    }
   }
 
   async toggleShowcase() {
