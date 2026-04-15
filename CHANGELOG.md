@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [1.1.0] — 2026-04-15
+### Fixed
+
+- **Barter assets API 422 error** — `GET /barter-assets` returned "Thread ID is required" in the private message composer. Frontend sends snake_case parameter names (`thread_id`, `counterparty_user_id`) but the backend only read camelCase. Now accepts both formats for backward compatibility.
+
+## [1.1.0]
 
 ### Added
 

@@ -73,7 +73,7 @@
 
 - `extend.php`
   扩展注册入口
-- `js/src/forum.ts`
+- `js/src/forum.tsx`
   forum 前端入口
 - `src/Api/Resource/*`
   JSON:API resource 定义与 endpoint 入口

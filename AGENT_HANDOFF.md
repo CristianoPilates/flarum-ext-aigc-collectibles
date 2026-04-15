@@ -9,7 +9,7 @@
 截至 2026-04-15：
 
 - 当前工作分支：`release/post-refactor-consolidation`
-- HEAD commit：`9570220` `feat: barter composer redesign — summary card, config overlay, inline rename, draft persistence`
+- HEAD commit：`e6e4ebc` `fix: support both snake_case and camelCase parameter naming in barter assets API`
 - PR：`https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/pull/1`
 - PR 状态：OPEN，待合并
 
@@ -33,7 +33,17 @@ v1.1.0 (2 additional commits) 主要内容：
 4. **Barter draft persistence** — 选中的资产每 500ms 自动保存到 localStorage，刷新页面或重开 composer 可恢复
 5. **Unnamed collectibles banner** — overlay 的 mine-collectibles tab 在有未命名藏品时显示引导 banner
 
-### 本次修复的 bug
+### 本次修复的 bug（最新 hotfix）
+
+1. **Barter assets API 422 错误** — 私信 composer 中 barter 资产加载返回 "Thread ID is required"
+   - 根因：前端发送 snake_case 参数名 (`thread_id`)，后端只读取 camelCase (`threadId`)
+   - 修复：`ListBarterAssetsController.php` 现在同时支持两种命名格式
+
+2. **翻译 key 缺失警告** — `core.forum.blind_box.inventory_title` 等 key 显示为原始 key 名
+   - 根因：API 失败导致翻译资源未加载，Flarum 缓存需要刷新
+   - 修复：执行 `make publish-site-runtime` 清理缓存并重新发布资源
+
+### 之前修复的 bug
 
 1. **Blind box SVG 404** — SVG 从 `resources/images/` 迁到 `assets/images/`，Flarum `assets:publish` 链路修复
 2. **Dead `STATUS_OPENED` UI** — 移除不可达展示逻辑
