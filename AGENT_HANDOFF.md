@@ -44,8 +44,14 @@ v1.1.0 (2 additional commits) 主要内容：
    - 修复：执行 `make publish-site-runtime` 清理缓存并重新发布资源
 
 3. **盲盒 tabs 显示为空** — "我的盲盒"与"对方盲盒"tabs 没有显示任何盲盒
-   - 根因：`BarterConfigOverlay` 对所有 tabs 使用藏品的 rarity filter，盲盒没有 `rarity` 字段，导致切换 tab 后盲盒被错误过滤
+   - 根因 A：`BarterConfigOverlay` 对所有 tabs 使用藏品 rarity filter，盲盒没有 `rarity` 字段，导致切换 tab 后盲盒被错误过滤
    - 修复：添加 `activeStatus` 字段，盲盒 tabs 显示 status filter (已鉴定/未鉴定)，排序按 budget 降序
+   - 根因 B（发现于 2026-04-15）：`getActiveBucket()` 和 `renderGrid()` 方法中 `kind` 类型声明为 `'blindboxes'`（小写b），但 API 响应和 `BarterAssetBucket` 接口定义使用的属性名是 `blindBoxes`（大写B，camelCase）。JavaScript 访问 `bucket['blindboxes']` 返回 `undefined`。
+   - 修复（2026-04-15）：将两处 `kind` 类型统一改为 `'blindBoxes'`，与 API 响应一致
+
+4. **盲盒 tabs 展示为 rarity filter** — 切换到盲盒 tab 后，filter bar 仍显示 rarity 按钮而非 status filter
+   - 根因：`filterAssets()` 依赖 `isBlindBoxTab` 判断，但 `activeStatus` 字段在切换 tab 时已重置，逻辑正确
+   - 状态：已被根因 B 的修复解决 — 正确加载盲盒数据后，filter 逻辑自然正确
 
 ### 之前修复的 bug
 

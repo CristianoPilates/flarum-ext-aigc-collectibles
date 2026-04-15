@@ -253,7 +253,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
 
   private renderGrid() {
     const bucket = this.getActiveBucket();
-    const kind: 'collectibles' | 'blindboxes' = this.activeTab.includes('collectibles') ? 'collectibles' : 'blindboxes';
+    const kind: 'collectibles' | 'blindBoxes' = this.activeTab.includes('collectibles') ? 'collectibles' : 'blindBoxes';
     const assets: BarterAsset[] = bucket?.[kind] ?? [];
 
     const filtered = this.filterAssets(assets);
@@ -463,9 +463,9 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
     return { collectibles: payload.theirs?.collectibles || [], blindBoxes: payload.theirs?.blindBoxes || [] };
   }
 
-  private getActiveBucket(): BarterAssetBucket {
+private getActiveBucket(): BarterAssetBucket {
     const isMine = this.activeTab.startsWith('mine');
-    const kind = this.activeTab.includes('collectibles') ? 'collectibles' : 'blindBoxes';
+    const kind: 'collectibles' | 'blindBoxes' = this.activeTab.includes('collectibles') ? 'collectibles' : 'blindBoxes';
     return this.getBucket(isMine ? 'mine' : 'theirs', kind);
   }
 
