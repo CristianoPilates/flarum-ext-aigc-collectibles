@@ -32,9 +32,9 @@ class ListBarterAssetsController implements RequestHandlerInterface
 
         $payload = $this->barterService->listThreadAssets(
             actor: $actor,
-            threadType: trim((string) ($filters['threadType'] ?? BarterProposal::THREAD_DIALOG)),
-            threadId: (int) ($filters['threadId'] ?? 0),
-            counterpartyUserId: (int) ($filters['counterpartyUserId'] ?? 0),
+            threadType: trim((string) ($filters['thread_type'] ?? $filters['threadType'] ?? BarterProposal::THREAD_DIALOG)),
+            threadId: (int) ($filters['thread_id'] ?? $filters['threadId'] ?? 0),
+            counterpartyUserId: (int) ($filters['counterparty_user_id'] ?? $filters['counterpartyUserId'] ?? 0),
         );
 
         return new JsonResponse(['data' => $payload]);
