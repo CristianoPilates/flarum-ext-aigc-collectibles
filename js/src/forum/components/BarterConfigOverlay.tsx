@@ -26,6 +26,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
   private activeTab: 'mine-collectibles' | 'mine-blindboxes' | 'theirs-collectibles' | 'theirs-blindboxes' = 'mine-collectibles';
   private searchQuery: string = '';
   private activeRarity: string | null = null;
+  private activeStatus: string | null = null;
   private currentPage: number = 1;
   private bannerDismissed: boolean = false;
   private focusedIndex: number = 0;
@@ -43,6 +44,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
     this.activeTab = 'mine-collectibles';
     this.searchQuery = '';
     this.activeRarity = null;
+    this.activeStatus = null;
     this.currentPage = 1;
     this.focusedIndex = 0;
     this.bannerDismissed = false;
@@ -156,6 +158,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
           this.currentPage = 1;
           this.searchQuery = '';
           this.activeRarity = null;
+          this.activeStatus = null;
           m.redraw();
         }}
       >
@@ -172,6 +175,8 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
   // ─── Filter Bar ────────────────────────────────────────────────────────────
 
   private renderFilterBar() {
+    const isBlindBoxTab = this.activeTab.includes('blindboxes');
+
     return (
       <div className="BarterConfigOverlay-filters">
         <input
@@ -188,28 +193,57 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
         />
         <div className="BarterConfigOverlay-rarityPills">
           <button
-            className={`BarterConfigOverlay-pill ${this.activeRarity === null ? 'active' : ''}`}
+            className={`BarterConfigOverlay-pill ${(isBlindBoxTab ? this.activeStatus : this.activeRarity) === null ? 'active' : ''}`}
             onclick={() => {
-              this.activeRarity = null;
+              if (isBlindBoxTab) {
+                this.activeStatus = null;
+              } else {
+                this.activeRarity = null;
+              }
               this.currentPage = 1;
               m.redraw();
             }}
           >
             {transText('donk-aigc-collectibles.forum.barter.config_overlay_all')}
           </button>
-          {RARITY_ORDER.map((r) => (
-            <button
-              key={r}
-              className={`BarterConfigOverlay-pill rarity-${r} ${this.activeRarity === r ? 'active' : ''}`}
-              onclick={() => {
-                this.activeRarity = this.activeRarity === r ? null : r;
-                this.currentPage = 1;
-                m.redraw();
-              }}
-            >
-              {app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + r)}
-            </button>
-          ))}
+          {isBlindBoxTab ? (
+            <>
+              <button
+                className={`BarterConfigOverlay-pill ${this.activeStatus === 'appraised' ? 'active' : ''}`}
+                onclick={() => {
+                  this.activeStatus = this.activeStatus === 'appraised' ? null : 'appraised';
+                  this.currentPage = 1;
+                  m.redraw();
+                }}
+              >
+                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_appraised')}
+              </button>
+              <button
+                className={`BarterConfigOverlay-pill ${this.activeStatus === 'unappraised' ? 'active' : ''}`}
+                onclick={() => {
+                  this.activeStatus = this.activeStatus === 'unappraised' ? null : 'unappraised';
+                  this.currentPage = 1;
+                  m.redraw();
+                }}
+              >
+                {app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_unappraised')}
+              </button>
+            </>
+          ) : (
+            RARITY_ORDER.map((r) => (
+              <button
+                key={r}
+                className={`BarterConfigOverlay-pill rarity-${r} ${this.activeRarity === r ? 'active' : ''}`}
+                onclick={() => {
+                  this.activeRarity = this.activeRarity === r ? null : r;
+                  this.currentPage = 1;
+                  m.redraw();
+                }}
+              >
+                {app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + r)}
+              </button>
+            ))
+          )}
         </div>
       </div>
     );
@@ -441,6 +475,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
 
   private filterAssets(assets: BarterAsset[]): BarterAsset[] {
     let result = [...assets];
+    const isBlindBoxTab = this.activeTab.includes('blindboxes');
 
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase();
@@ -450,13 +485,21 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
       });
     }
 
-    if (this.activeRarity) {
-      result = result.filter((a) => a.rarity === this.activeRarity);
+    // Apply filter based on asset type
+    if (isBlindBoxTab) {
+      if (this.activeStatus) {
+        result = result.filter((a) => a.status === this.activeStatus);
+      }
+      // Sort blind boxes by budget descending
+      result.sort((a, b) => (b.budget ?? 0) - (a.budget ?? 0));
+    } else {
+      if (this.activeRarity) {
+        result = result.filter((a) => a.rarity === this.activeRarity);
+      }
+      // Sort collectibles by rarity
+      const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
+      result.sort((a, b) => (rarityOrder[b.rarity || 'common'] ?? 0) - (rarityOrder[a.rarity || 'common'] ?? 0));
     }
-
-    // Sort by rarity
-    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, common: 1 };
-    result.sort((a, b) => (rarityOrder[b.rarity || 'common'] ?? 0) - (rarityOrder[a.rarity || 'common'] ?? 0));
 
     return result;
   }
