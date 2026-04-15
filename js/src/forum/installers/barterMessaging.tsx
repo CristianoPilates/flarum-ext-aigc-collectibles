@@ -18,7 +18,8 @@ export function installBarterMessaging(): void {
   installMessageComposerHooks();
 }
 
-export function openBarterConfigOverlay(composer: any, dialog: any): void {
+export async function openBarterConfigOverlay(composer: any, dialog: any): Promise<void> {
+  await loadBarterAssets(composer, dialog, false);
   app.modal.show(BarterConfigOverlay, { composer, dialog });
 }
 

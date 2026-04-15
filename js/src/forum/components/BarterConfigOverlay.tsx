@@ -220,7 +220,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
   private renderGrid() {
     const bucket = this.getActiveBucket();
     const kind: 'collectibles' | 'blindboxes' = this.activeTab.includes('collectibles') ? 'collectibles' : 'blindboxes';
-    const assets = bucket[kind];
+    const assets: BarterAsset[] = bucket?.[kind] ?? [];
 
     const filtered = this.filterAssets(assets);
     const selected = this.getSideSelections(this.activeTab.startsWith('mine') ? 'yours' : 'theirs');
@@ -358,7 +358,7 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
           }
           if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
             e.preventDefault();
-            this.focusedIndex = Math.min(this.focusedIndex + 1, this.getActiveBucket()[this.activeTab.includes('collectibles') ? 'collectibles' : 'blindboxes'].length - 1);
+            this.focusedIndex = Math.min(this.focusedIndex + 1, this.getActiveBucket()[this.activeTab.includes('collectibles') ? 'collectibles' : 'blindBoxes'].length - 1);
             m.redraw();
           }
           if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
@@ -397,15 +397,13 @@ export default class BarterConfigOverlay extends Modal<BarterConfigOverlayAttrs>
       <div className="BarterConfigOverlay-footer">
         <Button
           className="Button"
-          onclick={() => this.close()}
+          onclick={() => this.hide()}
         >
           {transText('donk-aigc-collectibles.forum.barter.config_overlay_cancel')}
         </Button>
         <Button
           className="Button Button--primary"
-          onclick={() => {
-            this.close();
-          }}
+          onclick={() => this.hide()}
         >
           {transText('donk-aigc-collectibles.forum.barter.config_overlay_confirm')}
         </Button>

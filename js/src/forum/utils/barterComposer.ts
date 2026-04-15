@@ -283,9 +283,9 @@ export async function loadBarterAssets(composer: any, dialog: any, force: boolea
       url: `${app.forum.attribute('apiUrl')}/barter-assets`,
       params: {
         filter: {
-          threadType: 'dialog',
-          threadId: dialogId,
-          counterpartyUserId: recipientId,
+          thread_type: 'dialog',
+          thread_id: dialogId,
+          counterparty_user_id: recipientId,
         },
       },
     });
