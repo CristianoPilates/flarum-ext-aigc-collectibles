@@ -9,7 +9,7 @@
 截至 2026-04-15：
 
 - 当前工作分支：`release/post-refactor-consolidation`
-- HEAD commit：`e6e4ebc` `fix: support both snake_case and camelCase parameter naming in barter assets API`
+- HEAD commit：`17b13ea` `fix: blind box tabs now show status filter and sort by budget`
 - PR：`https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/pull/1`
 - PR 状态：OPEN，待合并
 
@@ -42,6 +42,10 @@ v1.1.0 (2 additional commits) 主要内容：
 2. **翻译 key 缺失警告** — `core.forum.blind_box.inventory_title` 等 key 显示为原始 key 名
    - 根因：API 失败导致翻译资源未加载，Flarum 缓存需要刷新
    - 修复：执行 `make publish-site-runtime` 清理缓存并重新发布资源
+
+3. **盲盒 tabs 显示为空** — "我的盲盒"与"对方盲盒"tabs 没有显示任何盲盒
+   - 根因：`BarterConfigOverlay` 对所有 tabs 使用藏品的 rarity filter，盲盒没有 `rarity` 字段，导致切换 tab 后盲盒被错误过滤
+   - 修复：添加 `activeStatus` 字段，盲盒 tabs 显示 status filter (已鉴定/未鉴定)，排序按 budget 降序
 
 ### 之前修复的 bug
 

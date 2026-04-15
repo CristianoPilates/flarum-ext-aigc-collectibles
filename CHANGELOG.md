@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **Blind box tabs empty in barter overlay** — blind box tabs showed no items because the overlay used collectible rarity filter for all tabs. Blind boxes have `status` (appraised/unappraised), not `rarity`. Now shows correct status filter pills and sorts by budget descending for blind box tabs.
 - **Barter assets API 422 error** — `GET /barter-assets` returned "Thread ID is required" in the private message composer. Frontend sends snake_case parameter names (`thread_id`, `counterparty_user_id`) but the backend only read camelCase. Now accepts both formats for backward compatibility.
 
 ## [1.1.0]
