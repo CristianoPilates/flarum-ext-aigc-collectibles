@@ -9,10 +9,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **Barter composer redesign** — composer now shows selection summary card instead of full asset grid. "编辑协商" button opens full overlay for asset selection.
-- **Barter config overlay** — full-screen overlay with 4 tabs (mine collectibles, mine blind boxes, theirs collectibles, theirs blind boxes), search, rarity filters, pagination, and visual asset cards.
-- **Collectible inline rename** — users can rename collectibles directly in the detail modal with pencil icon, inline input, and save/cancel buttons.
-- **Barter draft persistence** — composer selections auto-save to localStorage every 500ms, restored on page reload or composer re-open.
-- **Unnamed collectibles banner** — overlay shows banner in "mine collectibles" tab when user has unnamed collectibles, prompting them to add names.
+- **Barter config overlay** — pick assets in a clean full-screen overlay. Four tabs separate your collectibles, your blind boxes, theirs collectibles, and theirs blind boxes. Search, rarity filters, and pagination keep things navigable even with many assets.
+- **Collectible inline rename** — tap the pencil icon in a collectible's detail modal to rename it. No extra pages or dialogs.
+- **Barter draft persistence** — your asset selections survive page refreshes. Draft auto-saves every 500ms.
+- **Unnamed collectibles banner** — if you have collectibles without names, the overlay reminds you to name them before proposing.
 
 ### Changed
 

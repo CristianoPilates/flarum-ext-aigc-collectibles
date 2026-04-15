@@ -6,16 +6,16 @@
 
 ## 当前现场快照
 
-截至 2026-04-14：
+截至 2026-04-15：
 
 - 当前工作分支：`release/post-refactor-consolidation`
-- HEAD commit：`5cfd32d` `docs: add CHANGELOG.md for v1.0.0`
+- HEAD commit：`9570220` `feat: barter composer redesign — summary card, config overlay, inline rename, draft persistence`
 - PR：`https://github.com/CristianoPilates/flarum-ext-aigc-collectibles/pull/1`
 - PR 状态：OPEN，待合并
 
-## 本次发布内容（36 commits）
+## 本次发布内容（37 commits）
 
-这是 v1.0.0 的发布提交。主要内容：
+这是 v1.0.0 + v1.1.0 的发布提交。v1.0.0 (35 commits) 主要内容：
 
 1. **Barter proposals in private message threads** — barter 已完全迁移到私信线程，old `Trade` 模型已退役
 2. **Multi-asset barter** — 盲盒 + 藏品混合交换，双向多件打包
@@ -25,11 +25,20 @@
 6. **Blind box SVG 视觉** — `blindbox-unappraised.svg` / `blindbox-appraised.svg`
 7. **Showcase panel** — reply 右侧展示，with fallback DB query
 
+v1.1.0 (2 additional commits) 主要内容：
+
+1. **Barter composer redesign** — composer 从内联双列资产 grid 改为摘要卡片 + config overlay 路线
+2. **BarterConfigOverlay** — 全屏 overlay，4 tabs (mine collectibles/blind boxes, theirs collectibles/blind boxes)，搜索、稀有度筛选、分页
+3. **Collectible inline rename** — detail modal 中可通过铅笔图标直接修改藏品名，PATCH 到 API
+4. **Barter draft persistence** — 选中的资产每 500ms 自动保存到 localStorage，刷新页面或重开 composer 可恢复
+5. **Unnamed collectibles banner** — overlay 的 mine-collectibles tab 在有未命名藏品时显示引导 banner
+
 ### 本次修复的 bug
 
 1. **Blind box SVG 404** — SVG 从 `resources/images/` 迁到 `assets/images/`，Flarum `assets:publish` 链路修复
 2. **Dead `STATUS_OPENED` UI** — 移除不可达展示逻辑
 3. **Barter composer 输入区被挤压** — `BarterComposerPanel` 从 `headerItems` 注入改为 `view()` 块级注入
+4. **BarterService transaction safety** — `rejectProposal()` 和 `cancelProposal()` 现在使用 `lockForUpdate()` + 事务包装，与 `acceptProposal()` 模式一致
 
 ## 遗留问题（PR body 已记录）
 
@@ -41,10 +50,10 @@
 
 ## 测试状态
 
-- Unit tests: 34/34 PASS
-- Integration tests: 41/41 PASS (3 deprecations)
+- Unit tests: 38/38 PASS
+- Integration tests: 45/45 PASS (3 deprecations)
 - TypeScript: PASS (`tsc noEmit`)
-- Frontend build: PASS (webpack 5.105.4)
+- Frontend build: PASS (webpack 5.105.4, 92.5 KiB forum.js)
 
 ## 当前硬规则（不变）
 

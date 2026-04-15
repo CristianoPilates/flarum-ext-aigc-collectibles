@@ -54,10 +54,14 @@
 
 - `flarum/messages` 私信扩展已启用并集成
 - `BarterProposal` 多资产协商模型已实现
-- 支持盲盒+藏品混合交换,双向多件资产打包
+- 支持盲盒+藏品混合交换,双向多件打包
 - `BarterThreadPanel` 在私信线程中展示协商历史
 - `BarterComposerPanel` 资产选择器和提案创建
+- `BarterConfigOverlay` 全屏选择器,4 tabs,搜索,稀有度筛选,分页
 - `BarterProposalCard` 提案摘要卡片
+- **Composer redesign** — 摘要卡片 + overlay 替代内联双列 grid
+- **Collectible inline rename** — detail modal 中可修改藏品名
+- **Draft persistence** — localStorage 自动保存选中的资产
 - 状态机支持提案、接受、拒绝、取消、结算
 - Legacy `Trade` 模型已完全退役
 
@@ -67,6 +71,7 @@
 - 支持多轮协商(创建新提案覆盖旧提案)
 - 接受后自动结算资产转移
 - 协商历史可回溯查看
+- composer 显示摘要卡片,"编辑协商"打开 overlay
 
 ### Phase 3: Blind box 视觉化资产卡片
 
@@ -81,9 +86,8 @@
 - 支持分阶段开盒流程(鉴定 -> 开盒)
 
 待完善：
-
 - 更丰富的视觉设计和动画
-- 在 barter composer 中的卡片展示优化
+- composer overlay 中的视觉细节打磨
 
 ## 4. 证明与演示标准
 
