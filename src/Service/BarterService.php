@@ -247,10 +247,19 @@ class BarterService implements BarterServiceInterface
             throw new ValidationException(['proposal' => 'Only the counterparty can reject this barter proposal.']);
         }
 
-        $this->stateMachines->get($proposal, 'barterProposal')->apply('reject');
-        $proposal->save();
+        return $this->db->transaction(function () use ($proposal) {
+            /** @var BarterProposal $proposal */
+            $proposal = BarterProposal::query()->where('id', $proposal->id)->lockForUpdate()->firstOrFail();
 
-        return $proposal->load(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']);
+            if ($proposal->status !== BarterProposal::STATUS_PROPOSED) {
+                throw new ValidationException(['proposal' => 'This barter proposal is no longer open.']);
+            }
+
+            $this->stateMachines->get($proposal, 'barterProposal')->apply('reject');
+            $proposal->save();
+
+            return $proposal->load(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']);
+        });
     }
 
     public function cancelProposal(BarterProposal $proposal, User $actor): BarterProposal
@@ -263,10 +272,19 @@ class BarterService implements BarterServiceInterface
             throw new ValidationException(['proposal' => 'Only the proposer can cancel this barter proposal.']);
         }
 
-        $this->stateMachines->get($proposal, 'barterProposal')->apply('cancel');
-        $proposal->save();
+        return $this->db->transaction(function () use ($proposal) {
+            /** @var BarterProposal $proposal */
+            $proposal = BarterProposal::query()->where('id', $proposal->id)->lockForUpdate()->firstOrFail();
 
-        return $proposal->load(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']);
+            if ($proposal->status !== BarterProposal::STATUS_PROPOSED) {
+                throw new ValidationException(['proposal' => 'This barter proposal is no longer open.']);
+            }
+
+            $this->stateMachines->get($proposal, 'barterProposal')->apply('cancel');
+            $proposal->save();
+
+            return $proposal->load(['items.ownerUser', 'proposer', 'counterparty', 'acceptedBy']);
+        });
     }
 
     /**
