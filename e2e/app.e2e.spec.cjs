@@ -217,6 +217,165 @@ test.describe.serial('app smoke @smoke', () => {
     await expect(page.locator('.UserPage, .CollectiblesPage, .WalletConnector').first()).toBeVisible();
   });
 
+  test('buyer can start a private message from showcase CTA @smoke', async ({}, testInfo) => {
+    const messageText = `Showcase CTA PM ${Date.now()}`;
+    await login(page, context, 'admin');
+    await gotoApp(page, '/');
+
+    const setup = await page.evaluate(async () => {
+      const app = window.flarum?.core?.app;
+      if (!app?.forum || !app?.session?.user || !app?.request) {
+        throw new Error('Flarum app is not ready');
+      }
+
+      const apiUrl = app.forum.attribute('apiUrl');
+      const actor = app.session.user;
+      const csrfToken = app.session.csrfToken || null;
+      const userId = actor.id();
+      const collectibleParams = new URLSearchParams({
+        'filter[user]': String(userId),
+        'page[limit]': '50',
+        sort: '-createdAt',
+      });
+
+      const payload = await app.request({
+        method: 'GET',
+        url: apiUrl + '/collectibles?' + collectibleParams.toString(),
+      });
+
+      const selected = (payload.data || []).find((item) => item.attributes?.status === 'completed' && item.attributes?.ipfsCid);
+
+      if (!selected) {
+        return null;
+      }
+
+      await app.request({
+        method: 'PATCH',
+        url: apiUrl + '/collectibles/' + selected.id,
+        body: {
+          data: {
+            type: 'collectibles',
+            id: String(selected.id),
+            attributes: {
+              isShowcase: true,
+            },
+          },
+        },
+      });
+
+      actor.pushAttributes({
+        showcaseCollectibleId: Number(selected.id),
+        showcaseCollectibleName: selected.attributes?.name || null,
+        showcaseCollectibleCid: selected.attributes?.ipfsCid || null,
+        showcaseCollectibleRarity: selected.attributes?.rarity || null,
+        showcaseCollectibleTokenId: selected.attributes?.tokenId || null,
+      });
+
+      const discussionResponse = await fetch(apiUrl + '/discussions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'discussions',
+            attributes: {
+              title: 'Showcase CTA ' + Date.now(),
+              content: 'Starter post for showcase CTA smoke validation.',
+            },
+          },
+        }),
+      });
+
+      const discussionPayload = await discussionResponse.json();
+      const discussionId = discussionPayload?.data?.id;
+
+      if (!discussionResponse.ok || !discussionId) {
+        throw new Error(discussionPayload?.errors?.[0]?.detail || 'Failed to create discussion for showcase CTA smoke');
+      }
+
+      const postResponse = await fetch(apiUrl + '/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'posts',
+            attributes: {
+              content: 'Reply post with showcase CTA.',
+            },
+            relationships: {
+              discussion: {
+                data: {
+                  type: 'discussions',
+                  id: String(discussionId),
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const postPayload = await postResponse.json();
+      const replyNumber = postPayload?.data?.attributes?.number;
+
+      if (!postResponse.ok || !replyNumber) {
+        throw new Error(postPayload?.errors?.[0]?.detail || 'Failed to create reply for showcase CTA smoke');
+      }
+
+      return {
+        discussionUrl: '/d/' + discussionId + '/' + replyNumber,
+        discussionTitle: discussionPayload?.data?.attributes?.title || null,
+        collectibleName: selected.attributes?.name || null,
+        tokenId: selected.attributes?.tokenId || null,
+      };
+    });
+
+    if (!setup?.discussionUrl) {
+      testInfo.annotations.push({ type: 'info', description: 'no completed collectible with IPFS image was available for showcase CTA' });
+      return;
+    }
+
+    await login(page, context, 'buyer');
+    await gotoApp(page, setup.discussionUrl);
+
+    const showcaseMessageButton = page.locator('.PostCollectibleShowcase-messageButton').first();
+    await page.locator('.PostCollectibleShowcase').first().hover();
+    await expect(showcaseMessageButton).toBeVisible();
+    await showcaseMessageButton.click();
+
+    const composer = page.locator('.Composer').first();
+    const editor = composer.locator('.TextEditor-editor').first();
+    await expect(editor).toBeVisible();
+    const initialValue = await editor.inputValue();
+    expect(initialValue).toContain(setup.collectibleName);
+    expect(initialValue).toContain(setup.discussionTitle);
+    expect(initialValue).toContain('http://127.0.0.1:8080/');
+
+    if (setup.tokenId) {
+      expect(initialValue).toContain(String(setup.tokenId));
+    }
+
+    await editor.fill(`${initialValue}\n\n${messageText}`);
+
+    const sendButton = composer.locator('.Composer-footer .Button--primary').first();
+    await expect(sendButton).toBeEnabled();
+    await sendButton.click();
+
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1200);
+
+    await expect(page).toHaveURL(/\/messages\/dialog\/\d+/);
+    await expect(page.locator('body')).toContainText(messageText);
+
+    await login(page, context, 'admin');
+    await gotoApp(page, '/messages');
+    await expect(page.locator('body')).toContainText(messageText);
+  });
+
   test('buyer can send a private message to seller @smoke', async () => {
     const messageText = `Smoke PM ${Date.now()}`;
 

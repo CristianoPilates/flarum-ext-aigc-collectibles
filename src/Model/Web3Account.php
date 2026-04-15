@@ -29,6 +29,9 @@ class Web3Account extends AbstractModel
     const CREATED_AT = 'attached_at';
     const UPDATED_AT = 'last_verified_at';
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -36,7 +39,7 @@ class Web3Account extends AbstractModel
 
     public static function create(User $user, string $address, string $source = 'metamask', string $type = 'evm'): self
     {
-        $account = new static();
+        $account = new self();
         $account->user_id = $user->id;
         $account->address = strtolower($address);
         $account->source = $source;

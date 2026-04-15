@@ -4,8 +4,8 @@ namespace Donk\AigcCollectibles\Service;
 
 use Carbon\Carbon;
 use Donk\AigcCollectibles\Event\CheckedIn;
-use Donk\AigcCollectibles\Model\BlindBox;
 use Donk\AigcCollectibles\Model\CheckinRecord;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -19,7 +19,7 @@ class CheckinService implements CheckinServiceInterface
         private readonly ConnectionInterface $db,
         private readonly Dispatcher $events,
         private readonly SettingsRepositoryInterface $settings,
-        // BlindBoxServiceInterface removed — creation uses Model factory directly
+        private readonly BlindBoxServiceInterface $blindBoxService,
     ) {}
 
     public function performCheckin(User $user): CheckinRecord
@@ -37,12 +37,8 @@ class CheckinService implements CheckinServiceInterface
             $record->save();
 
             for ($i = 0; $i < $rewardAmount; $i++) {
-                BlindBox::createForUser($user, 'checkin_reward');
+                $this->blindBoxService->createForUser($user, 'checkin_reward');
             }
-
-            $this->db->table('users')
-                ->where('id', $user->id)
-                ->increment('blind_box_count', $rewardAmount);
 
             $user->last_checkin_at = Carbon::now();
             $user->save();

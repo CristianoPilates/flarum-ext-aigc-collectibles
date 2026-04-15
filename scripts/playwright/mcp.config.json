@@ -1,7 +1,6 @@
 {
   "browser": {
     "browserName": "chromium",
-    "userDataDir": "/home/donk/development/flarum-ext-aigc-collectibles/.devenv/state/playwright-profile",
     "launchOptions": {
       "channel": "chromium",
       "headless": false,
@@ -23,7 +22,7 @@
   },
   "server": {
     "port": 8931,
-    "host": "localhost"
+    "host": "127.0.0.1"
   },
   "outputDir": "/home/donk/development/flarum-ext-aigc-collectibles/.devenv/state/playwright-mcp-output",
   "sharedBrowserContext": true,

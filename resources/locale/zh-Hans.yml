@@ -1,0 +1,351 @@
+donk-aigc-collectibles:
+  admin:
+    settings:
+      title: AIGC 数字藏品设置
+
+      # AIGC API 设置
+      aigc_heading: AIGC 图像生成
+      aigc_api_endpoint_label: AIGC API 端点
+      aigc_api_endpoint_help: 图像生成 API 的基础 URL（如 OpenAI DALL-E 或 Stable Diffusion 兼容端点）。
+      aigc_api_key_label: AIGC API 密钥
+      aigc_api_key_help: 用于验证 AIGC 图像生成服务的密钥。
+      aigc_model_label: AIGC 模型
+      aigc_model_help: 用于图像生成的模型标识符（如 dall-e-3、stable-diffusion-xl）。
+      aigc_default_prompt_label: 默认提示词模板
+      aigc_default_prompt_help: 藏品生成的基础提示词模板。使用 {rarity} 作为稀有度等级的占位符。
+
+      # IPFS 设置
+      ipfs_heading: IPFS 存储
+      ipfs_api_endpoint_label: IPFS API 端点
+      ipfs_api_endpoint_help: IPFS 节点或 Pinata API 的 HTTP API 端点（如 https://api.pinata.cloud）。
+      ipfs_api_key_label: IPFS API 密钥
+      ipfs_api_key_help: 用于验证 IPFS 固定服务的 API 密钥或 Bearer Token。
+      ipfs_gateway_url_label: IPFS 网关 URL
+      ipfs_gateway_url_help: 用于提供 IPFS 内容的公共网关 URL（如 https://gateway.pinata.cloud/ipfs/）。必须以 / 结尾。
+
+      # 区块链设置
+      blockchain_heading: 区块链与 NFT
+      blockchain_enabled_label: 启用 NFT 铸造
+      blockchain_enabled_help: 启用或禁用区块链上的 NFT 铸造功能。
+      blockchain_rpc_url_label: 区块链 RPC URL
+      blockchain_rpc_url_help: EVM 链的 JSON-RPC 端点（如 http://127.0.0.1:8545 用于本地 Hardhat/Ganache）。
+      blockchain_contract_address_label: NFT 合约地址
+      blockchain_contract_address_help: 已部署的 ERC-721 CollectibleNFT 合约地址。
+      blockchain_private_key_label: 铸造钱包私钥
+      blockchain_private_key_help: 授权铸造 NFT 的钱包私钥。请妥善保管。
+      blockchain_chain_id_label: 链 ID
+      blockchain_chain_id_help: 目标 EVM 网络的链 ID（如 31337 用于 Hardhat 本地网络）。
+
+      # 签到设置
+      checkin_heading: 每日签到
+      checkin_reward_amount_label: 签到奖励数量
+      checkin_reward_amount_help: 每次每日签到奖励的盲盒数量。
+      checkin_reward_label: 签到奖励数量
+      checkin_reward_help: 每次每日签到奖励的盲盒数量。
+
+      # 稀有度设置
+      rarity_heading: 稀有度权重
+      rarity_help: 各稀有度等级的相对权重。无需加总为 100，系统会自动归一化。
+      rarity_common_weight_label: 普通权重
+      rarity_rare_weight_label: 稀有权重
+      rarity_epic_weight_label: 史诗权重
+      rarity_legendary_weight_label: 传说权重
+      rarity_common_label: 普通权重
+      rarity_rare_label: 稀有权重
+      rarity_epic_label: 史诗权重
+      rarity_legendary_label: 传说权重
+      rarity_weights_help: 各稀有度等级的相对权重，系统会自动归一化。
+
+      # 功能开关
+      features_heading: 功能开关
+      trading_enabled_label: 启用 P2P 交易
+      web3_enabled_label: 启用 Web3 钱包绑定
+      aigc_enabled_label: 启用 AIGC 生成
+      aigc_enabled_help: 启用或禁用 AIGC 图像生成功能。
+
+      # admin.ts registerSetting 使用的键
+      aigc_endpoint_label: AIGC API 端点
+      aigc_prompt_template_label: 默认提示词模板
+      aigc_prompt_template_help: 藏品生成的基础提示词模板。使用 {rarity} 作为占位符。
+      ipfs_endpoint_label: IPFS API 端点
+      ipfs_gateway_label: IPFS 网关 URL
+      ws_url_label: WebSocket URL
+      ws_url_help: 用于实时通知的 WebSocket 服务器 URL（可选）。
+
+      # 分区标题
+      section_aigc: AIGC 图像生成
+      section_ipfs: IPFS 存储
+      section_blockchain: 区块链与 NFT
+      section_rarity: 稀有度权重
+
+      # 提交
+      submit_button: 保存设置
+
+  forum:
+    checkin:
+      button: 签到
+      button_checked: 今日已签到
+      check_in: 签到
+      checked_in: 已签到
+      success_message: 签到成功！获得 {reward} 个盲盒。
+      already_checked: 今天已经签到过了。
+      streak_label: 连续签到：{count} 天
+
+    blind_box:
+      balance_label: 盲盒：{count}
+      balance_title: 你的盲盒余额
+      balance: 可用盲盒
+      open_button: 开启盲盒
+      open_title: 开启盲盒
+      inventory_title: 我的盲盒
+      inventory_subtitle: "当前拥有 {count} 个可用盲盒"
+      inventory_empty: 当前没有可用盲盒。
+      own_only: 盲盒只会显示在你自己的个人资料页中。
+      open: 开启盲盒
+      open_another: 再开一个
+      close: 关闭
+      try_again: 重试
+      appraise_button: 先鉴定盲盒
+      open_collectible_button: 开盒生成藏品
+      type_label: 类型
+      type_checkin_reward: 签到奖励盲盒
+      type_trade_reward: 交易奖励盲盒
+      type_unknown: 未知盲盒
+      status_label: 状态
+      status_unappraised: 未鉴定
+      status_appraised: 已鉴定
+      status_opened: 已开启
+      status_unknown: 未知状态
+      seed_label: 种子
+      budget_label: 预算
+      budget_unknown: "???"
+      budget_value: "{budget}"
+      draw_categories_label: 可抽取类别
+      category_subject: 主体
+      category_style: 风格
+      category_mood: 氛围
+      category_theme: 主题
+      category_unknown: 未知类别
+      category_required: 必选
+      category_optional: 可选
+      appraising: 正在进行 10 秒盲盒鉴定（PoW）...
+      appraising_progress: "剩余 {seconds} 秒 · 已尝试 {attempts} 次 · 当前最佳前导零 {zeros} 个"
+      appraising_quality: "当前鉴定品质：{rarity}"
+      generating: 正在生成你的藏品...
+      generation_failed: 藏品生成失败，请重试。
+      generation_timeout: 生成超时，请稍后重试。
+      insufficient: 盲盒数量不足。
+      reveal_title: 获得新藏品！
+      cost_label: 消耗：1 个盲盒
+      confirm_open: 确定要开启一个盲盒吗？
+
+    collectible:
+      gallery_title: 我的藏品
+      gallery_title_user: "{username} 的藏品"
+      detail_title: 藏品详情
+      name_fallback: "藏品 {idLabel}"
+      rarity_common: 普通
+      rarity_rare: 稀有
+      rarity_epic: 史诗
+      rarity_legendary: 传说
+      status_generating: 生成中...
+      status_completed: 已完成
+      status_failed: 生成失败
+      status_burned: 已销毁
+      showcase_button: 设为展示藏品
+      showcase_set: 此藏品已设为帖子展示。
+      showcase_remove: 取消展示
+      showcase_removed: 已取消藏品展示。
+      owner_label: 拥有者：
+      owner: 拥有者：{username}
+      original_creator: 创建者：{username}
+      times_traded: 交易次数：{count}
+      created_at: 创建时间：{date}
+      no_collectibles: 暂无藏品。开启盲盒来获取你的第一件藏品吧！
+      no_collectibles_user: 该用户暂无藏品。
+      mint_nft_button: 铸造为 NFT
+      mint_nft_confirm: 将此藏品铸造为链上 NFT？
+      minting: 正在铸造 NFT...
+      minted: 已上链
+      rename_button: 重命名
+      rename_save: 保存
+      rename_cancel: 取消
+      rename_success: 名称已更新。
+      rename_error: 更新名称失败。
+      token_id_label: "Token ID: #{id}"
+      ipfs_label: 在 IPFS 上查看
+      proof_button: 查看证明
+      proof_title: NFT 证明
+      proof_section_app: 应用记录
+      proof_section_chain: 链上证明
+      proof_section_metadata: Metadata JSON
+      proof_section_image: 图片资源
+      proof_open_metadata: 打开 metadata
+      proof_open_image: 打开图片
+      proof_open_token_uri: 打开 tokenURI 目标
+      proof_field_collectible: 藏品
+      proof_field_owner: 拥有者
+      proof_field_token_id: Token ID
+      proof_field_metadata_cid: Metadata CID
+      proof_field_image_cid: 图片 CID
+      proof_field_expected_token_uri: 预期 tokenURI
+      proof_field_chain_id: 链 ID
+      proof_field_contract: 合约
+      proof_field_owner_of: ownerOf
+      proof_field_token_uri: tokenURI
+      proof_field_cid: CID
+      proof_field_image_field: image
+      proof_field_source: 来源
+      proof_match_metadata: tokenURI 与 metadata CID 一致
+      proof_match_metadata_image: image 与 metadata JSON 一致
+      proof_yes: "是"
+      proof_no: "否"
+      image_unavailable: 图片在 IPFS 上已不可用。
+      view_history: 查看所有权历史
+      history_title: 所有权历史
+      history_generated: 由 {username} 生成
+      history_traded: 交易：{from} -> {to}，{boxes} 个盲盒
+      history_minted: 由 {username} 铸造为 NFT
+      history_burned: 由 {username} 销毁
+
+    messages:
+      showcase_button: 私信主人
+      detail_button: 我想聊这件藏品
+      context_intro: 我想聊聊这件藏品：
+      context_collectible: 藏品：{name}
+      context_rarity: 稀有度：{rarity}
+      context_token_id: "Token ID：#{id}"
+      context_source_discussion: 讨论帖：{title}
+      context_source_post: 来源帖子：{url}
+      unavailable: 私信功能当前不可用。
+      permission_denied: 你的账号当前不能发送私信。
+      self_not_allowed: 你不能给自己发私信。
+
+    barter:
+      thread_title: 线程内协商
+      thread_subtitle: 先聊天，再在这条私信线程里发起、修改并确认协商条件。
+      create_button: 发起协商
+      counter_button: 发起还价
+      composer_kicker: 协商草稿
+      composer_title: "为 {username} 配置协商条件"
+      enable_button: 添加协商
+      disable_button: 取消协商
+      summary_yours: "你已选择 {count} 项"
+      summary_theirs: "对方已选择 {count} 项"
+      your_offer: 你的出价
+      their_offer: 对方出价
+      collectibles_label: 藏品
+      blind_boxes_label: 盲盒
+      refresh: 刷新
+      loading: 加载中...
+      empty: 当前线程里还没有协商。
+      load_failed: 协商加载失败。
+      action_failed: 协商更新失败。
+      proposer: "{username} 发起"
+      offer_from: "{username} 提供"
+      revision: "第 {number} 版"
+      accept: 接受
+      reject: 拒绝
+      cancel: 取消
+      replaces_revision: "替代第 {number} 版"
+      replaced_by_revision: "已被第 {number} 版替代"
+      replaced_by_later_revision: 已被后续版本替代
+      accepted_by: "{username} 接受"
+      your_asset: 你的资产
+      collectible_link: 查看藏品页
+      no_assets: 当前没有可选资产。
+      selection_summary: "已选：{collectibles} 藏品，{blindBoxes} 盲盒"
+      pre_send_summary: "你将给出 {collectibles} 藏品，换取 {blindBoxes} 盲盒"
+      clear_selections: 清除选择
+      empty_cta: "这里没有资产。每日签到可获得盲盒，开始交换吧！"
+      counter_diff: "原：{prev} → 现在：{curr}"
+      counter_added: 新增
+      counter_removed: 移除
+      validation_assets_required: 至少选择一项资产。
+      validation_both_sides_required: 协商必须同时包含双方资产。
+      validation_message_required: 请先在私信输入框里写下你要发送的话，再发送协商。
+      status_proposed: 协商中
+      status_accepted: 已达成
+      status_settling: 交易结算中
+      status_completed: 已成交
+      status_rejected: 已拒绝
+      status_cancelled: 已取消
+      status_superseded: 已被替代
+      status_failed: 交易失败
+      asset_type_collectible: 藏品
+      asset_type_blind_box: 盲盒
+      asset_type_unknown: 资产
+      config_overlay_title: 配置协商
+      config_overlay_confirm: 确认选择
+      config_overlay_cancel: 取消
+      config_tab_mine_collectibles: 我的藏品
+      config_tab_mine_blindboxes: 我的盲盒
+      config_tab_theirs_collectibles: 对方藏品
+      config_tab_theirs_blindboxes: 对方盲盒
+      config_overlay_search_placeholder: 按名称或 #ID 搜索...
+      config_overlay_search_aria: 按名称搜索资产
+      config_overlay_all: 全部
+      config_overlay_no_results: 没有匹配的资产
+      config_overlay_earn_hint: 每日签到可获得盲盒
+      config_overlay_them_empty_hint: 对方暂无资产可交易
+      config_overlay_nothing_selected: 未选择
+      config_overlay_page: "第 {current} 页 / 共 {total} 页"
+      config_overlay_unnamed_count: "{count} 件未命名藏品 — 打开藏品详情即可命名"
+      your_side: 我方出
+      their_side: 对方出
+      edit_negotiation: 编辑协商
+
+    wallet:
+      title: Web3 钱包
+      connect_button: 连接钱包
+      connect: 连接钱包
+      disconnect_button: 断开钱包
+      unbind: 断开钱包
+      connected_label: 钱包已连接
+      install_metamask: 请安装 MetaMask 以使用此功能。
+      connection_denied: 钱包连接请求被拒绝。
+      signing_message: 请在 MetaMask 中签名以验证钱包所有权。
+      signing_cancelled: 签名已取消。
+      verify_success: 钱包已成功绑定到你的账户！
+      verify_failed: 签名验证失败，请重试。
+      address_label: 钱包：{address}
+      already_bound: 此钱包地址已绑定到其他账户。
+      confirm_disconnect: 确定要解绑钱包吗？
+      disconnect_success: 钱包已解绑。
+      step_connecting: 正在连接 MetaMask...
+      step_signing: 请在 MetaMask 中签名...
+      step_verifying: 正在验证签名...
+      bind_failed: 钱包绑定失败，请重试。
+      unbind_failed: 钱包解绑失败，请重试。
+
+    post_badge:
+      showcase_alt: "{username} 的展示藏品"
+      showcase_tooltip: "{name}（{rarity}）"
+
+    post_showcase:
+      kicker: 展柜
+
+    nav:
+      collectibles: 藏品
+
+    user:
+      blindboxes_link: 盲盒
+      collectibles_link: 藏品
+
+    gallery:
+      title: 藏品
+      filter_all: 全部
+      filter_common: 普通
+      filter_rare: 稀有
+      filter_epic: 史诗
+      filter_legendary: 传说
+      empty: 暂无藏品。
+      load_more: 加载更多
+
+    notification:
+      collectible_ready_title: 藏品已就绪
+      collectible_ready_body: 你的新藏品已生成完毕！
+      collectible_failed_title: 生成失败
+      collectible_failed_body: 藏品生成失败。你的盲盒已退还。
+      nft_minted_title: NFT 已铸造
+      nft_minted_body: 你的藏品已铸造为 NFT #{tokenId}。

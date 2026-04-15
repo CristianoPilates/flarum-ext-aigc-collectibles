@@ -1,19 +1,32 @@
 import app from 'flarum/forum/app';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import Modal from 'flarum/common/components/Modal';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
+import {
+  blindBoxBudget,
+  blindBoxDrawRules,
+  blindBoxId,
+  blindBoxSeed,
+  blindBoxStatus,
+  blindBoxType,
+  computeBlindBoxPow,
+  rarityFromBudget,
+  rarityFromZeros,
+} from '../utils/blindBoxes';
+import { transText } from '../utils/i18n';
 import { subscribe, unsubscribe } from '../utils/notifications';
 import { gatewayUrl } from '../utils/ipfs';
 
-const RARITY_LABELS: Record<string, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
-};
+interface BlindBoxOpenerAttrs extends IInternalModalAttrs {
+  blindBox?: any;
+  onUpdated?: () => void;
+}
 
-export default class BlindBoxOpener extends Modal {
+export default class BlindBoxOpener extends Modal<BlindBoxOpenerAttrs> {
+  blindBox: any = null;
   appraising: boolean = false;
   generating: boolean = false;
   generatedCollectible: any = null;
@@ -26,15 +39,7 @@ export default class BlindBoxOpener extends Modal {
 
   oninit(vnode: any) {
     super.oninit(vnode);
-    this.appraising = false;
-    this.generating = false;
-    this.generatedCollectible = null;
-    this.error = null;
-    this.pendingCollectibleId = null;
-    this.pendingRarity = null;
-    this.pendingPowZeros = 0;
-    this.pendingPowAttempts = 0;
-    this.pendingPowSecondsLeft = 10;
+    this.reset();
   }
 
   className() {
@@ -66,6 +71,7 @@ export default class BlindBoxOpener extends Modal {
     if (!user) return null;
 
     const blindBoxCount = user.attribute<number>('blindBoxCount') || 0;
+    const blindBox = this.blindBox;
 
     // State: reveal completed collectible
     if (this.generatedCollectible) {
@@ -86,27 +92,90 @@ export default class BlindBoxOpener extends Modal {
       return this.viewError();
     }
 
-    // State: idle — ready to open
+    if (!blindBox) {
+      return (
+        <div className="Modal-body BlindBoxOpener-body BlindBoxOpener-empty">
+          <p>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.inventory_empty')}</p>
+          <Button className="Button" onclick={() => this.hide()}>
+            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.close')}
+          </Button>
+        </div>
+      );
+    }
+
+    const status = blindBoxStatus(blindBox) || 'unappraised';
+    const budget = blindBoxBudget(blindBox);
+    const type = blindBoxType(blindBox);
+    const drawRules = blindBoxDrawRules(blindBox);
+
     return (
       <div className="Modal-body BlindBoxOpener-body">
-        <div className="BlindBoxOpener-balance">
-          <i className="fas fa-box" />
-          <span className="BlindBoxOpener-balanceCount">{blindBoxCount}</span>
-          <span className="BlindBoxOpener-balanceLabel">
-            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.balance')}
-          </span>
+        <div className={`BlindBoxOpener-summary BlindBoxOpener-summary--${type} BlindBoxOpener-summary--${status}`}>
+          <div className="BlindBoxOpener-balance">
+            <i className="fas fa-box" />
+            <span className="BlindBoxOpener-balanceCount">{blindBoxCount}</span>
+            <span className="BlindBoxOpener-balanceLabel">
+              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.balance')}
+            </span>
+          </div>
+
+          <h3 className="BlindBoxOpener-summaryTitle">
+            {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.type_${type}`)}
+          </h3>
+
+          <p className="BlindBoxOpener-summaryRow">
+            <strong>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.status_label')}</strong>{' '}
+            {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.status_${status}`)}
+          </p>
+          <p className="BlindBoxOpener-summaryRow">
+            <strong>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.budget_label')}</strong>{' '}
+            {typeof budget === 'number'
+              ? app.translator.trans('donk-aigc-collectibles.forum.blind_box.budget_value', { budget })
+              : app.translator.trans('donk-aigc-collectibles.forum.blind_box.budget_unknown')}
+          </p>
+          <p className="BlindBoxOpener-summaryRow BlindBoxOpener-summaryRow--seed">
+            <strong>{app.translator.trans('donk-aigc-collectibles.forum.blind_box.seed_label')}</strong>{' '}
+            <code>{blindBoxSeed(blindBox) || '-'}</code>
+          </p>
+
+          <div className="BlindBoxOpener-summaryRules">
+            {drawRules.map((rule) => (
+              <span
+                className={`BlindBoxCard-category${rule.required ? ' BlindBoxCard-category--required' : ''}`}
+                key={`${rule.category}-${rule.required ? 'required' : 'optional'}`}
+              >
+                {app.translator.trans(`donk-aigc-collectibles.forum.blind_box.category_${rule.category}`)}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="BlindBoxOpener-action">
-          <Button
-            className="Button Button--primary Button--block BlindBoxOpener-openButton"
-            onclick={() => this.openBox()}
-            disabled={blindBoxCount < 1}
-            icon="fas fa-box-open"
-          >
-            {blindBoxCount >= 1
-              ? app.translator.trans('donk-aigc-collectibles.forum.blind_box.open')
-              : app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')}
+          {status === 'unappraised' && (
+            <Button
+              className="Button Button--primary Button--block BlindBoxOpener-openButton"
+              onclick={() => this.appraiseCurrentBox()}
+              icon="fas fa-hammer"
+            >
+              {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraise_button')}
+            </Button>
+          )}
+
+          {status === 'appraised' && (
+            <Button
+              className="Button Button--primary Button--block BlindBoxOpener-openButton"
+              onclick={() => this.openCurrentBox()}
+              disabled={blindBoxCount < 1}
+              icon="fas fa-box-open"
+            >
+              {blindBoxCount >= 1
+                ? app.translator.trans('donk-aigc-collectibles.forum.blind_box.open_collectible_button')
+                : app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')}
+            </Button>
+          )}
+
+          <Button className="Button Button--block" onclick={() => this.hide()}>
+            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.close')}
           </Button>
         </div>
       </div>
@@ -136,7 +205,7 @@ export default class BlindBoxOpener extends Modal {
         </p>
         <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
           {app.translator.trans('donk-aigc-collectibles.forum.blind_box.appraising_quality', {
-            rarity: RARITY_LABELS[rarity] || rarity,
+            rarity: collectibleRarityLabel(rarity),
           })}
         </span>
       </div>
@@ -159,7 +228,7 @@ export default class BlindBoxOpener extends Modal {
         </p>
         {this.pendingRarity && (
           <span className={'CollectibleRarity CollectibleRarity--' + this.pendingRarity}>
-            {RARITY_LABELS[this.pendingRarity] || this.pendingRarity}
+            {collectibleRarityLabel(this.pendingRarity)}
           </span>
         )}
       </div>
@@ -170,24 +239,22 @@ export default class BlindBoxOpener extends Modal {
     const collectible = this.generatedCollectible;
     const rarity = collectible.rarity();
     const imageUrl = collectible.ipfsCid() ? gatewayUrl(collectible.ipfsCid()) : null;
+    const displayName = displayCollectibleName(collectible.name?.(), collectible.id?.());
 
     return (
       <div className={'Modal-body BlindBoxOpener-body BlindBoxOpener-reveal BlindBoxOpener-reveal--' + rarity}>
         <div className="BlindBoxOpener-revealCard">
           {imageUrl ? (
-            <img className="BlindBoxOpener-revealImage" src={imageUrl} alt={collectible.name()} loading="lazy" />
+            <img className="BlindBoxOpener-revealImage" src={imageUrl} alt={displayName} loading="lazy" />
           ) : (
             <div className="BlindBoxOpener-revealPlaceholder">
               <i className="fas fa-image" />
             </div>
           )}
         </div>
-        <h3 className="BlindBoxOpener-revealName">{collectible.name()}</h3>
-        <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{RARITY_LABELS[rarity] || rarity}</span>
+        <h3 className="BlindBoxOpener-revealName">{displayName}</h3>
+        <span className={'CollectibleRarity CollectibleRarity--' + rarity}>{collectibleRarityLabel(rarity)}</span>
         <div className="BlindBoxOpener-revealActions">
-          <Button className="Button Button--primary" onclick={() => this.reset()}>
-            {app.translator.trans('donk-aigc-collectibles.forum.blind_box.open_another')}
-          </Button>
           <Button className="Button" onclick={() => this.hide()}>
             {app.translator.trans('donk-aigc-collectibles.forum.blind_box.close')}
           </Button>
@@ -210,51 +277,71 @@ export default class BlindBoxOpener extends Modal {
     );
   }
 
-  openBox() {
+  appraiseCurrentBox() {
     if (this.appraising || this.generating) return;
+    if (!this.blindBox) return;
 
-    this.appraising = false;
-    this.generating = true;
-    this.error = null;
-    this.generatedCollectible = null;
-    this.pendingCollectibleId = null;
-    this.pendingPowZeros = 0;
-    this.pendingPowAttempts = 0;
-    this.pendingPowSecondsLeft = 10;
+    this.resetPendingState();
+    this.appraising = true;
     this.pendingRarity = 'common';
+    m.redraw();
 
-    void this.openBlindBoxFlow();
+    void this.runAppraisalFlow();
   }
 
-  async openBlindBoxFlow() {
+  openCurrentBox() {
+    if (this.appraising || this.generating) return;
+    if (!this.blindBox) return;
+
+    this.resetPendingState();
+    this.generating = true;
+    m.redraw();
+
+    void this.runOpenFlow();
+  }
+
+  async runAppraisalFlow() {
     try {
-      const box = await this.fetchOpenableBlindBox();
+      const readyBox = await this.appraiseBlindBox(this.blindBox);
+      const readyBoxId = blindBoxId(readyBox) || blindBoxId(this.blindBox);
+      this.blindBox = readyBoxId ? app.store.getById('blindboxes', readyBoxId) || this.blindBox : this.blindBox;
+      this.appraising = false;
+      this.generating = false;
+      this.attrs.onUpdated?.();
+      m.redraw();
+    } catch (error: any) {
+      this.appraising = false;
+      this.generating = false;
+      this.error =
+        error?.response?.errors?.[0]?.detail ||
+        error?.message ||
+        transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
+      m.redraw();
+    }
+  }
 
-      if (!box) {
-        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.insufficient')));
+  async runOpenFlow() {
+    try {
+      if (!this.blindBox) {
+        throw new Error(transText('donk-aigc-collectibles.forum.blind_box.insufficient'));
       }
 
-      let readyBox = box;
-
-      if (readyBox.attributes?.status === 'unappraised') {
-        this.appraising = true;
-        this.generating = false;
-        m.redraw();
-        readyBox = await this.appraiseBlindBox(readyBox);
-        this.appraising = false;
-        this.generating = true;
-      } else if (readyBox.attributes?.status === 'appraised') {
-        this.pendingRarity = this.rarityFromBudget(readyBox.attributes?.budget || 0);
+      const readyBox = this.blindBox;
+      const readyBoxId = blindBoxId(readyBox);
+      if (!readyBoxId) {
+        throw new Error('Blind box id is missing.');
       }
+
+      this.pendingRarity = rarityFromBudget(blindBoxBudget(readyBox) || 0);
 
       const response: any = await app.request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/blindboxes/' + readyBox.id + '/open',
+        url: app.forum.attribute('apiUrl') + '/blindboxes/' + readyBoxId + '/open',
       });
 
       const collectibleId = response?.data?.relationships?.collectible?.data?.id;
       if (!collectibleId) {
-        throw new Error(String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed')));
+        throw new Error(transText('donk-aigc-collectibles.forum.blind_box.generation_failed'));
       }
 
       this.pendingCollectibleId = collectibleId;
@@ -265,6 +352,7 @@ export default class BlindBoxOpener extends Modal {
         user.pushAttributes({ blindBoxCount: Math.max(0, currentCount - 1) });
       }
 
+      this.attrs.onUpdated?.();
       m.redraw();
       this.startPolling();
     } catch (error: any) {
@@ -273,147 +361,52 @@ export default class BlindBoxOpener extends Modal {
       this.error =
         error?.response?.errors?.[0]?.detail ||
         error?.message ||
-        String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+        transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
       m.redraw();
     }
   }
 
-  async fetchOpenableBlindBox(): Promise<any | null> {
-    const response: any = await app.request({
-      method: 'GET',
-      url: app.forum.attribute('apiUrl') + '/blindboxes',
-      params: {
-        'page[limit]': 50,
-        sort: '-createdAt',
-      },
-    });
-
-    const items = Array.isArray(response?.data) ? response.data : [];
-
-    return (
-      items.find((item: any) => item.attributes?.status === 'appraised') ||
-      items.find((item: any) => item.attributes?.status === 'unappraised') ||
-      null
-    );
-  }
-
   async appraiseBlindBox(box: any): Promise<any> {
-    const seed = box.attributes?.seed;
-    if (!seed) {
+    const boxId = blindBoxId(box);
+    const seed = blindBoxSeed(box);
+    if (!boxId || !seed) {
       throw new Error('Blind box seed is missing.');
     }
 
-    const pow = await this.computePow(seed, 10_000);
-    this.pendingRarity = this.rarityFromZeros(pow.zeros);
+    const pow = await computeBlindBoxPow(seed, 10_000, (progress) => {
+      this.pendingPowZeros = progress.zeros;
+      this.pendingPowAttempts = progress.attempts;
+      this.pendingPowSecondsLeft = progress.secondsLeft;
+      this.pendingRarity = progress.rarity;
+      m.redraw();
+    });
+    this.pendingRarity = rarityFromZeros(pow.zeros);
 
     const response: any = await app.request({
       method: 'POST',
-      url: app.forum.attribute('apiUrl') + '/blindboxes/' + box.id + '/appraise',
+      url: app.forum.attribute('apiUrl') + '/blindboxes/' + boxId + '/appraise',
       body: {
         nonce: pow.nonce,
         hash: pow.hash,
       },
     });
 
-    const readyBox = response?.data ?? response;
+    const payload = response?.data ? app.store.pushPayload(response) : null;
+    const readyBox = Array.isArray(payload) ? payload[0] : payload || response?.data || response;
     const budget = readyBox?.attributes?.budget;
 
     if (typeof budget === 'number') {
-      this.pendingRarity = this.rarityFromBudget(budget);
+      this.pendingRarity = rarityFromBudget(budget);
+    }
+
+    if (box.pushAttributes) {
+      box.pushAttributes({
+        status: readyBox?.attributes?.status,
+        budget: readyBox?.attributes?.budget,
+      });
     }
 
     return readyBox;
-  }
-
-  async computePow(
-    seed: string,
-    durationMs: number = 10_000
-  ): Promise<{ nonce: string; hash: string; zeros: number; attempts: number }> {
-    const deadline = performance.now() + durationMs;
-    const uiUpdateIntervalMs = 200;
-    const yieldEvery = 100;
-
-    let nonce = '0';
-    let hash = await this.sha256(seed + nonce);
-    let bestZeros = this.leadingZeros(hash);
-    let attempts = 1;
-    let lastUiUpdate = performance.now();
-
-    this.updatePowProgress(deadline, bestZeros, attempts);
-
-    while (performance.now() < deadline) {
-      const candidateNonce = attempts.toString(16);
-      const candidateHash = await this.sha256(seed + candidateNonce);
-      attempts++;
-      const zeros = this.leadingZeros(candidateHash);
-
-      if (zeros > bestZeros) {
-        nonce = candidateNonce;
-        hash = candidateHash;
-        bestZeros = zeros;
-      }
-
-      const now = performance.now();
-      if (now - lastUiUpdate >= uiUpdateIntervalMs) {
-        this.updatePowProgress(deadline, bestZeros, attempts);
-        lastUiUpdate = now;
-      }
-
-      if (attempts % yieldEvery === 0) {
-        await this.yieldToBrowser();
-      }
-    }
-
-    this.updatePowProgress(deadline, bestZeros, attempts);
-
-    return { nonce, hash, zeros: bestZeros, attempts };
-  }
-
-  updatePowProgress(deadline: number, zeros: number, attempts: number) {
-    const secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
-
-    this.pendingPowZeros = zeros;
-    this.pendingPowAttempts = attempts;
-    this.pendingPowSecondsLeft = secondsLeft;
-    this.pendingRarity = this.rarityFromZeros(zeros);
-    m.redraw();
-  }
-
-  async yieldToBrowser(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-
-  async sha256(value: string): Promise<string> {
-    const bytes = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-
-    return Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, '0'))
-      .join('');
-  }
-
-  leadingZeros(hash: string): number {
-    let count = 0;
-
-    while (count < hash.length && hash[count] === '0') {
-      count++;
-    }
-
-    return count;
-  }
-
-  rarityFromZeros(zeros: number): string {
-    if (zeros >= 7) return 'legendary';
-    if (zeros >= 6) return 'epic';
-    if (zeros >= 5) return 'rare';
-    return 'common';
-  }
-
-  rarityFromBudget(budget: number): string {
-    if (budget >= 160) return 'legendary';
-    if (budget >= 80) return 'epic';
-    if (budget >= 40) return 'rare';
-    return 'common';
   }
 
   onCollectibleReady(data: any) {
@@ -436,7 +429,7 @@ export default class BlindBoxOpener extends Modal {
     if (!this.pendingCollectibleId || !this.generating) return;
     if (this.pollAttempts >= this.MAX_POLL_ATTEMPTS) {
       this.generating = false;
-      this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_timeout'));
+      this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_timeout');
       m.redraw();
       return;
     }
@@ -455,7 +448,7 @@ export default class BlindBoxOpener extends Modal {
           this.fetchCollectible(this.pendingCollectibleId!);
         } else if (status === 'failed') {
           this.generating = false;
-          this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+          this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
           // Refund is done server-side
           m.redraw();
         } else {
@@ -479,7 +472,7 @@ export default class BlindBoxOpener extends Modal {
       })
       .catch(() => {
         this.generating = false;
-        this.error = String(app.translator.trans('donk-aigc-collectibles.forum.blind_box.generation_failed'));
+        this.error = transText('donk-aigc-collectibles.forum.blind_box.generation_failed');
         this.stopPolling();
         m.redraw();
       });
@@ -492,7 +485,7 @@ export default class BlindBoxOpener extends Modal {
     }
   }
 
-  reset() {
+  resetPendingState() {
     this.appraising = false;
     this.generating = false;
     this.generatedCollectible = null;
@@ -502,6 +495,11 @@ export default class BlindBoxOpener extends Modal {
     this.pendingPowZeros = 0;
     this.pendingPowAttempts = 0;
     this.pendingPowSecondsLeft = 10;
+  }
+
+  reset() {
+    this.blindBox = this.attrs.blindBox || null;
+    this.resetPendingState();
     this.stopPolling();
   }
 }

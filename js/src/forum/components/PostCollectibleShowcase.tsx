@@ -1,7 +1,15 @@
 import app from 'flarum/forum/app';
 import Component from 'flarum/common/Component';
+import Button from 'flarum/common/components/Button';
 import CollectibleDetailModal from './CollectibleDetailModal';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
+import {
+  buildCollectibleMessageContent,
+  currentDiscussionTitle,
+  shouldShowPrivateMessageButton,
+  startPrivateMessage,
+} from '../utils/privateMessages';
 
 interface PostCollectibleShowcaseAttrs {
   user: any;
@@ -12,41 +20,50 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
     const user = this.attrs.user;
     if (!user) return null;
 
-    const showcaseId = user.attribute<number>('showcaseCollectibleId');
-    const showcaseName = user.attribute<string>('showcaseCollectibleName');
-    const showcaseCid = user.attribute<string>('showcaseCollectibleCid');
-    const showcaseRarity = user.attribute<string>('showcaseCollectibleRarity');
-    const showcaseTokenId = user.attribute<number>('showcaseCollectibleTokenId');
+    const showcaseId = user.attribute('showcaseCollectibleId') as number | null;
+    const showcaseName = user.attribute('showcaseCollectibleName') as string | null;
+    const showcaseCid = user.attribute('showcaseCollectibleCid') as string | null;
+    const showcaseRarity = user.attribute('showcaseCollectibleRarity') as string | null;
+    const showcaseTokenId = user.attribute('showcaseCollectibleTokenId') as number | null;
 
     if (!showcaseId || !showcaseCid) return null;
 
     const imageUrl = gatewayUrl(showcaseCid);
     const collectible = app.store.getById('collectibles', String(showcaseId));
+    const canMessageOwner = shouldShowPrivateMessageButton(user);
+
+    const className =
+      'PostCollectibleShowcase PostCollectibleShowcase--' +
+      (showcaseRarity || 'common') +
+      (canMessageOwner ? ' PostCollectibleShowcase--messaging' : '');
+    const displayName = displayCollectibleName(showcaseName, showcaseId);
 
     return (
-      <button
-        type="button"
-        className={'PostCollectibleShowcase PostCollectibleShowcase--' + (showcaseRarity || 'common')}
-        onclick={() => this.openCollectibleDetail(collectible, showcaseId)}
-      >
-        <div className="PostCollectibleShowcase-frame">
-          {imageUrl ? (
-            <img className="PostCollectibleShowcase-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />
-          ) : (
-            <div className="PostCollectibleShowcase-placeholder">
-              <i className="fas fa-gem" />
-            </div>
-          )}
-        </div>
+      <div className={className}>
+        <button
+          type="button"
+          className="PostCollectibleShowcase-preview"
+          onclick={() => this.openCollectibleDetail(collectible, showcaseId)}
+        >
+          <div className="PostCollectibleShowcase-frame">
+            {imageUrl ? (
+              <img className="PostCollectibleShowcase-image" src={imageUrl} alt={showcaseName || ''} loading="lazy" />
+            ) : (
+              <div className="PostCollectibleShowcase-placeholder">
+                <i className="fas fa-gem" />
+              </div>
+            )}
+          </div>
+        </button>
 
         <div className="PostCollectibleShowcase-copy">
           <div className="PostCollectibleShowcase-kicker">
             {app.translator.trans('donk-aigc-collectibles.forum.post_showcase.kicker')}
           </div>
-          <div className="PostCollectibleShowcase-name">{showcaseName || 'Collectible #' + showcaseId}</div>
+          <div className="PostCollectibleShowcase-name">{displayName}</div>
           <div className="PostCollectibleShowcase-meta">
             <span className={'CollectibleRarity CollectibleRarity--' + (showcaseRarity || 'common')}>
-              {this.rarityLabel(showcaseRarity)}
+              {collectibleRarityLabel(showcaseRarity)}
             </span>
             {showcaseTokenId ? (
               <span className="PostCollectibleShowcase-token">
@@ -55,14 +72,33 @@ export default class PostCollectibleShowcase extends Component<PostCollectibleSh
             ) : null}
           </div>
         </div>
-      </button>
+
+        {canMessageOwner ? (
+          <div className="PostCollectibleShowcase-actions">
+            <Button
+              className="Button Button--primary PostCollectibleShowcase-messageButton"
+              onclick={() => void startPrivateMessage(user, { initialContent: this.messageContent(showcaseId, collectible) })}
+            >
+              {app.translator.trans('donk-aigc-collectibles.forum.messages.showcase_button')}
+            </Button>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
-  rarityLabel(rarity?: string | null) {
-    const key = rarity || 'common';
+  messageContent(showcaseId: number, collectible: any) {
+    const user = this.attrs.user;
 
-    return app.translator.trans('donk-aigc-collectibles.forum.collectible.rarity_' + key);
+    return buildCollectibleMessageContent({
+      collectible,
+      collectibleId: showcaseId,
+      collectibleName: user?.attribute?.('showcaseCollectibleName') || null,
+      rarity: user?.attribute?.('showcaseCollectibleRarity') || null,
+      tokenId: user?.attribute?.('showcaseCollectibleTokenId') || null,
+      sourceDiscussionTitle: currentDiscussionTitle(),
+      sourcePostUrl: typeof window !== 'undefined' ? window.location.href : null,
+    });
   }
 
   openCollectibleDetail(collectible: any, showcaseId: number) {

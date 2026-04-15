@@ -77,10 +77,37 @@ donk-aigc-collectibles:
       balance: blind boxes available
       open_button: Open Blind Box
       open_title: Open Blind Box
+      inventory_title: Blind Boxes
+      inventory_subtitle: "{count} active blind box(es) in your inventory"
+      inventory_empty: No blind boxes available right now.
+      own_only: Blind boxes are only visible on your own profile.
       open: Open Blind Box
       open_another: Open Another
       close: Close
       try_again: Try Again
+      appraise_button: Appraise Blind Box
+      open_collectible_button: Open Into Collectible
+      type_label: Type
+      type_checkin_reward: Check-in Reward
+      type_trade_reward: Trade Reward
+      type_unknown: Unknown Type
+      status_label: Status
+      status_unappraised: Unappraised
+      status_appraised: Appraised
+      status_opened: Opened
+      status_unknown: Unknown Status
+      seed_label: Seed
+      budget_label: Budget
+      budget_unknown: "???"
+      budget_value: "{budget}"
+      draw_categories_label: Draw Categories
+      category_subject: Subject
+      category_style: Style
+      category_mood: Mood
+      category_theme: Theme
+      category_unknown: Unknown Category
+      category_required: Required
+      category_optional: Optional
       appraising: "Appraising your blind box with a 10-second proof-of-work..."
       appraising_progress: "{seconds}s left · {attempts} attempts · best {zeros} leading zero(es)"
       appraising_quality: "Current appraisal: {rarity}"
@@ -96,6 +123,7 @@ donk-aigc-collectibles:
       gallery_title: My Collectibles
       gallery_title_user: "{username}'s Collectibles"
       detail_title: Collectible Details
+      name_fallback: "Collectible {idLabel}"
       rarity_common: Common
       rarity_rare: Rare
       rarity_epic: Epic
@@ -108,6 +136,7 @@ donk-aigc-collectibles:
       showcase_set: This collectible is now displayed on your posts.
       showcase_remove: Remove from Showcase
       showcase_removed: Collectible removed from showcase.
+      owner_label: "Owner:"
       owner: "Owner: {username}"
       original_creator: "Created by: {username}"
       times_traded: "Times traded: {count}"
@@ -118,6 +147,11 @@ donk-aigc-collectibles:
       mint_nft_confirm: Mint this collectible as an on-chain NFT?
       minting: Minting NFT...
       minted: Minted on-chain
+      rename_button: Rename
+      rename_save: Save
+      rename_cancel: Cancel
+      rename_success: Name updated.
+      rename_error: Failed to update name.
       token_id_label: "Token ID: #{id}"
       ipfs_label: View on IPFS
       proof_button: View Proof
@@ -130,6 +164,7 @@ donk-aigc-collectibles:
       proof_open_image: Open image
       proof_open_token_uri: Open tokenURI target
       proof_field_collectible: Collectible
+      proof_field_owner: Owner
       proof_field_token_id: Token ID
       proof_field_metadata_cid: Metadata CID
       proof_field_image_cid: Image CID
@@ -153,54 +188,92 @@ donk-aigc-collectibles:
       history_minted: Minted as NFT by {username}
       history_burned: Burned by {username}
 
-    trade:
-      panel_title: Trades
-      title: Trades
-      create_button: Offer Trade
-      create_title: Make a Trade Offer
-      offer_label: Blind Boxes to Offer
-      offer_amount: Blind Boxes to Offer
-      offer_placeholder: Enter the number of blind boxes
-      note_label: Note (optional)
-      note_placeholder: Add a message to the collectible owner...
-      submit: Send Offer
-      cancel: Cancel Offer
-      cancel_action: Cancel
-      accept: Accept Trade
-      reject: Reject Trade
-      confirm_accept: "Accept this trade? You will give up your collectible in exchange for {boxes} blind box(es)."
-      confirm_reject: Are you sure you want to reject this trade offer?
-      confirm_cancel: Are you sure you want to cancel this trade offer?
-      status_pending: Pending
-      status_accepted: Accepted
+    messages:
+      showcase_button: Message Owner
+      detail_button: Ask About This Collectible
+      context_intro: "Hi, I'd like to ask about this collectible:"
+      context_collectible: "Collectible: {name}"
+      context_rarity: "Rarity: {rarity}"
+      context_token_id: "Token ID: #{id}"
+      context_source_discussion: "Discussion: {title}"
+      context_source_post: "Source post: {url}"
+      unavailable: Private messages are not available right now.
+      permission_denied: Your account can't send private messages right now.
+      self_not_allowed: You can't message yourself.
+
+    barter:
+      thread_title: Negotiation Thread
+      thread_subtitle: Chat first, then draft, revise, and confirm negotiation terms inside this private thread.
+      create_button: Start Negotiation
+      counter_button: Counteroffer
+      composer_kicker: Negotiation Draft
+      composer_title: "Configure negotiation terms for {username}"
+      enable_button: Add Negotiation
+      disable_button: Cancel Negotiation
+      summary_yours: "You selected {count}"
+      summary_theirs: "They selected {count}"
+      your_offer: Your Side
+      their_offer: Their Side
+      collectibles_label: Collectibles
+      blind_boxes_label: Blind Boxes
+      refresh: Refresh
+      loading: Loading...
+      empty: No negotiations in this thread yet.
+      load_failed: Failed to load negotiations.
+      action_failed: Failed to update the negotiation.
+      proposer: "Proposed by {username}"
+      offer_from: "{username} offers"
+      revision: "Revision {number}"
+      accept: Accept
+      reject: Reject
+      cancel: Cancel
+      replaces_revision: "Replaces revision {number}"
+      replaced_by_revision: "Replaced by revision {number}"
+      replaced_by_later_revision: Replaced by a later revision
+      accepted_by: "Accepted by {username}"
+      your_asset: Yours
+      collectible_link: View collectibles
+      no_assets: No available assets.
+      selection_summary: "Selected: {collectibles} collectible(s), {blindBoxes} blind box(es)"
+      pre_send_summary: "You'll give {collectibles} collectible(s) for {blindBoxes} blind box(es)"
+      clear_selections: Clear
+      empty_cta: "No assets here. Earn blind boxes by checking in daily!"
+      counter_diff: "Was {prev}, now {curr}"
+      counter_added: "Added"
+      counter_removed: "Removed"
+      validation_assets_required: Select at least one asset.
+      validation_both_sides_required: The negotiation must include assets from both sides.
+      validation_message_required: Write your message in the private message box before sending the negotiation.
+      status_proposed: Negotiating
+      status_accepted: Agreed
+      status_settling: Trade Settling
+      status_completed: Traded
       status_rejected: Rejected
       status_cancelled: Cancelled
-      incoming: Incoming Offers
-      outgoing: My Offers
-      history: Trade History
-      empty: No trades to display.
-      no_incoming: No incoming trade offers.
-      no_outgoing: You haven't made any trade offers.
-      success_created: Trade offer sent!
-      success_accepted: Trade completed! The collectible is now yours.
-      success_rejected: Trade offer rejected.
-      success_cancelled: Trade offer cancelled.
-      error_insufficient: "The buyer no longer has enough blind boxes to complete this trade."
-      error_self_trade: You cannot trade with yourself.
-      error_not_owner: This collectible no longer belongs to the expected owner.
-      no_trades: No trade history yet.
-      offered_boxes: "{count} blind box(es) offered"
-      available: available
-      from_user: "From: {username}"
-      to_user: "To: {username}"
-      owned_by: "Owned by {username}"
-      unknown_user: Unknown User
-      offers_you: offers you
-      you_offered: you offered
-      offer_sent: Trade offer sent!
-      notification_received: You received a new trade offer!
-      notification_accepted: Your trade offer was accepted!
-      notification_rejected: Your trade offer was rejected.
+      status_superseded: Superseded
+      status_failed: Trade Failed
+      asset_type_collectible: Collectible
+      asset_type_blind_box: Blind Box
+      asset_type_unknown: Asset
+      config_overlay_title: Configure Negotiation
+      config_overlay_confirm: Confirm Selection
+      config_overlay_cancel: Cancel
+      config_tab_mine_collectibles: My Collectibles
+      config_tab_mine_blindboxes: My Blind Boxes
+      config_tab_theirs_collectibles: Their Collectibles
+      config_tab_theirs_blindboxes: Their Blind Boxes
+      config_overlay_search_placeholder: Search by name or #ID...
+      config_overlay_search_aria: Search assets by name
+      config_overlay_all: All
+      config_overlay_no_results: No matching assets found
+      config_overlay_earn_hint: Earn blind boxes by checking in daily!
+      config_overlay_them_empty_hint: They have no assets available yet
+      config_overlay_nothing_selected: Not selected
+      config_overlay_page: "Page {current} of {total}"
+      config_overlay_unnamed_count: "{count} unnamed collectibles — open a collectible to name it"
+      your_side: You give
+      their_side: They give
+      edit_negotiation: Edit Negotiation
 
     wallet:
       title: Web3 Wallet
@@ -234,9 +307,9 @@ donk-aigc-collectibles:
 
     nav:
       collectibles: Collectibles
-      trades: Trades
 
     user:
+      blindboxes_link: Blind Boxes
       collectibles_link: Collectibles
 
     gallery:
@@ -250,14 +323,6 @@ donk-aigc-collectibles:
       load_more: Load More
 
     notification:
-      trade_received_title: New Trade Offer
-      trade_received_body: "{username} offered {boxes} blind box(es) for your {collectible}."
-      trade_accepted_title: Trade Accepted
-      trade_accepted_body: "{username} accepted your trade offer for {collectible}."
-      trade_rejected_title: Trade Rejected
-      trade_rejected_body: "{username} rejected your trade offer for {collectible}."
-      trade_cancelled_title: Trade Cancelled
-      trade_cancelled_body: "{username} cancelled their trade offer for {collectible}."
       collectible_ready_title: Collectible Ready
       collectible_ready_body: Your new collectible has been generated!
       collectible_failed_title: Generation Failed

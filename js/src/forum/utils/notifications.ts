@@ -49,7 +49,7 @@ export function connect(): void {
       reconnectAttempts = 0;
 
       // Authenticate with session token if available
-      const sessionId = app.session?.token;
+      const sessionId = (app.session as any)?.token;
       if (sessionId && socket) {
         socket.send(JSON.stringify({ type: 'auth', token: sessionId }));
       }

@@ -9,6 +9,8 @@ tests/integration/tmp
 js/node_modules
 js/dist
 js/assets
+js/coverage-ts
 js/playwright-report
 js/test-results
 e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn
+.gstack/

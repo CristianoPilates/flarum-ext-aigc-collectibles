@@ -7,6 +7,7 @@ use Donk\AigcCollectibles\Tests\Fake\FakeCollectibleProofService;
 use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class CollectibleProofChainTest extends TestCase
 {
@@ -56,7 +57,7 @@ class CollectibleProofChainTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function guest_can_fetch_proof_for_a_completed_collectible(): void
     {
         $response = $this->send($this->request('GET', '/api/collectibles/1/proof'));
@@ -69,7 +70,7 @@ class CollectibleProofChainTest extends TestCase
         $this->assertEquals('verified', $body['data']['attributes']['chain']['state']);
     }
 
-    /** @test */
+    #[Test]
     public function guest_cannot_fetch_proof_for_a_non_visible_collectible(): void
     {
         $response = $this->send($this->request('GET', '/api/collectibles/2/proof'));
@@ -77,7 +78,7 @@ class CollectibleProofChainTest extends TestCase
         $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function owner_can_fetch_proof_for_their_non_public_collectible(): void
     {
         $response = $this->send(

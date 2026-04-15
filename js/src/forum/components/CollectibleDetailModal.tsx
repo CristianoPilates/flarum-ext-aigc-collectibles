@@ -1,23 +1,24 @@
 import app from 'flarum/forum/app';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
 import Button from 'flarum/common/components/Button';
+import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import TradeRequestModal from './TradeRequestModal';
 import CollectibleProofModal from './CollectibleProofModal';
+import { collectibleRarityLabel, displayCollectibleName } from '../utils/collectibles';
 import { gatewayUrl } from '../utils/ipfs';
+import {
+  buildCollectibleMessageContent,
+  currentDiscussionTitle,
+  shouldShowPrivateMessageButton,
+  startPrivateMessage,
+} from '../utils/privateMessages';
 
-interface CollectibleDetailModalAttrs {
+interface CollectibleDetailModalAttrs extends IInternalModalAttrs {
   collectible: any;
   isOwnProfile: boolean;
   onUpdated?: () => void;
 }
-
-const RARITY_LABELS: Record<string, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  epic: 'Epic',
-  legendary: 'Legendary',
-};
 
 const STATUS_KEYS: Record<string, string> = {
   generating: 'status_generating',
@@ -29,11 +30,17 @@ const STATUS_KEYS: Record<string, string> = {
 export default class CollectibleDetailModal extends Modal<CollectibleDetailModalAttrs> {
   loadingAction: boolean = false;
   error: string | null = null;
+  renaming: boolean = false;
+  renameValue: string = '';
+  renameError: string | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
     this.loadingAction = false;
     this.error = null;
+    this.renaming = false;
+    this.renameValue = '';
+    this.renameError = null;
   }
 
   className() {
@@ -50,7 +57,6 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
     if (!collectible) return null;
 
-    const currentUser = app.session?.user;
     const rarity = collectible.rarity();
     const status = collectible.status();
     const tokenId = collectible.tokenId();
@@ -59,8 +65,9 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     const canMintAttribute = collectible.canMint?.();
     const canMint = canMintAttribute ?? (status === 'completed' && !tokenId);
     const isShowcase = Boolean(collectible.isShowcase?.());
-    const canOfferTrade = Boolean(currentUser && !isOwnProfile && status === 'completed');
+    const canMessageOwner = Boolean(owner && shouldShowPrivateMessageButton(owner));
     const statusKey = STATUS_KEYS[status];
+    const displayName = displayCollectibleName(collectible.name?.(), collectible.id?.());
 
     return (
       <div className="Modal-body CollectibleDetailModal-body">
@@ -69,7 +76,7 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
         <div className="CollectibleDetailModal-layout">
           <div className="CollectibleDetailModal-media">
             {imageUrl ? (
-              <img className="CollectibleDetailModal-image" src={imageUrl} alt={collectible.name()} loading="lazy" />
+              <img className="CollectibleDetailModal-image" src={imageUrl} alt={displayName} loading="lazy" />
             ) : (
               <div className="CollectibleDetailModal-placeholder">
                 {status === 'generating' ? <LoadingIndicator size="large" /> : <i className="fas fa-image" />}
@@ -78,11 +85,67 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
           </div>
 
           <div className="CollectibleDetailModal-content">
-            <h3 className="CollectibleDetailModal-name">{collectible.name()}</h3>
+            <div className="CollectibleDetailModal-nameRow">
+              {isOwnProfile && !this.renaming && (
+                <button
+                  className="CollectibleDetailModal-renameBtn"
+                  onclick={() => {
+                    this.renaming = true;
+                    this.renameValue = collectible.name?.() || '';
+                    this.renameError = null;
+                    m.redraw();
+                  }}
+                  title={app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_button')}
+                >
+                  <i className="fas fa-pencil-alt" />
+                </button>
+              )}
+              <h3 className="CollectibleDetailModal-name">{displayName}</h3>
+            </div>
+
+            {this.renaming && (
+              <div className="CollectibleDetailModal-renameRow">
+                <input
+                  className="CollectibleDetailModal-renameInput"
+                  type="text"
+                  value={this.renameValue}
+                  oninput={(e: InputEvent) => {
+                    this.renameValue = (e.target as HTMLInputElement).value;
+                  }}
+                  onkeydown={(e: KeyboardEvent) => {
+                    if (e.key === 'Enter') void this.saveRename();
+                    if (e.key === 'Escape') { this.renaming = false; m.redraw(); }
+                  }}
+                  disabled={this.loadingAction}
+                  maxLength={100}
+                  placeholder={app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_button')}
+                />
+                {this.renameError && (
+                  <div className="CollectibleDetailModal-renameError">{this.renameError}</div>
+                )}
+                <div className="CollectibleDetailModal-renameActions">
+                  <Button
+                    className="Button Button--primary"
+                    onclick={() => void this.saveRename()}
+                    loading={this.loadingAction}
+                    disabled={this.loadingAction}
+                  >
+                    {app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_save')}
+                  </Button>
+                  <Button
+                    className="Button"
+                    onclick={() => { this.renaming = false; this.renameError = null; m.redraw(); }}
+                    disabled={this.loadingAction}
+                  >
+                    {app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="CollectibleDetailModal-meta">
               <span className={'CollectibleRarity CollectibleRarity--' + rarity}>
-                {RARITY_LABELS[rarity] || rarity}
+                {collectibleRarityLabel(rarity)}
               </span>
               {statusKey && (
                 <span className="CollectibleDetailModal-status">
@@ -98,9 +161,10 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
 
             {owner && (
               <p className="CollectibleDetailModal-line">
-                {app.translator.trans('donk-aigc-collectibles.forum.collectible.owner', {
-                  username: owner.displayName?.() || owner.username?.() || owner.id?.(),
-                })}
+                {app.translator.trans('donk-aigc-collectibles.forum.collectible.owner_label')}{' '}
+                <Link href={app.route.user(owner)}>
+                  {owner.displayName?.() || owner.username?.() || owner.id?.()}
+                </Link>
               </p>
             )}
 
@@ -149,13 +213,13 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
                 </Button>
               )}
 
-              {canOfferTrade && (
+              {canMessageOwner && (
                 <Button
-                  className="Button Button--primary"
-                  onclick={() => this.openTradeRequest()}
+                  className="Button Button--primary CollectibleDetailModal-messageButton"
+                  onclick={() => void this.openConversation()}
                   disabled={this.loadingAction}
                 >
-                  {app.translator.trans('donk-aigc-collectibles.forum.trade.create_button')}
+                  {app.translator.trans('donk-aigc-collectibles.forum.messages.detail_button')}
                 </Button>
               )}
 
@@ -167,6 +231,50 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
         </div>
       </div>
     );
+  }
+
+  async saveRename() {
+    const collectible = this.attrs.collectible;
+    if (!collectible || this.loadingAction) return;
+
+    const trimmed = this.renameValue.trim();
+    if (!trimmed) {
+      this.renameError = app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_error');
+      m.redraw();
+      return;
+    }
+
+    this.loadingAction = true;
+    this.renameError = null;
+    m.redraw();
+
+    try {
+      await app.request({
+        method: 'PATCH',
+        url: app.forum.attribute('apiUrl') + '/collectibles/' + collectible.id(),
+        body: {
+          data: {
+            type: 'collectibles',
+            id: collectible.id(),
+            attributes: { name: trimmed },
+          },
+        },
+      });
+
+      collectible.pushAttributes({ name: trimmed });
+      this.renaming = false;
+      app.alerts.show(
+        { type: 'success' },
+        app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_success')
+      );
+      this.attrs.onUpdated?.();
+    } catch (error: any) {
+      this.renameError = error.response?.errors?.[0]?.detail ||
+        app.translator.trans('donk-aigc-collectibles.forum.collectible.rename_error');
+    } finally {
+      this.loadingAction = false;
+      m.redraw();
+    }
   }
 
   async toggleShowcase() {
@@ -259,14 +367,20 @@ export default class CollectibleDetailModal extends Modal<CollectibleDetailModal
     }
   }
 
-  openTradeRequest() {
+  async openConversation() {
     const collectible = this.attrs.collectible;
-    if (!collectible) return;
+    const owner = collectible?.owner?.() || collectible?.user?.();
+
+    if (!owner) return;
+
+    const initialContent = buildCollectibleMessageContent({
+      collectible,
+      sourceDiscussionTitle: currentDiscussionTitle(),
+      sourcePostUrl: typeof window !== 'undefined' ? window.location.href : null,
+    });
 
     this.hide();
-    app.modal.show(TradeRequestModal, {
-      collectible,
-    });
+    await startPrivateMessage(owner, { initialContent });
   }
 
   openProof() {

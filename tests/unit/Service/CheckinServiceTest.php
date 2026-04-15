@@ -4,6 +4,7 @@ namespace Donk\AigcCollectibles\Tests\unit\Service;
 
 use Donk\AigcCollectibles\Model\CheckinRecord;
 use Donk\AigcCollectibles\Service\CheckinService;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Illuminate\Support\Carbon;
 use Flarum\Foundation\ValidationException;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -13,6 +14,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 
 class CheckinServiceTest extends TestCase
 {
@@ -25,6 +27,9 @@ class CheckinServiceTest extends TestCase
     /** @var Dispatcher|MockInterface */
     protected $events;
 
+    /** @var BlindBoxServiceInterface|MockInterface */
+    protected $blindBoxService;
+
     protected CheckinService $service;
 
     protected function setUp(): void
@@ -34,15 +39,17 @@ class CheckinServiceTest extends TestCase
         $this->settings = Mockery::mock(SettingsRepositoryInterface::class);
         $this->db = Mockery::mock(ConnectionInterface::class);
         $this->events = Mockery::mock(Dispatcher::class);
+        $this->blindBoxService = Mockery::mock(BlindBoxServiceInterface::class);
 
         $this->service = new CheckinService(
             $this->db,
             $this->events,
-            $this->settings
+            $this->settings,
+            $this->blindBoxService
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_validation_exception_when_user_has_already_checked_in_today(): void
     {
         $user = $this->makeUser(id: 101);
@@ -52,6 +59,7 @@ class CheckinServiceTest extends TestCase
             $this->db,
             $this->events,
             $this->settings,
+            $this->blindBoxService,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')
@@ -69,7 +77,7 @@ class CheckinServiceTest extends TestCase
         $service->performCheckin($user);
     }
 
-    /** @test */
+    #[Test]
     public function it_reads_reward_from_settings_and_returns_the_transaction_result(): void
     {
         $user = $this->makeUser(id: 202);
@@ -80,6 +88,7 @@ class CheckinServiceTest extends TestCase
             $this->db,
             $this->events,
             $this->settings,
+            $this->blindBoxService,
         ])->makePartial();
 
         $service->shouldReceive('hasCheckedInToday')
@@ -105,10 +114,7 @@ class CheckinServiceTest extends TestCase
         $this->assertSame($expectedRecord, $actualRecord);
     }
 
-    /**
-     * @test
-     *
-     */
+    #[Test]
     public function it_checks_today_status_via_the_users_last_checkin_timestamp(): void
     {
         $userA = $this->makeUser(id: 1);

@@ -49,7 +49,7 @@ async function main() {
         }
 
         async function goto(pathname) {
-          await page.goto(appUrl(pathname), { waitUntil: 'load' });
+          await page.goto(appUrl(pathname), { waitUntil: 'domcontentloaded' });
           await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });
           await page.waitForLoadState('networkidle').catch(() => {});
           await wait(900);
@@ -62,24 +62,30 @@ async function main() {
         async function login(username, password = 'password') {
           await goto('/');
 
-          const loggedIn = await page.locator('.SessionDropdown').first().isVisible().catch(() => false);
-          if (loggedIn && (await currentUsername()) === username) {
-            return;
+          const response = await page.evaluate(async (credentials) => {
+            const request = await fetch('/api/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...credentials, remember: true }),
+            });
+
+            return await request.json();
+          }, { identification: username, password });
+
+          if (!response?.token) {
+            throw new Error('Login failed for ' + username);
           }
 
-          const loginButton = page.locator('.item-logIn .Button, header .Button:has-text("Log In")').first();
-          if (await loginButton.isVisible().catch(() => false)) {
-            await loginButton.click();
-            await wait(500);
-          }
+          await page.context().addCookies([
+            {
+              name: 'flarum_remember',
+              value: response.token,
+              domain: '127.0.0.1',
+              path: '/',
+            },
+          ]);
 
-          const identification = page.locator('.LogInModal input[name="identification"], .Modal input[name="identification"]').first();
-          await identification.waitFor({ state: 'visible', timeout: 10000 });
-          await identification.fill(username);
-          await page.locator('.LogInModal input[type="password"], .Modal input[type="password"]').first().fill(password);
-          await page.locator('.LogInModal .Button--primary, .Modal .Button--primary').first().click();
-          await page.waitForLoadState('networkidle').catch(() => {});
-          await wait(1200);
+          await goto('/');
         }
 
         await page.setViewportSize({ width: 1440, height: 1280 });

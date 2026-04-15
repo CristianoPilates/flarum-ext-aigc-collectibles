@@ -101,7 +101,10 @@ class CollectibleResource extends AbstractDatabaseResource
     public function fields(): array
     {
         return [
-            Schema\Str::make('name'),
+            Schema\Str::make('name')
+                ->get(fn (Collectible $model) => $model->name)
+                ->writable(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
+                ->nullable(),
             Schema\Str::make('rarity'),
             Schema\Str::make('status'),
             Schema\Str::make('ipfsCid')
@@ -116,9 +119,6 @@ class CollectibleResource extends AbstractDatabaseResource
                 ->nullable(),
             Schema\Integer::make('timesTraded')
                 ->property('times_traded'),
-            Schema\Boolean::make('canTrade')
-                ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
-                ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('trade', $model)),
             Schema\Boolean::make('canMint')
                 ->visible(fn (Collectible $model, Context $context) => $context->getActor()->id === $model->owner_id)
                 ->get(fn (Collectible $model, Context $context) => $context->getActor()->can('mint', $model)),
@@ -137,9 +137,6 @@ class CollectibleResource extends AbstractDatabaseResource
             Schema\Relationship\ToMany::make('events')
                 ->type('collectible-events')
                 ->includable(),
-            Schema\Relationship\ToMany::make('trades')
-                ->type('trades')
-                ->includable(),
         ];
     }
 
@@ -154,11 +151,20 @@ class CollectibleResource extends AbstractDatabaseResource
 
     public function updating(object $model, \Tobyz\JsonApiServer\Context $context): ?object
     {
+        $actor = $context->getActor();
         $data = $context->body();
-        $isShowcase = $data['data']['attributes']['isShowcase'] ?? null;
+        $attributes = $data['data']['attributes'] ?? [];
+
+        // Ownership check: only owner can update name
+        if (array_key_exists('name', $attributes)) {
+            if ($actor->id !== $model->owner_id) {
+                throw new \Flarum\User\Exception\PermissionDeniedException();
+            }
+        }
+
+        $isShowcase = $attributes['isShowcase'] ?? null;
 
         if ($isShowcase !== null) {
-            $actor = $context->getActor();
             $actor->assertCan('showcase', $model);
 
             if ($isShowcase) {

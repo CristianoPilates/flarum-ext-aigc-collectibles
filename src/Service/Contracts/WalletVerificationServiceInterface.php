@@ -2,8 +2,6 @@
 
 namespace Donk\AigcCollectibles\Service\Contracts;
 
-use Flarum\User\User;
-
 interface WalletVerificationServiceInterface
 {
     public function generateNonce(): string;

@@ -43,6 +43,8 @@ class CollectibleProofService implements CollectibleProofServiceInterface
                 'tokenId' => $collectible->token_id,
                 'metadataCid' => $collectible->metadata_cid,
                 'ipfsCid' => $collectible->ipfs_cid,
+                'ownerId' => $collectible->owner?->id,
+                'ownerSlug' => $collectible->owner?->slug,
                 'ownerUsername' => $collectible->owner?->username,
                 'expectedTokenUri' => $collectible->metadata_cid ? 'ipfs://'.$this->normalizeCid($collectible->metadata_cid) : null,
                 'metadataGatewayUrl' => $collectible->metadata_cid ? $this->gatewayUrl($collectible->metadata_cid) : null,
@@ -54,6 +56,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function buildChainLayer(Collectible $collectible): array
     {
         if ($collectible->token_id === null) {
@@ -108,6 +113,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function buildMetadataLayer(Collectible $collectible): array
     {
         if (empty($collectible->metadata_cid)) {
@@ -147,6 +155,10 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         }
     }
 
+    /**
+     * @param array<string, mixed> $metadataLayer
+     * @return array<string, mixed>
+     */
     protected function buildImageLayer(Collectible $collectible, array $metadataLayer): array
     {
         $metadataImageCid = is_string($metadataLayer['imageCid'] ?? null) ? $metadataLayer['imageCid'] : null;
@@ -201,6 +213,9 @@ class CollectibleProofService implements CollectibleProofServiceInterface
         ], 'latest']);
     }
 
+    /**
+     * @param array<int, mixed> $params
+     */
     protected function rpcCall(string $rpcUrl, string $method, array $params): mixed
     {
         try {
@@ -291,7 +306,7 @@ class CollectibleProofService implements CollectibleProofServiceInterface
             return null;
         }
 
-        if (preg_match('#/ipfs/([^/?#]+)#', $value, $matches)) {
+        if (preg_match('~/(?:ipfs)/([^/?#]+)~', $value, $matches)) {
             return $matches[1];
         }
 

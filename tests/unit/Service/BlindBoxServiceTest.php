@@ -12,6 +12,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Collection;
 use Mockery;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Test;
 
 class BlindBoxServiceTest extends TestCase
 {
@@ -42,7 +43,7 @@ class BlindBoxServiceTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_the_users_blind_box_balance(): void
     {
         $user = $this->makeUser(id: 1, blindBoxCount: 7);
@@ -65,12 +66,20 @@ class BlindBoxServiceTest extends TestCase
         $this->assertSame(7, $this->service->balanceOf($user));
     }
 
-    /** @test */
+    #[Test]
+    public function it_resolves_draw_rule_type_via_single_compatibility_map(): void
+    {
+        $this->assertSame('checkin_reward', $this->service->resolveDrawRuleType('trade_reward'));
+        $this->assertSame('checkin_reward', $this->service->resolveDrawRuleType('checkin_reward'));
+    }
+
+    #[Test]
     public function it_transfers_blind_boxes_between_users(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 10);
         $to = $this->makeUser(id: 2, blindBoxCount: 0);
         $selectBuilder = Mockery::mock();
+        $ownershipBuilder = Mockery::mock();
         $moveBuilder = Mockery::mock();
         $fromCountBuilder = Mockery::mock();
         $fromUserBuilder = Mockery::mock();
@@ -78,13 +87,13 @@ class BlindBoxServiceTest extends TestCase
         $toUserBuilder = Mockery::mock();
 
         $this->db->shouldReceive('transaction')
-            ->once()
+            ->twice()
             ->andReturnUsing(fn (callable $callback) => $callback());
 
         $this->db->shouldReceive('table')
-            ->times(4)
+            ->times(5)
             ->with('blindboxes')
-            ->andReturn($selectBuilder, $moveBuilder, $fromCountBuilder, $toCountBuilder);
+            ->andReturn($selectBuilder, $ownershipBuilder, $moveBuilder, $fromCountBuilder, $toCountBuilder);
 
         $this->db->shouldReceive('table')
             ->twice()
@@ -124,6 +133,30 @@ class BlindBoxServiceTest extends TestCase
             ->once()
             ->with('id', [11, 12, 13])
             ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('where')
+            ->once()
+            ->with('user_id', 1)
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('status', ['unappraised', 'appraised'])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('id', [11, 12, 13])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('lockForUpdate')
+            ->once()
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('pluck')
+            ->once()
+            ->with('id')
+            ->andReturn(new Collection([11, 12, 13]));
 
         $moveBuilder->shouldReceive('update')
             ->once()
@@ -181,7 +214,7 @@ class BlindBoxServiceTest extends TestCase
         $this->service->transfer($from, $to, 3);
     }
 
-    /** @test */
+    #[Test]
     public function it_rejects_invalid_transfer_amount(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 10);
@@ -194,7 +227,7 @@ class BlindBoxServiceTest extends TestCase
         $this->service->transfer($from, $to, 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_when_the_sender_cannot_cover_the_transfer(): void
     {
         $from = $this->makeUser(id: 1, blindBoxCount: 1);
@@ -243,6 +276,81 @@ class BlindBoxServiceTest extends TestCase
         $this->service->transfer($from, $to, 2);
     }
 
+    #[Test]
+    public function it_returns_early_when_transfer_specific_receives_no_box_ids(): void
+    {
+        $from = $this->makeUser(id: 1, blindBoxCount: 3);
+        $to = $this->makeUser(id: 2, blindBoxCount: 4);
+
+        $this->db->shouldNotReceive('transaction');
+        $this->db->shouldNotReceive('table');
+
+        $this->service->transferSpecific($from, $to, []);
+    }
+
+    #[Test]
+    public function it_throws_when_transfer_specific_detects_unavailable_boxes(): void
+    {
+        $from = $this->makeUser(id: 1, blindBoxCount: 10);
+        $to = $this->makeUser(id: 2, blindBoxCount: 0);
+
+        $this->db->shouldReceive('transaction')
+            ->once()
+            ->andReturnUsing(fn (callable $callback) => $callback());
+
+        $this->db->shouldReceive('table')
+            ->once()
+            ->with('blindboxes')
+            ->andReturn($ownershipBuilder = Mockery::mock());
+
+        $ownershipBuilder->shouldReceive('where')
+            ->once()
+            ->with('user_id', 1)
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('status', ['unappraised', 'appraised'])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('whereIn')
+            ->once()
+            ->with('id', [11, 12, 13])
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('lockForUpdate')
+            ->once()
+            ->andReturnSelf();
+
+        $ownershipBuilder->shouldReceive('pluck')
+            ->once()
+            ->with('id')
+            ->andReturn(new Collection([11, 12]));
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('One or more blind boxes are unavailable for transfer.');
+
+        $this->service->transferSpecific($from, $to, [11, 12, 13]);
+    }
+
+    #[Test]
+    public function it_maps_leading_zero_counts_to_budget_tiers(): void
+    {
+        $this->assertSame(20, $this->invokeHiddenMethod('zerosToBudget', [4]));
+        $this->assertSame(40, $this->invokeHiddenMethod('zerosToBudget', [5]));
+        $this->assertSame(80, $this->invokeHiddenMethod('zerosToBudget', [6]));
+        $this->assertSame(160, $this->invokeHiddenMethod('zerosToBudget', [7]));
+    }
+
+    #[Test]
+    public function it_maps_budget_values_to_rarity_tiers(): void
+    {
+        $this->assertSame('common', $this->invokeHiddenMethod('budgetToRarity', [20]));
+        $this->assertSame('rare', $this->invokeHiddenMethod('budgetToRarity', [40]));
+        $this->assertSame('epic', $this->invokeHiddenMethod('budgetToRarity', [80]));
+        $this->assertSame('legendary', $this->invokeHiddenMethod('budgetToRarity', [160]));
+    }
+
     protected function makeUser(int $id, int $blindBoxCount): User
     {
         $user = new User;
@@ -250,5 +358,18 @@ class BlindBoxServiceTest extends TestCase
         $user->blind_box_count = $blindBoxCount;
 
         return $user;
+    }
+
+    private function invokeHiddenMethod(string $method, array $args): mixed
+    {
+        $invoker = \Closure::bind(
+            function (array $args) use ($method) {
+                return $this->{$method}(...$args);
+            },
+            $this->service,
+            BlindBoxService::class
+        );
+
+        return $invoker($args);
     }
 }

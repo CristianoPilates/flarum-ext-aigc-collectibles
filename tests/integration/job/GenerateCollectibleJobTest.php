@@ -4,6 +4,7 @@ namespace Donk\AigcCollectibles\Tests\integration\job;
 
 use Donk\AigcCollectibles\Job\GenerateCollectibleJob;
 use Donk\AigcCollectibles\Service\Contracts\AIGCServiceInterface;
+use Donk\AigcCollectibles\Service\Contracts\BlindBoxServiceInterface;
 use Donk\AigcCollectibles\Service\Contracts\IPFSServiceInterface;
 use Donk\AigcCollectibles\Tests\Fake\FakeAIGCService;
 use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
@@ -14,6 +15,7 @@ use Flarum\Testing\integration\TestCase;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Queue\Jobs\SyncJob;
+use PHPUnit\Framework\Attributes\Test;
 use SM\Factory\FactoryInterface;
 
 class GenerateCollectibleJobTest extends TestCase
@@ -66,7 +68,7 @@ class GenerateCollectibleJobTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function successful_generation_completes_collectible_without_auto_minting(): void
     {
         $container = $this->app()->getContainer();
@@ -80,6 +82,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
@@ -89,7 +92,7 @@ class GenerateCollectibleJobTest extends TestCase
         $this->assertNull($collectible->token_id);
     }
 
-    /** @test */
+    #[Test]
     public function failed_generation_marks_collectible_failed_and_restores_a_real_blind_box(): void
     {
         $container = $this->app()->getContainer();
@@ -108,6 +111,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();
@@ -130,7 +134,7 @@ class GenerateCollectibleJobTest extends TestCase
         $this->assertSame(1, (int) $originalBox->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function sync_queue_failures_are_treated_as_final_attempts_and_refunded(): void
     {
         $container = $this->app()->getContainer();
@@ -149,6 +153,7 @@ class GenerateCollectibleJobTest extends TestCase
             $container->make(ConnectionInterface::class),
             $container->make(Dispatcher::class),
             $container->make(FactoryInterface::class),
+            $container->make(BlindBoxServiceInterface::class),
         );
 
         $collectible = $this->database()->table('collectibles')->where('id', 1)->first();

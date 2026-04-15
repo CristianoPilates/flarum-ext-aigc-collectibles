@@ -1,30 +1,33 @@
 import Extend from "flarum/common/extenders";
 import app from "flarum/forum/app";
-import { extend as flarumExtend } from "flarum/common/extend";
 import User from "flarum/common/models/User";
-import HeaderSecondary from "flarum/forum/components/HeaderSecondary";
-import UserPage from "flarum/forum/components/UserPage";
-import PostUser from "flarum/forum/components/PostUser";
-import CommentPost from "flarum/forum/components/CommentPost";
-import LinkButton from "flarum/common/components/LinkButton";
 
 import Collectible from "./forum/models/Collectible";
-import Trade from "./forum/models/Trade";
+import BlindBox from "./forum/models/BlindBox";
 import CheckinRecord from "./forum/models/CheckinRecord";
+import BarterProposal from "./forum/models/BarterProposal";
+import BarterProposalItem from "./forum/models/BarterProposalItem";
 
-import CheckinButton from "./forum/components/CheckinButton";
-import PostCollectibleBadge from "./forum/components/PostCollectibleBadge";
-import PostCollectibleShowcase from "./forum/components/PostCollectibleShowcase";
-import BlindBoxOpener from "./forum/components/BlindBoxOpener";
 import UserCollectiblesPage from "./forum/components/UserCollectiblesPage";
+import UserBlindBoxesPage from "./forum/components/UserBlindBoxesPage";
 
-import { connect as wsConnect, subscribe } from "./forum/utils/notifications";
+import { connect as wsConnect } from "./forum/utils/notifications";
+import { installForumChrome } from "./forum/installers/forumChrome";
+import { installBarterMessaging } from "./forum/installers/barterMessaging";
 
 export const extend = [
   new Extend.Store()
+    .add("blindboxes", BlindBox)
+    .add("barter-proposal-items", BarterProposalItem)
+    .add("barter-proposals", BarterProposal)
     .add("collectibles", Collectible)
-    .add("trades", Trade)
     .add("checkin-records", CheckinRecord),
+
+  new Extend.Routes().add(
+    "user.blindboxes",
+    "/u/:username/blindboxes",
+    UserBlindBoxesPage
+  ),
 
   new Extend.Routes().add(
     "user.collectibles",
@@ -47,123 +50,11 @@ export const extend = [
 ];
 
 app.initializers.add("donk-aigc-collectibles", () => {
-  // Add check-in button to header
-  flarumExtend(HeaderSecondary.prototype, "items", function (items: any) {
-    if (app.session?.user) {
-      items.add("donk-aigc-collectibles-checkin", <CheckinButton />, 15);
-
-      // Blind box opener button
-      items.add(
-        "donk-aigc-collectibles-blindbox",
-        <button
-          className="Button Button--link BlindBoxOpener-trigger"
-          onclick={() => app.modal.show(BlindBoxOpener)}
-          title={app.translator.trans(
-            "donk-aigc-collectibles.forum.blind_box.open_title"
-          )}
-        >
-          <i className="fas fa-box-open" />
-        </button>,
-        14
-      );
-    }
-  });
-
-  // Add collectible badge next to post author
-  flarumExtend(PostUser.prototype, "view", function (vnode: any) {
-    const post = this?.attrs?.post;
-    if (!vnode || !post || typeof post.user !== "function") return;
-
-    const user = post.user();
-    if (!user || typeof user.attribute !== "function") return;
-
-    const showcaseId = user.attribute("showcaseCollectibleId");
-    if (!showcaseId) return;
-
-    if (!vnode.children) {
-      vnode.children = [];
-    }
-
-    if (Array.isArray(vnode.children)) {
-      vnode.children.push(<PostCollectibleBadge user={user} />);
-    }
-  });
-
-  flarumExtend(CommentPost.prototype, "content", function (content: any[]) {
-    const post = this?.attrs?.post;
-    const user = post?.user?.();
-
-    if (
-      !user ||
-      !user.attribute?.("showcaseCollectibleId") ||
-      !user.attribute?.("showcaseCollectibleCid")
-    ) {
-      return;
-    }
-
-    const originalContent = content.slice();
-    if (originalContent.length === 0) {
-      return;
-    }
-
-    content.splice(0, content.length, (
-      <div className="CollectibleShowcasePost">
-        <div className="CollectibleShowcasePost-content">{originalContent}</div>
-        <aside className="CollectibleShowcasePost-panel">
-          <PostCollectibleShowcase user={user} />
-        </aside>
-      </div>
-    ));
-  });
-
-  // Add collectibles tab to user profile
-  flarumExtend(UserPage.prototype, "navItems", function (items: any) {
-    const profileUser = this?.user ?? this?.attrs?.user;
-    if (!profileUser) return;
-
-    items.add(
-      "collectibles",
-      <LinkButton
-        href={app.route("user.collectibles", { username: profileUser.slug() })}
-        icon="fas fa-gem"
-      >
-        {app.translator.trans(
-          "donk-aigc-collectibles.forum.user.collectibles_link"
-        )}
-      </LinkButton>,
-      50
-    );
-  });
+  installForumChrome();
+  installBarterMessaging();
 
   // Connect WebSocket for real-time notifications
   if (app.session?.user) {
     wsConnect();
-
-    subscribe("trade.created", () => {
-      app.alerts.show(
-        { type: "info" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_received"
-        )
-      );
-    });
-
-    subscribe("trade.accepted", () => {
-      app.alerts.show(
-        { type: "success" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_accepted"
-        )
-      );
-    });
-
-    subscribe("trade.rejected", () => {
-      app.alerts.show(
-        { type: "info" },
-        app.translator.trans(
-          "donk-aigc-collectibles.forum.trade.notification_rejected"
-        )
-      );
-    });
   }
 });

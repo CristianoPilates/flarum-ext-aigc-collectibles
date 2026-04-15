@@ -3,11 +3,14 @@
 namespace Donk\AigcCollectibles\StateMachine;
 
 use Donk\AigcCollectibles\Model\BlindBox;
+use Donk\AigcCollectibles\Model\BarterProposal;
 use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Model\Trade;
 
 class StateMachineConfig
 {
+    /**
+     * @return array<string, mixed>
+     */
     public static function collectible(): array
     {
         return [
@@ -47,6 +50,9 @@ class StateMachineConfig
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public static function blindBox(): array
     {
         return [
@@ -72,55 +78,64 @@ class StateMachineConfig
         ];
     }
 
-    public static function trade(): array
+    /**
+     * @return array<string, mixed>
+     */
+    public static function barterProposal(): array
     {
         return [
-            'class' => Trade::class,
-            'graph' => 'trade',
+            'class' => BarterProposal::class,
+            'graph' => 'barterProposal',
             'property_path' => 'status',
             'states' => [
-                Trade::STATUS_PENDING,
-                Trade::STATUS_ACCEPTED,
-                Trade::STATUS_SETTLING,
-                Trade::STATUS_COMPLETED,
-                Trade::STATUS_REJECTED,
-                Trade::STATUS_CANCELLED,
-                Trade::STATUS_FAILED,
+                BarterProposal::STATUS_PROPOSED,
+                BarterProposal::STATUS_ACCEPTED,
+                BarterProposal::STATUS_SETTLING,
+                BarterProposal::STATUS_COMPLETED,
+                BarterProposal::STATUS_REJECTED,
+                BarterProposal::STATUS_CANCELLED,
+                BarterProposal::STATUS_SUPERSEDED,
+                BarterProposal::STATUS_FAILED,
             ],
             'transitions' => [
                 'accept' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_ACCEPTED,
+                    'from' => [BarterProposal::STATUS_PROPOSED],
+                    'to' => BarterProposal::STATUS_ACCEPTED,
                 ],
                 'settle' => [
-                    'from' => [Trade::STATUS_ACCEPTED],
-                    'to' => Trade::STATUS_SETTLING,
+                    'from' => [BarterProposal::STATUS_ACCEPTED],
+                    'to' => BarterProposal::STATUS_SETTLING,
                 ],
                 'complete' => [
-                    'from' => [Trade::STATUS_SETTLING],
-                    'to' => Trade::STATUS_COMPLETED,
+                    'from' => [BarterProposal::STATUS_SETTLING],
+                    'to' => BarterProposal::STATUS_COMPLETED,
                 ],
                 'reject' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_REJECTED,
+                    'from' => [BarterProposal::STATUS_PROPOSED],
+                    'to' => BarterProposal::STATUS_REJECTED,
                 ],
                 'cancel' => [
-                    'from' => [Trade::STATUS_PENDING],
-                    'to' => Trade::STATUS_CANCELLED,
+                    'from' => [BarterProposal::STATUS_PROPOSED],
+                    'to' => BarterProposal::STATUS_CANCELLED,
+                ],
+                'supersede' => [
+                    'from' => [BarterProposal::STATUS_PROPOSED],
+                    'to' => BarterProposal::STATUS_SUPERSEDED,
                 ],
                 'fail' => [
-                    'from' => [Trade::STATUS_SETTLING],
-                    'to' => Trade::STATUS_FAILED,
+                    'from' => [BarterProposal::STATUS_SETTLING],
+                    'to' => BarterProposal::STATUS_FAILED,
                 ],
             ],
             'callbacks' => [
                 'after' => [
                     'mark_terminal_completion' => [
                         'to' => [
-                            Trade::STATUS_COMPLETED,
-                            Trade::STATUS_REJECTED,
-                            Trade::STATUS_CANCELLED,
-                            Trade::STATUS_FAILED,
+                            BarterProposal::STATUS_COMPLETED,
+                            BarterProposal::STATUS_REJECTED,
+                            BarterProposal::STATUS_CANCELLED,
+                            BarterProposal::STATUS_SUPERSEDED,
+                            BarterProposal::STATUS_FAILED,
                         ],
                         'do' => ['object', 'markCompletedAt'],
                     ],

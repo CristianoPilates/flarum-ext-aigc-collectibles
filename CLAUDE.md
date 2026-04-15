@@ -29,11 +29,19 @@
 - `NFT`
   可选链上投射，不等于整个产品本体
 
-当前尚未完成但方向已定的部分：
+当前已经落地的新实体:
 
-- `flarum/messages` 私信场景
-- 多资产 barter 领域模型
-- blind box 的视觉化与交易化
+- `BarterProposal`
+  多资产协商模型,支持盲盒+藏品混合交换,已集成到私信线程
+- `BarterProposalItem`
+  提案中的资产明细,支持双向多件资产打包
+- `BarterThreadPanel`
+  私信线程中的协商历史展示
+
+当前尚未完成但方向已定的部分:
+
+- blind box 的完整视觉化资产卡片
+- 更丰富的协商交互(还价、计数器报价)
 
 ## 2. 当前技术现实
 
@@ -65,7 +73,7 @@
 
 - `extend.php`
   扩展注册入口
-- `js/src/forum.ts`
+- `js/src/forum.tsx`
   forum 前端入口
 - `src/Api/Resource/*`
   JSON:API resource 定义与 endpoint 入口
@@ -268,9 +276,8 @@
 
 ### 8.2 还没做成的
 
-- 基于私信的完整社交交易
-- 多盲盒 / 多藏品 / 双向交换的 barter 模型
-- blind box 的可视化资产卡片
+- blind box 的完整视觉化资产卡片（Phase 3 部分完成，视觉和动画待完善）
+- 更丰富的协商交互（还价、计数器报价）
 
 ### 8.3 不要误判的
 

@@ -6,11 +6,13 @@ EXT_NAME    := donk/flarum-ext-aigc-collectibles
 FLARUM_VER  := ^2.0.0
 PLAYWRIGHT_MCP_PORT := $(shell printf '%s\n' "$(PLAYWRIGHT_MCP_URL)" | sed -n 's#.*:\([0-9][0-9]*\)/.*#\1#p')
 PLAYWRIGHT_MCP_OUTPUT_DIR ?= $(STATE_DIR)/playwright-mcp-output
-# Single shared persistent Chromium profile for both manual and MCP flows.
+# Persistent seed profile for manual wallet setup; MCP runs use a fresh runtime copy.
 PLAYWRIGHT_SHARED_USER_DATA_DIR := $(STATE_DIR)/playwright-profile
-PLAYWRIGHT_MCP_USER_DATA_DIR := $(PLAYWRIGHT_SHARED_USER_DATA_DIR)
+PLAYWRIGHT_MCP_RUNTIME_ROOT := $(STATE_DIR)/playwright-mcp-runtime
+PLAYWRIGHT_MCP_USER_DATA_DIR ?= $(PLAYWRIGHT_MCP_RUNTIME_ROOT)/default
 PLAYWRIGHT_MCP_CONFIG := $(EXT_DIR)/scripts/playwright/mcp.config.json
 PLAYWRIGHT_MCP_CLI_DIR := $(EXT_DIR)/scripts/playwright/mcp-cli
+DEVENV_EXEC := $(EXT_DIR)/scripts/runtime/with-devenv.sh
 PLAYWRIGHT_MANUAL_USER_DATA_DIR := $(PLAYWRIGHT_SHARED_USER_DATA_DIR)
 PLAYWRIGHT_MANUAL_CHANNEL ?= chromium
 PLAYWRIGHT_MANUAL_EXTENSION_DIRS ?= $(EXT_DIR)/e2e/support/nkbihfbeogaeaoehlefnkodbefgpgknn
@@ -29,9 +31,9 @@ ifeq ($(strip $(SITE_DIR)),)
 $(error SITE_DIR is empty; set FLARUM_SITE_DIR in .env or export SITE_DIR)
 endif
 
-.PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile \
+.PHONY: up down status dev pw-smoke pw-manual mcp mcp-headed prepare-playwright-profile prepare-playwright-mcp-profile \
         mcp-state mcp-minimal-nft mcp-debug-mint mcp-focus-metamask mcp-storage \
-        mcp-showcase mcp-proof mcp-messages \
+        mcp-showcase mcp-proof mcp-messages mcp-barter-inspect mcp-barter mcp-barter-validation mcp-barter-history locale-status locale-set-en locale-set-zh-Hans \
         up-site up-external up-mysql up-ipfs up-anvil up-akashgen \
         init init-site init-chain init-test-data assert-mysql assert-no-pw-smoke-scene assert-runtime-clean verify reset-state \
         enable-messages publish-site-runtime \
@@ -67,7 +69,7 @@ init-test-data:
 	php ./scripts/playwright/prepare-data.php
 
 assert-mysql:
-	@mysql \
+	@"$(DEVENV_EXEC)" mysql \
 		-u "$(DB_USERNAME)" \
 		-p"$(DB_PASSWORD)" \
 		-h "$(DB_HOST)" \
@@ -122,11 +124,26 @@ pw-smoke: assert-runtime-clean assert-no-pw-smoke-scene
 	done; \
 	make init-chain; \
 	make init-test-data; \
-	playwright test --grep @smoke
+	"$(DEVENV_EXEC)" playwright test --grep @smoke
 
 prepare-playwright-profile:
 	@mkdir -p "$(STATE_DIR)"
 	@if [ ! -e "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then mkdir -p "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)"; fi
+
+prepare-playwright-mcp-profile: prepare-playwright-profile
+	@mkdir -p "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)"
+	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@mkdir -p "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@if [ -d "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" ]; then \
+		tar -C "$(PLAYWRIGHT_SHARED_USER_DATA_DIR)" -cf - . | tar -C "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" -xf -; \
+	fi
+	@find "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" -maxdepth 1 \( -name 'Singleton*' -o -name 'lockfile' \) -delete
+	@rm -f \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Current Session" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Current Tabs" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Last Session" \
+		"$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Last Tabs"
+	@rm -rf "$(PLAYWRIGHT_MCP_USER_DATA_DIR)/Default/Sessions"
 
 pw-manual: prepare-playwright-profile
 	@set -eu; \
@@ -134,22 +151,24 @@ pw-manual: prepare-playwright-profile
 	PLAYWRIGHT_MANUAL_USER_DATA_DIR="$(PLAYWRIGHT_MANUAL_USER_DATA_DIR)" \
 	PLAYWRIGHT_MANUAL_CHANNEL="$(PLAYWRIGHT_MANUAL_CHANNEL)" \
 	PLAYWRIGHT_MANUAL_EXTENSION_DIRS="$(PLAYWRIGHT_MANUAL_EXTENSION_DIRS)" \
-	node ./scripts/playwright/launch-manual.cjs
+	"$(DEVENV_EXEC)" node ./scripts/playwright/launch-manual.cjs
 
 mcp-headed:
 	@$(MAKE) mcp PW_MCP_HEADLESS=0
 
 mcp: prepare-playwright-profile
-	@mkdir -p "$(PLAYWRIGHT_MCP_OUTPUT_DIR)" "$(PLAYWRIGHT_MCP_USER_DATA_DIR)"
+	@mkdir -p "$(PLAYWRIGHT_MCP_OUTPUT_DIR)" "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)"
 	@set -eu; \
 	curl -fsS "$(FORUM_URL)" >/dev/null; \
 	pid="$$(ss -ltnp '( sport = :$(PLAYWRIGHT_MCP_PORT) )' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | head -n1)"; \
 	if [ -n "$$pid" ]; then kill "$$pid" >/dev/null 2>&1 || true; fi; \
-	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; exit "$$status"' INT TERM EXIT; \
-	echo "playwright-mcp profile: $(PLAYWRIGHT_MCP_USER_DATA_DIR)"; \
-	mcp-server-playwright \
+	runtime_dir="$$(mktemp -d "$(PLAYWRIGHT_MCP_RUNTIME_ROOT)/profile.XXXXXX")"; \
+	$(MAKE) prepare-playwright-mcp-profile PLAYWRIGHT_MCP_USER_DATA_DIR="$$runtime_dir"; \
+	trap 'status="$$?"; if [ -n "$${mcp_pid:-}" ]; then kill "$$mcp_pid" >/dev/null 2>&1 || true; wait "$$mcp_pid" 2>/dev/null || true; fi; if [ -n "$${runtime_dir:-}" ]; then rm -rf "$$runtime_dir"; fi; exit "$$status"' INT TERM EXIT; \
+	echo "playwright-mcp profile: $$runtime_dir"; \
+	"$(DEVENV_EXEC)" mcp-server-playwright \
 	  --config "$(PLAYWRIGHT_MCP_CONFIG)" \
-	  --user-data-dir "$(PLAYWRIGHT_MCP_USER_DATA_DIR)" \
+	  --user-data-dir "$$runtime_dir" \
 	  $$( [ "$(PW_MCP_HEADLESS)" = "1" ] && printf '%s' '--headless' ) \
 	  --no-sandbox \
 	  & \
@@ -172,28 +191,40 @@ mcp: prepare-playwright-profile
 
 # Optional CLI wrappers over the running Playwright MCP server.
 mcp-state:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-state.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-state.cjs"
 
 mcp-minimal-nft:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-minimal-nft.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-minimal-nft.cjs"
 
 mcp-debug-mint:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-debug-mint-state.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-debug-mint-state.cjs"
 
 mcp-focus-metamask:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-focus-metamask.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-focus-metamask.cjs"
 
 mcp-storage:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-metamask-storage.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-metamask-storage.cjs"
 
 mcp-showcase:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-showcase.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-showcase.cjs"
 
 mcp-proof:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-proof.cjs"
 
 mcp-messages:
-	node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-messages.cjs"
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-messages.cjs"
+
+mcp-barter-inspect:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-inspect-barter-composer.cjs"
+
+mcp-barter:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-composer.cjs"
+
+mcp-barter-validation:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-composer-validation.cjs"
+
+mcp-barter-history:
+	"$(DEVENV_EXEC)" node "$(PLAYWRIGHT_MCP_CLI_DIR)/mcp-validate-barter-history.cjs"
 
 up-mysql: assert-runtime-clean
 	devenv up mysql
@@ -246,6 +277,17 @@ publish-site-runtime:
 	cd $(SITE_DIR) && php flarum assets:publish
 	cd $(SITE_DIR) && php flarum cache:clear
 
+locale-status:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/locale-status.php
+
+locale-set-en:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php en
+	cd $(SITE_DIR) && php flarum cache:clear
+
+locale-set-zh-Hans:
+	FLARUM_SITE_DIR="$(SITE_DIR)" php ./scripts/forum/set-default-locale.php zh-Hans
+	cd $(SITE_DIR) && php flarum cache:clear
+
 # === 禁用扩展 ===
 disable:
 	cd $(SITE_DIR) && php flarum extension:disable donk-aigc-collectibles
@@ -268,6 +310,7 @@ reset-state: assert-runtime-clean
 	rm -rf .devenv/state/ipfs
 	rm -rf .devenv/state/playwright
 	rm -rf .devenv/state/playwright-profile
+	rm -rf .devenv/state/playwright-mcp-runtime
 	rm -rf .devenv/state/playwright-mcp-output
 	rm -f .devenv/state/pw-test-external.pid
 	rm -f .devenv/state/pw-test-site.pid
@@ -285,9 +328,9 @@ help:
 	@echo "  make dev            - 完整开发编排：启动站点本体 + 外部服务 + frontend watch"
 	@echo "  make pw-smoke       - Headless 冒烟测试闭环：拉起测试依赖、初始化并跑 @smoke E2E 子集"
 	@echo "  make pw-manual      - Headed 手工测试：打开可加载 unpacked extensions 的持久化 Chromium"
-	@echo "  make mcp            - MCP 自动化闭环（默认 headless，复用 playwright-profile）"
-	@echo "  make mcp-headed     - MCP 自动化闭环（headed，复用 playwright-profile）"
-	@echo "  make mcp-state      - 通过 MCP 检查当前 shared profile / MetaMask / 应用状态"
+	@echo "  make mcp            - MCP 自动化闭环（默认 headless，使用从 playwright-profile 派生的临时运行 profile）"
+	@echo "  make mcp-headed     - MCP 自动化闭环（headed，使用从 playwright-profile 派生的临时运行 profile）"
+	@echo "  make mcp-state      - 通过 MCP 检查当前 MCP 运行 profile / MetaMask / 应用状态"
 	@echo "  make mcp-minimal-nft - 通过 MCP 跑最小 NFT 路径（需要先提供 METAMASK_PASSWORD）"
 	@echo ""
 	@echo "  === 支撑命令 ==="
@@ -311,6 +354,10 @@ help:
 	@echo "  make mcp-focus-metamask - 通过 MCP 聚焦 MetaMask 页面"
 	@echo "  make mcp-storage    - 通过 MCP 检查 MetaMask 扩展存储"
 	@echo "  make mcp-messages   - 通过 MCP 验证 buyer -> seller 私信链路"
+	@echo "  make mcp-barter-inspect - 通过 MCP 检查私信线程内 barter composer 是否成功挂载"
+	@echo "  make mcp-barter     - 通过 MCP 验证 proposal-in-PM 主链路（buyer 发起，seller 接受）"
+	@echo "  make mcp-barter-validation - 通过 MCP 验证 barter composer 的前端校验分支"
+	@echo "  make mcp-barter-history - 通过 MCP 验证线程内协商 revision 历史呈现"
 	@echo "  PLAYWRIGHT_MANUAL_EXTENSION_DIRS=/abs/ext make pw-manual - 加载 unpacked 扩展"
 	@echo "  playwright test     - 直接运行 Playwright"
 	@echo "  playwright test --headed - 直接运行 headed Playwright"
@@ -321,5 +368,8 @@ help:
 	@echo "  make enable         - 链接并启用扩展"
 	@echo "  make disable        - 禁用并移除扩展"
 	@echo "  make migrate        - 运行新增迁移"
+	@echo "  make locale-status  - 查看站点 default_locale 与扩展 locale 文件"
+	@echo "  make locale-set-en  - 将站点默认语言切回 English"
+	@echo "  make locale-set-zh-Hans - 将站点默认语言切到 zh-Hans"
 	@echo "  make test           - 运行 PHPUnit"
 	@echo ""

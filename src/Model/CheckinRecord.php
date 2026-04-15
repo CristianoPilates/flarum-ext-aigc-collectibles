@@ -35,7 +35,7 @@ class CheckinRecord extends AbstractModel
 
     public static function create(User $user, int $rewardAmount): self
     {
-        $record = new static;
+        $record = new self();
         $record->user_id = $user->id;
         $record->reward_amount = $rewardAmount;
         $record->checked_in_at = Carbon::now();

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $ipfs_cid
  * @property string|null $metadata_cid
  * @property string|null $aigc_prompt
- * @property string $name
+ * @property string|null $name
  * @property string $rarity
  * @property string $status
  * @property int|null $token_id
@@ -25,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon $updated_at
  * @property-read User $owner
  * @property-read CollectibleEvent[] $events
- * @property-read Trade[] $trades
  */
 class Collectible extends AbstractModel
 {
@@ -51,29 +50,34 @@ class Collectible extends AbstractModel
         'token_id' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    /**
+     * @return HasMany<CollectibleEvent, self>
+     */
     public function events(): HasMany
     {
         return $this->hasMany(CollectibleEvent::class, 'collectible_id');
     }
 
-    public function trades(): HasMany
+    public function getNameAttribute(mixed $value): string
     {
-        return $this->hasMany(Trade::class, 'collectible_id');
-    }
+        if ($value !== null && $value !== '') {
+            return $value;
+        }
 
-    public function getNameAttribute(): string
-    {
         return 'Collectible #' . ($this->id ?: 'Draft');
     }
 
     public static function createDraft(int $ownerId, string $aigcPrompt, string $rarity): self
     {
-        $collectible = new static;
+        $collectible = new self();
         $collectible->owner_id = $ownerId;
         $collectible->aigc_prompt = $aigcPrompt;
         $collectible->rarity = $rarity;

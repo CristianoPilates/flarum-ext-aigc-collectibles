@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CollectibleRepository
 {
+    /**
+     * @return Builder<Collectible>
+     */
     public function query(): Builder
     {
         return Collectible::query();
@@ -25,6 +28,9 @@ class CollectibleRepository
         return $query->firstOrFail();
     }
 
+    /**
+     * @return Collection<int, Collectible>
+     */
     public function findByUser(User $user, ?User $actor = null): Collection
     {
         $query = $this->query()

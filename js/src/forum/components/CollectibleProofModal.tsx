@@ -1,8 +1,12 @@
 import app from 'flarum/forum/app';
+import type Mithril from 'mithril';
+import type { IInternalModalAttrs } from 'flarum/common/components/Modal';
 import Modal from 'flarum/common/components/Modal';
+import Link from 'flarum/common/components/Link';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import { displayCollectibleName } from '../utils/collectibles';
 
-interface CollectibleProofModalAttrs {
+interface CollectibleProofModalAttrs extends IInternalModalAttrs {
   collectible: any;
 }
 
@@ -65,7 +69,14 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
           {this.renderSection(
             app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_section_app'),
             [
-              this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_collectible'), proof.app?.name || '-'),
+              this.renderRow(
+                app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_collectible'),
+                displayCollectibleName(proof.app?.name, proof.app?.collectibleId)
+              ),
+              this.renderRow(
+                app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_owner'),
+                this.renderOwnerLink(proof.app)
+              ),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_token_id'), this.renderMaybeValue(proof.app?.tokenId)),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_metadata_cid'), this.renderMaybeValue(proof.app?.metadataCid)),
               this.renderRow(app.translator.trans('donk-aigc-collectibles.forum.collectible.proof_field_image_cid'), this.renderMaybeValue(proof.app?.ipfsCid)),
@@ -163,7 +174,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     }
   }
 
-  renderSection(title: string, children: any[]) {
+  renderSection(title: Mithril.Children, children: Mithril.Children) {
     return (
       <section className="CollectibleProofModal-section">
         <h3 className="CollectibleProofModal-sectionTitle">{title}</h3>
@@ -172,7 +183,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     );
   }
 
-  renderRow(label: string, value: any) {
+  renderRow(label: Mithril.Children, value: Mithril.Children) {
     return (
       <div className="CollectibleProofModal-row">
         <span className="CollectibleProofModal-label">{label}</span>
@@ -181,7 +192,7 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
     );
   }
 
-  renderLinkRow(label: string, href?: string | null) {
+  renderLinkRow(label: Mithril.Children, href?: string | null) {
     if (!href) return null;
 
     return this.renderRow(
@@ -190,6 +201,21 @@ export default class CollectibleProofModal extends Modal<CollectibleProofModalAt
         {href}
       </a>
     );
+  }
+
+  renderOwnerLink(appLayer?: any) {
+    const ownerUsername = appLayer?.ownerUsername;
+    const ownerSlug = appLayer?.ownerSlug || ownerUsername;
+
+    if (!ownerUsername) {
+      return '-';
+    }
+
+    if (ownerSlug) {
+      return <Link href={app.route('user', { username: ownerSlug })}>{ownerUsername}</Link>;
+    }
+
+    return ownerUsername;
   }
 
   renderJson(value: any) {

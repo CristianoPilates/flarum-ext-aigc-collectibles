@@ -3,8 +3,8 @@
 namespace Donk\AigcCollectibles\Api;
 
 use Donk\AigcCollectibles\Model\Collectible;
-use Donk\AigcCollectibles\Model\Web3Account;
 use Donk\AigcCollectibles\Service\Contracts\CheckinServiceInterface;
+use Flarum\Api\Schema\Attribute;
 use Flarum\Api\Schema;
 use Flarum\User\User;
 
@@ -17,32 +17,33 @@ class UserResourceFields
         $this->checkinService = $checkinService;
     }
 
+    /**
+     * @return array<int, Attribute>
+     */
     public function __invoke(): array
     {
-        $showcaseCache = [];
-        $walletCache = [];
+        $getShowcase = function (User $user): ?Collectible {
+            if ($user->relationLoaded('showcaseCollectible')) {
+                $collectible = $user->getRelation('showcaseCollectible');
+            } else {
+                // Fallback: relation not eager-loaded (e.g. post author via PostResource).
+                // Fetch directly to ensure showcase panel renders in posts/replies.
+                $collectible = $user->showcase_collectible_id
+                    ? Collectible::query()->find($user->showcase_collectible_id)
+                    : null;
+            }
 
-        $getShowcase = function (User $user) use (&$showcaseCache): ?Collectible {
-            if (!$user->showcase_collectible_id) {
+            if (! $collectible instanceof Collectible) {
                 return null;
             }
 
-            if (!array_key_exists($user->id, $showcaseCache)) {
-                $collectible = Collectible::query()->find($user->showcase_collectible_id);
-                $showcaseCache[$user->id] = ($collectible && $collectible->status === Collectible::STATUS_COMPLETED) ? $collectible : null;
-            }
-
-            return $showcaseCache[$user->id];
+            return $collectible->status === Collectible::STATUS_COMPLETED ? $collectible : null;
         };
 
-        $getWallet = function (User $user) use (&$walletCache): ?Web3Account {
-            if (!array_key_exists($user->id, $walletCache)) {
-                $walletCache[$user->id] = Web3Account::query()
-                    ->where('user_id', $user->id)
-                    ->first();
-            }
-
-            return $walletCache[$user->id];
+        $getWallet = function (User $user): mixed {
+            return $user->relationLoaded('web3Account')
+                ? $user->getRelation('web3Account')
+                : null;
         };
 
         return [

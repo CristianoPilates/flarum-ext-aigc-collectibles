@@ -11,6 +11,7 @@ use Donk\AigcCollectibles\Tests\Fake\FakeNftMintingService;
 use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class BlindBoxLifecycleTest extends TestCase
 {
@@ -18,30 +19,6 @@ class BlindBoxLifecycleTest extends TestCase
 
     private const SEED = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
     private const BOX_TYPE = 'test_reward';
-    private const SUBJECT_PHRASES = [
-        'dragon',
-        'forest',
-        'phoenix',
-        'clockwork fox',
-        'library automaton',
-    ];
-    private const STYLE_PHRASES = [
-        'oil painting',
-        'pixel art',
-        'ink wash painting',
-        'art nouveau poster',
-        'isometric diorama',
-        'noir comic panel',
-        'bioluminescent concept art',
-    ];
-    private const OPTIONAL_FLAVOR_PHRASES = [
-        'ethereal glow',
-        'dark',
-        'cosmic awe',
-        'midnight bazaar',
-        'solemn grandeur',
-        'desert caravan',
-    ];
 
     protected function setUp(): void
     {
@@ -85,7 +62,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Appraise ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function appraise_with_valid_pow_transitions_to_appraised(): void
     {
         $pow = $this->computePow(self::SEED);
@@ -107,7 +84,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertGreaterThan(0, $box->budget);
     }
 
-    /** @test */
+    #[Test]
     public function appraise_rejects_invalid_hash(): void
     {
         $response = $this->send(
@@ -126,7 +103,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('unappraised', $box->status);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_appraise_already_appraised(): void
     {
         $this->database()->table('blindboxes')
@@ -148,7 +125,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode(), (string) $response->getBody());
     }
 
-    /** @test */
+    #[Test]
     public function cannot_appraise_other_users_blindbox(): void
     {
         $this->database()->table('blindboxes')
@@ -172,7 +149,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Open ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function open_creates_collectible_and_transitions_to_opened(): void
     {
         $this->database()->table('blindboxes')
@@ -204,7 +181,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals(0, $collectible->times_traded);
     }
 
-    /** @test */
+    #[Test]
     public function open_with_epic_budget_yields_epic_rarity(): void
     {
         $this->database()->table('blindboxes')
@@ -225,7 +202,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('epic', $collectible->rarity);
     }
 
-    /** @test */
+    #[Test]
     public function open_with_legendary_budget_yields_legendary_rarity(): void
     {
         $this->database()->table('blindboxes')
@@ -246,7 +223,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertEquals('legendary', $collectible->rarity);
     }
 
-    /** @test */
+    #[Test]
     public function appraise_pow_thresholds_map_to_expected_budgets_and_rarities(): void
     {
         $cases = [
@@ -331,7 +308,7 @@ class BlindBoxLifecycleTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function trade_reward_boxes_fallback_to_default_reward_rules_when_specific_rules_are_missing(): void
     {
         $this->database()->table('blindboxes')
@@ -358,7 +335,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertNotNull($box->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_open_unappraised(): void
     {
         // status is still 'unappraised' from setUp
@@ -375,7 +352,7 @@ class BlindBoxLifecycleTest extends TestCase
         $this->assertNull($box->collectible_id);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_open_already_opened(): void
     {
         $this->database()->table('blindboxes')
@@ -393,7 +370,7 @@ class BlindBoxLifecycleTest extends TestCase
 
     /* ═══════════════════════ Full Lifecycle ═══════════════════════ */
 
-    /** @test */
+    #[Test]
     public function full_lifecycle_appraise_then_open(): void
     {
         // 1. Appraise
@@ -433,15 +410,32 @@ class BlindBoxLifecycleTest extends TestCase
         $user = $this->database()->table('users')->where('id', 2)->first();
         $this->assertSame(0, (int) $user->blind_box_count);
 
-        // Prompt should contain at least one subject and one style (both required)
         $prompt = $collectible->aigc_prompt;
-        $hasSubject = $this->promptContainsAny($prompt, self::SUBJECT_PHRASES);
-        $hasStyle = $this->promptContainsAny($prompt, self::STYLE_PHRASES);
-        $this->assertTrue($hasSubject, "Prompt should contain a subject phrase: {$prompt}");
-        $this->assertTrue($hasStyle, "Prompt should contain a style phrase: {$prompt}");
+        $requiredCategories = $this->database()->table('blindbox_draw_rules')
+            ->where('blindbox_type', self::BOX_TYPE)
+            ->where('required', 1)
+            ->pluck('pool_category')
+            ->all();
 
-        $hasOptionalFlavor = $this->promptContainsAny($prompt, self::OPTIONAL_FLAVOR_PHRASES);
-        $this->assertTrue($hasOptionalFlavor, "Prompt should contain mood or theme flavor: {$prompt}");
+        foreach ($requiredCategories as $category) {
+            $phrases = $this->activePhrasesForCategories([$category]);
+            $this->assertTrue(
+                $this->promptContainsAny($prompt, $phrases),
+                "Prompt should contain a phrase from required category '{$category}': {$prompt}"
+            );
+        }
+
+        $optionalCategories = $this->database()->table('blindbox_draw_rules')
+            ->where('blindbox_type', self::BOX_TYPE)
+            ->where('required', 0)
+            ->pluck('pool_category')
+            ->all();
+
+        $optionalPhrases = $this->activePhrasesForCategories($optionalCategories);
+        $this->assertTrue(
+            $this->promptContainsAny($prompt, $optionalPhrases),
+            "Prompt should contain at least one optional flavor phrase: {$prompt}"
+        );
     }
 
     /* ═══════════════════════ Helpers ═══════════════════════ */
@@ -490,6 +484,23 @@ class BlindBoxLifecycleTest extends TestCase
         }
 
         return false;
+    }
+
+    /**
+     * @param string[] $categories
+     * @return string[]
+     */
+    private function activePhrasesForCategories(array $categories): array
+    {
+        if ($categories === []) {
+            return [];
+        }
+
+        return $this->database()->table('phrase_pools')
+            ->whereIn('category', $categories)
+            ->where('is_active', 1)
+            ->pluck('phrase')
+            ->all();
     }
 }
 

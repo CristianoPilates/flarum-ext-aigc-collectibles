@@ -9,6 +9,7 @@ use Donk\AigcCollectibles\Tests\Fake\FakeIPFSService;
 use Flarum\Extend;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class MintCollectibleChainTest extends TestCase
 {
@@ -77,7 +78,7 @@ class MintCollectibleChainTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function guest_cannot_mint(): void
     {
         $request = $this->request('POST', '/api/collectibles/1/mint')
@@ -88,7 +89,7 @@ class MintCollectibleChainTest extends TestCase
         $this->assertEquals(401, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function user_can_mint_completed_collectible_with_wallet(): void
     {
         $response = $this->send(
@@ -115,7 +116,7 @@ class MintCollectibleChainTest extends TestCase
         $this->assertNotNull($event);
     }
 
-    /** @test */
+    #[Test]
     public function cannot_mint_already_minted_collectible(): void
     {
         $response = $this->send(
@@ -128,7 +129,7 @@ class MintCollectibleChainTest extends TestCase
         $this->assertEquals(403, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function user_without_wallet_cannot_mint(): void
     {
         // Give user 3 a collectible to mint
@@ -154,7 +155,7 @@ class MintCollectibleChainTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function cannot_mint_other_users_collectible(): void
     {
         $response = $this->send(

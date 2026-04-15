@@ -11,7 +11,7 @@ export function gatewayUrl(cid: string): string {
   // Support both path-style gateways (`.../ipfs/`) and query-style
   // gateways (`.../api/v0/cat?arg=`), plus explicit `{cid}` templates.
   if (gateway.includes('{cid}')) {
-    return gateway.replaceAll('{cid}', encodeURIComponent(cleanCid));
+    return gateway.replace(/\{cid\}/g, encodeURIComponent(cleanCid));
   }
 
   if (gateway.includes('?')) {

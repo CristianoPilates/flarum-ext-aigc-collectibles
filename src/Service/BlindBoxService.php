@@ -31,6 +31,22 @@ class BlindBoxService implements BlindBoxServiceInterface
         private readonly BusDispatcher $bus,
     ) {}
 
+    public function createForUser(User $user, string $type): BlindBox
+    {
+        return $this->db->transaction(function () use ($user, $type) {
+            $box = new BlindBox();
+            $box->user_id = $user->id;
+            $box->type = $type;
+            $box->seed = bin2hex(random_bytes(32));
+            $box->status = BlindBox::STATUS_UNAPPRAISED;
+            $box->save();
+
+            $this->syncUserBalance($user->id);
+
+            return $box;
+        });
+    }
+
     /* ───────────────────── Appraise ───────────────────── */
 
     public function appraise(User $actor, int $boxId, string $nonce, string $hash): BlindBox
@@ -82,15 +98,6 @@ class BlindBoxService implements BlindBoxServiceInterface
                 throw new ValidationException(['status' => 'Blind box must be appraised before opening.']);
             }
 
-            $affected = $this->db->table('users')
-                ->where('id', $actor->id)
-                ->where('blind_box_count', '>=', 1)
-                ->decrement('blind_box_count', 1);
-
-            if ($affected !== 1) {
-                throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
-            }
-
             // 1. Load draw rules for this box type
             $rules = $this->loadDrawRules($box->type);
 
@@ -112,6 +119,7 @@ class BlindBoxService implements BlindBoxServiceInterface
             $this->stateMachines->get($box, 'blindBox')->apply('open');
             $box->collectible_id = $collectible->id;
             $box->save();
+            $this->syncUserBalance($actor->id);
 
             return [$box, $collectible];
         });
@@ -196,10 +204,10 @@ class BlindBoxService implements BlindBoxServiceInterface
      */
     private function loadDrawRules(string $boxType): Collection
     {
-        $candidateTypes = array_values(array_filter([
+        $candidateTypes = array_values(array_unique(array_filter([
             $boxType,
-            self::DRAW_RULE_FALLBACKS[$boxType] ?? null,
-        ]));
+            $this->resolveDrawRuleType($boxType),
+        ])));
 
         $groupedRules = BlindBoxDrawRule::query()
             ->whereIn('blindbox_type', $candidateTypes)
@@ -224,6 +232,34 @@ class BlindBoxService implements BlindBoxServiceInterface
         return (int) $this->db->table('users')
             ->where('id', $user->id)
             ->value('blind_box_count');
+    }
+
+    public function syncUserBalance(int $userId): void
+    {
+        $this->syncBlindBoxCount($userId, [
+            BlindBox::STATUS_UNAPPRAISED,
+            BlindBox::STATUS_APPRAISED,
+        ]);
+    }
+
+    public function resolveDrawRuleType(string $boxType): string
+    {
+        return self::DRAW_RULE_FALLBACKS[$boxType] ?? $boxType;
+    }
+
+    public function describeDrawRules(string $boxType): array
+    {
+        return $this->loadDrawRules($boxType)
+            ->sortBy([
+                ['required', 'desc'],
+                ['pool_category', 'asc'],
+            ])
+            ->map(static fn (BlindBoxDrawRule $rule) => [
+                'category' => $rule->pool_category,
+                'required' => (bool) $rule->required,
+            ])
+            ->values()
+            ->all();
     }
 
     public function transfer(User $from, User $to, int $amount): void
@@ -251,6 +287,43 @@ class BlindBoxService implements BlindBoxServiceInterface
                 throw new ValidationException(['blind_box' => 'Insufficient blind boxes.']);
             }
 
+            $this->transferSpecific($from, $to, $boxIds);
+        });
+    }
+
+    /**
+     * @param int[] $boxIds
+     */
+    public function transferSpecific(User $from, User $to, array $boxIds): void
+    {
+        if ($boxIds === []) {
+            return;
+        }
+
+        $boxIds = array_values(array_unique(array_map('intval', $boxIds)));
+        $transferableStatuses = [
+            BlindBox::STATUS_UNAPPRAISED,
+            BlindBox::STATUS_APPRAISED,
+        ];
+
+        $this->db->transaction(function () use ($from, $to, $boxIds, $transferableStatuses) {
+            $ownedBoxIds = $this->db->table('blindboxes')
+                ->where('user_id', $from->id)
+                ->whereIn('status', $transferableStatuses)
+                ->whereIn('id', $boxIds)
+                ->lockForUpdate()
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id)
+                ->all();
+
+            sort($ownedBoxIds);
+            $expectedBoxIds = $boxIds;
+            sort($expectedBoxIds);
+
+            if ($ownedBoxIds !== $expectedBoxIds) {
+                throw new ValidationException(['blind_box' => 'One or more blind boxes are unavailable for transfer.']);
+            }
+
             $this->db->table('blindboxes')
                 ->whereIn('id', $boxIds)
                 ->update([
@@ -258,8 +331,8 @@ class BlindBoxService implements BlindBoxServiceInterface
                     'updated_at' => date('Y-m-d H:i:s'),
                 ]);
 
-            $this->syncBlindBoxCount($from->id, $transferableStatuses);
-            $this->syncBlindBoxCount($to->id, $transferableStatuses);
+            $this->syncUserBalance($from->id);
+            $this->syncUserBalance($to->id);
         });
     }
 

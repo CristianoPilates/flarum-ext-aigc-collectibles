@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Collectible $collectible
  * @property-read User|null $fromUser
  * @property-read User|null $toUser
- * @property-read Trade|null $trade
  */
 class CollectibleEvent extends AbstractModel
 {
@@ -32,24 +31,28 @@ class CollectibleEvent extends AbstractModel
         'created_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<Collectible, self>
+     */
     public function collectible(): BelongsTo
     {
         return $this->belongsTo(Collectible::class, 'collectible_id');
     }
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function fromUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'from_user_id');
     }
 
+    /**
+     * @return BelongsTo<User, self>
+     */
     public function toUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
-    }
-
-    public function trade(): BelongsTo
-    {
-        return $this->belongsTo(Trade::class, 'trade_id');
     }
 
     public static function log(
@@ -60,7 +63,7 @@ class CollectibleEvent extends AbstractModel
         ?int $tradeId = null,
         ?array $metadata = null
     ): self {
-        $event = new static();
+        $event = new self();
         $event->collectible_id = $collectible->id;
         $event->event_type = $eventType;
         $event->from_user_id = $fromUserId;

@@ -111,7 +111,10 @@ class NftMintingService implements NftMintingServiceInterface
         throw new RuntimeException('Transaction receipt timeout after ' . $maxRetries . ' attempts.');
     }
 
-    protected function rpcCall(string $rpcUrl, string $method, array $params)
+    /**
+     * @param array<int, mixed> $params
+     */
+    protected function rpcCall(string $rpcUrl, string $method, array $params): mixed
     {
         $response = $this->client->post($rpcUrl, [
             'json' => [
@@ -131,6 +134,9 @@ class NftMintingService implements NftMintingServiceInterface
         return $body['result'] ?? null;
     }
 
+    /**
+     * @param array{nonce: string, gasPrice: string, gas: string, to: string, value: string, data: string} $tx
+     */
     protected function rlpEncodeTx(array $tx, int $chainId): string
     {
         $items = [
@@ -148,6 +154,9 @@ class NftMintingService implements NftMintingServiceInterface
         return $this->rlpEncodeList($items);
     }
 
+    /**
+     * @param array{nonce: string, gasPrice: string, gas: string, to: string, value: string, data: string} $tx
+     */
     protected function rlpEncodeSignedTx(array $tx, string $v, string $r, string $s): string
     {
         $items = [
@@ -165,6 +174,9 @@ class NftMintingService implements NftMintingServiceInterface
         return $this->rlpEncodeList($items);
     }
 
+    /**
+     * @param array<int, string> $items
+     */
     protected function rlpEncodeList(array $items): string
     {
         $encoded = '';

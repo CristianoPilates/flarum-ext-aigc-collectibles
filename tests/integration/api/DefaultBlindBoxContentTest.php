@@ -3,6 +3,7 @@
 namespace Donk\AigcCollectibles\Tests\integration\api;
 
 use Flarum\Testing\integration\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class DefaultBlindBoxContentTest extends TestCase
 {
@@ -13,7 +14,7 @@ class DefaultBlindBoxContentTest extends TestCase
         $this->extension('donk-aigc-collectibles');
     }
 
-    /** @test */
+    #[Test]
     public function it_seeds_default_phrases_and_draw_rules_for_reward_boxes(): void
     {
         $this->assertTrue(
